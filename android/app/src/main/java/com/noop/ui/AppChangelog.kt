@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "1.94"
+    const val CURRENT_VERSION = "1.95"
 
     data class Release(
         val version: String,
@@ -36,6 +36,14 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "1.95",
+            title = "Sleep and recovery for WHOOP 4.0 straps on the firmware we couldn't read",
+            date = "June 2026",
+            items = listOf(
+                "New (Mac and Android): some WHOOP 4.0 straps run a firmware whose offloaded history NOOP couldn't decode for motion — so sleep and recovery never built from the strap, even though live heart rate worked. NOOP now reads that firmware's motion (the accelerometer gravity vector) and per-second timestamps, which is exactly what the sleep engine needs. Once your strap banks a night, sleep staging and recovery can finally build from it. Heart rate in this layout is derived from the optical sensor rather than stored second-by-second, so this unlock is specifically the motion data. (#30)",
+            ),
+        ),
         Release(
             version = "1.94",
             title = "Manual workouts on WHOOP 5.0/MG get their calories and strain back",

@@ -17,6 +17,18 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 1.95 — Sleep and recovery for WHOOP 4.0 straps on the firmware we couldn't read
+
+- **New (Mac and Android):** some WHOOP 4.0 straps run a firmware whose offloaded history NOOP
+  couldn't decode for motion — so sleep and recovery never built from the strap, even though live
+  heart rate worked. NOOP now reads that firmware's motion (the accelerometer gravity vector) and
+  per-second timestamps, which is exactly what the sleep engine needs. Once your strap banks a night,
+  sleep staging and recovery can finally build from it. Heart rate in this layout is derived from the
+  optical sensor rather than stored second-by-second, so this unlock is specifically the motion data.
+  This was reverse-engineered from real on-wrist captures shared by users on #30 — thank you. (#30)
+
+---
+
 ## 1.94 — Manual workouts on WHOOP 5.0/MG get their calories and strain back
 
 - **Fixed (Mac and Android):** a workout you start yourself now fills in its calories, average heart
