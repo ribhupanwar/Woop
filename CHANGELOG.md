@@ -17,6 +17,14 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 1.93 — Tidy your journal — remove and hide questions
+
+- **New (Mac and Android):** the Journal now has an **Edit mode** (tap **Edit** on the Journal card) to
+  curate your questions. Delete custom questions you've added, and hide any built-in ones you don't
+  use — hidden questions are listed under the card and can be restored anytime. (#140)
+
+---
+
 ## 1.92 — Better diagnostics for newer strap firmware — so we can decode it
 
 - **Improved (Mac and Android):** when your strap's historical records use a firmware layout NOOP

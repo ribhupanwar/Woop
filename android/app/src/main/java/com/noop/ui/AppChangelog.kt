@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "1.92"
+    const val CURRENT_VERSION = "1.93"
 
     data class Release(
         val version: String,
@@ -36,6 +36,14 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "1.93",
+            title = "Tidy your journal — remove and hide questions",
+            date = "June 2026",
+            items = listOf(
+                "New (Mac and Android): the Journal now has an Edit mode (tap Edit on the Journal card) to curate your questions. Delete custom questions you've added, and hide any built-in ones you don't use — hidden questions are listed under the card and can be restored anytime. (#140)",
+            ),
+        ),
         Release(
             version = "1.92",
             title = "Better diagnostics for newer strap firmware — so we can decode it",
