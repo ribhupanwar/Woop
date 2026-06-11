@@ -37,7 +37,7 @@ struct CoachView: View {
     var body: some View {
         ScreenScaffold(title: "Coach",
                        subtitle: "Ask about your recovery, strain, sleep and workouts — grounded in your own numbers.") {
-            if coach.hasKey {
+            if coach.isConfigured {
                 connectedHeader
                 consentBar
                 transcript
@@ -52,16 +52,16 @@ struct CoachView: View {
             }
         }
         .toolbar {
-            if coach.hasKey {
+            if coach.isConfigured {
                 ToolbarItem {
                     Button(role: .destructive) {
-                        coach.clearKey()
+                        coach.disconnect()
                         keyDraft = ""
                     } label: {
-                        Label("Reset key", systemImage: "gearshape")
+                        Label("Disconnect", systemImage: "gearshape")
                     }
                     .help("Forget the saved key and disconnect")
-                    .accessibilityLabel("Reset API key")
+                    .accessibilityLabel("Disconnect provider")
                 }
             }
         }
@@ -126,13 +126,37 @@ struct CoachView: View {
                     .accessibilityLabel("Provider")
                 }
 
+                // Server URL (Custom / local LLM only)
+                if coach.provider == .custom {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Server URL").strandOverline()
+                        TextField("http://localhost:11434/v1", text: $coach.customBaseURL)
+                            .textFieldStyle(.plain)
+                            .font(StrandFont.body)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(StrandPalette.hairline, lineWidth: 1))
+                            .disableAutocorrection(true)
+                            .accessibilityLabel("Server URL")
+                        Text("Any OpenAI-compatible server — Ollama, LM Studio, llama.cpp, or your own gateway. Stays on your network; nothing leaves your Mac.")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
                 // Model
                 modelSelector
 
                 // Key
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("API key").strandOverline()
-                    SecureField("Paste your \(coach.provider.displayName) API key", text: $keyDraft)
+                    Text(coach.provider == .custom ? "API key (optional)" : "API key").strandOverline()
+                    SecureField(coach.provider == .custom
+                                ? "Only if your server requires one"
+                                : "Paste your \(coach.provider.displayName) API key", text: $keyDraft)
                         .textFieldStyle(.plain)
                         .font(StrandFont.body)
                         .foregroundStyle(StrandPalette.textPrimary)
@@ -141,17 +165,26 @@ struct CoachView: View {
                         .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(StrandPalette.hairline, lineWidth: 1))
-                        .onSubmit(saveKey)
+                        .onSubmit { coach.provider == .custom ? connectCustom() : saveKey() }
                         .accessibilityLabel("API key")
                 }
 
                 HStack {
-                    Button(action: saveKey) {
-                        Text("Save key").frame(minWidth: 90)
+                    if coach.provider == .custom {
+                        Button(action: connectCustom) {
+                            Text("Connect").frame(minWidth: 90)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(StrandPalette.accent)
+                        .disabled(coach.customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    } else {
+                        Button(action: saveKey) {
+                            Text("Save key").frame(minWidth: 90)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(StrandPalette.accent)
+                        .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(StrandPalette.accent)
-                    .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     Spacer()
                 }
 
@@ -429,7 +462,9 @@ struct CoachView: View {
 
     private var privacyFootnote: some View {
         Label {
-            Text("This is the only feature that leaves your Mac — it sends a summary of your metrics to \(coach.provider.displayName) using your own key. Nothing is sent until you ask.")
+            Text(coach.provider == .custom
+                 ? "Coach talks only to the server URL you set — point it at a local model (Ollama, LM Studio, llama.cpp) to keep everything on your own machine. Nothing is sent until you ask."
+                 : "This is the only feature that leaves your Mac — it sends a summary of your metrics to \(coach.provider.displayName) using your own key. Nothing is sent until you ask.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -447,6 +482,16 @@ struct CoachView: View {
         guard !trimmed.isEmpty else { return }
         coach.setKey(trimmed)
         keyDraft = ""
+    }
+
+    /// Commit the Custom (local) provider: save an optional key, then connect on the entered URL.
+    private func connectCustom() {
+        let trimmed = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            coach.setKey(trimmed)
+            keyDraft = ""
+        }
+        coach.connectCustom()
     }
 
     private func send(_ text: String) {

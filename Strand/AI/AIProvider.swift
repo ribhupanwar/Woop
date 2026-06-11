@@ -6,6 +6,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
     case openAI
     case anthropic
     case gemini
+    case custom
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return "OpenAI"
         case .anthropic: return "Anthropic"
         case .gemini:    return "Google Gemini"
+        case .custom:    return "Custom (OpenAI-compatible)"
         }
     }
 
@@ -22,6 +24,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return "gpt-4o-mini"
         case .anthropic: return "claude-sonnet-4-6"
         case .gemini:    return "gemini-2.5-flash"
+        case .custom:    return ""   // the user picks the model their server serves
         }
     }
 
@@ -48,6 +51,8 @@ enum AIProvider: String, CaseIterable, Identifiable {
                 "gemini-2.5-flash-lite",
                 "gemini-2.0-flash"
             ]
+        case .custom:
+            return []   // populated from the server's /models (refreshModels) or typed in
         }
     }
 
@@ -56,6 +61,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return URL(string: "https://api.openai.com/v1/chat/completions")!
         case .anthropic: return URL(string: "https://api.anthropic.com/v1/messages")!
         case .gemini:    return URL(string: "https://generativelanguage.googleapis.com/v1beta/models")!
+        case .custom:    return AIProvider.customURL(path: "/chat/completions")
         }
     }
 
@@ -64,6 +70,7 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return URL(string: "https://api.openai.com/v1/models")!
         case .anthropic: return URL(string: "https://api.anthropic.com/v1/models")!
         case .gemini:    return URL(string: "https://generativelanguage.googleapis.com/v1beta/models")!
+        case .custom:    return AIProvider.customURL(path: "/models")
         }
     }
 
@@ -72,7 +79,29 @@ enum AIProvider: String, CaseIterable, Identifiable {
         case .openAI:    return OpenAIClient()
         case .anthropic: return AnthropicClient()
         case .gemini:    return GeminiClient()
+        case .custom:    return CustomClient()
         }
+    }
+
+    // MARK: - Custom (OpenAI-compatible) base URL
+
+    /// UserDefaults key for the Custom provider's base URL (e.g. a local LLM server such as Ollama /
+    /// LM Studio / llama.cpp: `http://localhost:11434/v1`). `AICoachEngine` exposes it for editing.
+    static let customBaseURLKey = "ai.customBaseURL"
+
+    /// The user-set Custom base URL, trimmed.
+    static var customBaseURL: String {
+        (UserDefaults.standard.string(forKey: customBaseURLKey) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Build a Custom endpoint by appending `path` to the user's base URL (trailing slashes tolerated).
+    /// Falls back to a loopback placeholder when unset — the request then fails with a clear network
+    /// error until the user sets a URL.
+    static func customURL(path: String) -> URL {
+        var base = customBaseURL
+        while base.hasSuffix("/") { base.removeLast() }
+        return URL(string: base + path) ?? URL(string: "http://localhost" + path)!
     }
 }
 

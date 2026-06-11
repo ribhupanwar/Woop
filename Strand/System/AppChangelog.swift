@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "1.90"
+    static let currentVersion = "1.91"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,13 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "1.91",
+            title: "Run the AI Coach on your own model — including fully local",
+            date: "June 2026",
+            items: [
+                "New (Mac and Android): the AI Coach can now talk to any OpenAI-compatible server — including a model running locally on your own machine (Ollama, LM Studio, llama.cpp). Pick \"Custom (OpenAI-compatible)\", point it at your server URL (e.g. http://localhost:11434/v1) and choose a model; an API key is optional. With a local model, your coaching conversation and metrics never leave your device. (#131)",
+            ]),
         Release(
             version: "1.90",
             title: "NOOP now tells you when your strap isn't saving history — and how to fix it",

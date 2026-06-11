@@ -17,6 +17,16 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 1.91 — Run the AI Coach on your own model — including fully local
+
+- **New (Mac and Android):** the AI Coach can now talk to any OpenAI-compatible server — including a
+  model running locally on your own machine (Ollama, LM Studio, llama.cpp). Pick "Custom
+  (OpenAI-compatible)", point it at your server URL (e.g. `http://localhost:11434/v1`) and choose a
+  model; an API key is optional. With a local model, your coaching conversation and metrics never
+  leave your device. (#131)
+
+---
+
 ## 1.90 — NOOP now tells you when your strap isn't saving history — and how to fix it
 
 - **Improved (Mac and Android):** when a sync **completes** but your strap handed over only its

@@ -154,6 +154,16 @@ final class AICoachEngine: ObservableObject {
     @Published var dataConsent: Bool {
         didSet { UserDefaults.standard.set(dataConsent, forKey: Self.consentKey) }
     }
+    /// Base URL for the Custom (OpenAI-compatible) provider, e.g. `http://localhost:11434/v1` for a
+    /// local LLM server. Only used when `provider == .custom`. Persisted so it survives relaunch.
+    @Published var customBaseURL: String {
+        didSet { UserDefaults.standard.set(customBaseURL, forKey: AIProvider.customBaseURLKey) }
+    }
+    /// Whether the user has committed the Custom provider (tapped Connect with a base URL). Lets the
+    /// keyless local path reach the chat without a stored key, while avoiding a flip mid-typing.
+    @Published var customConnected: Bool {
+        didSet { UserDefaults.standard.set(customConnected, forKey: Self.customConnectedKey) }
+    }
 
     private let repo: Repository
     private let session: URLSession
@@ -161,6 +171,7 @@ final class AICoachEngine: ObservableObject {
     private static let providerKey = "ai.provider"
     private static let modelKey = "ai.model"
     private static let consentKey = "ai.dataConsent"
+    private static let customConnectedKey = "ai.customConnected"
 
     /// The system prompt that frames every request. Anonymous — frames the assistant only as a coach.
     private let systemPrompt = """
@@ -209,12 +220,51 @@ final class AICoachEngine: ObservableObject {
         self.availableModels = seeded
 
         self.dataConsent = UserDefaults.standard.bool(forKey: Self.consentKey)
+        self.customBaseURL = UserDefaults.standard.string(forKey: AIProvider.customBaseURLKey) ?? ""
+        self.customConnected = UserDefaults.standard.bool(forKey: Self.customConnectedKey)
     }
 
     // MARK: Key management
 
     /// True when a key is present in the Keychain.
     var hasKey: Bool { AIKeyStore.read() != nil }
+
+    /// True once the coach can actually send: a stored key for the cloud providers, or — for the
+    /// Custom (local) provider — a committed base URL (a key is optional there, as local servers
+    /// usually need none). Gates the setup card vs. the live chat.
+    var isConfigured: Bool { provider == .custom ? customConnected : hasKey }
+
+    /// The key to send with a request: the stored key, or an empty string for the keyless Custom
+    /// provider. `nil` means "not configured" — the caller surfaces `.noKey`.
+    private var resolvedKey: String? {
+        if let k = AIKeyStore.read() { return k }
+        return provider == .custom ? "" : nil
+    }
+
+    /// Commit the Custom (local) provider once the user has entered a server URL. Optionally stores a
+    /// key first if they pasted one. Pulls the server's live model list so the picker isn't empty.
+    func connectCustom() {
+        let url = customBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty else { return }
+        errorText = nil
+        customConnected = true
+        // Pull the server's model list; if the user hasn't picked one yet, default to the first.
+        Task {
+            await refreshModels()
+            if model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let first = availableModels.first {
+                model = first
+            }
+        }
+    }
+
+    /// Disconnect entirely: forget any stored key and un-commit the Custom provider. The base URL is
+    /// kept so reconnecting pre-fills it.
+    func disconnect() {
+        AIKeyStore.clear()
+        customConnected = false
+        objectWillChange.send()
+    }
 
     /// Store the user's pasted key securely. Clears any prior error.
     func setKey(_ key: String) {
@@ -247,7 +297,7 @@ final class AICoachEngine: ObservableObject {
     /// returned ids into `availableModels`. Never crashes; failures land in `errorText` and leave
     /// the existing list intact. Requires a saved key.
     func refreshModels() async {
-        guard let key = AIKeyStore.read() else {
+        guard let key = resolvedKey else {
             errorText = AICoachError.noKey.errorDescription
             return
         }
@@ -281,7 +331,7 @@ final class AICoachEngine: ObservableObject {
     func send(_ userText: String) async {
         let trimmed = userText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { errorText = AICoachError.emptyQuestion.errorDescription; return }
-        guard let key = AIKeyStore.read() else { errorText = AICoachError.noKey.errorDescription; return }
+        guard let key = resolvedKey else { errorText = AICoachError.noKey.errorDescription; return }
 
         errorText = nil
         messages.append(ChatMessage(role: .user, text: trimmed))
@@ -309,8 +359,8 @@ final class AICoachEngine: ObservableObject {
     /// Proactively generate "Today's brief" the first time the Coach opens — readiness + a training
     /// prescription + one recovery tip — without the user typing. Requires a key + data consent.
     func startBriefIfNeeded() async {
-        guard hasKey, dataConsent, messages.isEmpty, !sending else { return }
-        guard let key = AIKeyStore.read() else { return }
+        guard isConfigured, dataConsent, messages.isEmpty, !sending else { return }
+        guard let key = resolvedKey else { return }
         errorText = nil
         sending = true
         defer { sending = false }

@@ -11,7 +11,7 @@ options:
   developmentLanguage: en
 settings:
   base:
-    MARKETING_VERSION: "1.90"
+    MARKETING_VERSION: "1.91"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     # Emit localizable strings so Xcode auto-extracts every LocalizedStringKey into the
@@ -53,10 +53,16 @@ targets:
         CFBundleName: NOOP
         CFBundleDisplayName: NOOP
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
-        CFBundleVersion: "57"
+        CFBundleVersion: "58"
         LSMinimumSystemVersion: "13.0"
         LSApplicationCategoryType: public.app-category.healthcare-fitness
         NSBluetoothAlwaysUsageDescription: "NOOP connects directly to your WHOOP strap over Bluetooth to read heart rate, R-R intervals, battery, and sensor data locally on your Mac. Nothing leaves your device."
+        # The AI Coach's "Custom (OpenAI-compatible)" provider talks to a LOCAL LLM server over plain
+        # HTTP on loopback (Ollama / LM Studio / llama.cpp at http://localhost:…). ATS blocks cleartext
+        # by default; NSAllowsLocalNetworking exempts loopback/.local/unqualified hosts ONLY — public
+        # HTTPS endpoints are unaffected. No arbitrary-loads blanket exemption.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
     entitlements:
       path: Strand/Resources/Strand.entitlements
       properties:

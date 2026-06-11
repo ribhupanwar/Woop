@@ -73,4 +73,27 @@ final class AIProviderModelListTests: XCTestCase {
         ]
         XCTAssertEqual(AnthropicClient().parseModels(body), ["claude-sonnet-4-6", "claude-opus-4-8"])
     }
+
+    // MARK: - Custom (OpenAI-compatible / local LLM)
+
+    func testCustomKeepsAllNonEmptyIdsUnfiltered() {
+        // A local server (Ollama / LM Studio) names models freely — none start with gpt/o, so unlike
+        // OpenAI the Custom parser must keep them all (dropping only empties).
+        let body: [String: Any] = [
+            "data": [
+                ["id": "llama3.1:8b"],
+                ["id": "qwen2.5-coder"],
+                ["id": "phi4"],
+                ["id": ""] // empty — drop
+            ]
+        ]
+        XCTAssertEqual(CustomClient().parseModels(body),
+                       ["llama3.1:8b", "qwen2.5-coder", "phi4"])
+    }
+
+    func testCustomWrongEnvelopeKeyYieldsEmpty() {
+        // Custom reads the OpenAI "data" envelope — a Gemini-shaped body parses to nothing.
+        let body: [String: Any] = ["models": [["name": "models/llama3.1"]]]
+        XCTAssertTrue(CustomClient().parseModels(body).isEmpty)
+    }
 }
