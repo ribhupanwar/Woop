@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "1.82"
+    static let currentVersion = "1.83"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,14 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "1.83",
+            title: "Workout calories — for manual sessions and Health Connect imports",
+            date: "June 2026",
+            items: [
+                "Fixed (Mac and Android): a workout you start yourself now estimates its calories from your heart rate — the same model NOOP uses for auto-detected workouts — instead of leaving the field blank. (#117)",
+                "Fixed (Android): workouts imported from Health Connect (e.g. Garmin) now show their calories. NOOP credits each session with the active calories burned inside its time window (a Health Connect exercise record carries no energy of its own, so this stitches them together). (#117)",
+            ]),
         Release(
             version: "1.82",
             title: "Stop losing strap history we can't yet decode — plus a board of fixes",

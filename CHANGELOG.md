@@ -17,6 +17,17 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 1.83 — Workout calories (manual sessions + Health Connect imports)
+
+- **Fixed (Mac and Android):** a workout you **start yourself** now estimates its calories from your
+  heart rate — the same model NOOP uses for auto-detected workouts — instead of leaving the field
+  blank. (#117)
+- **Fixed (Android):** workouts imported from **Health Connect** (e.g. Garmin) now show their
+  calories. NOOP credits each session with the active calories burned inside its time window (a
+  Health Connect exercise record carries no energy of its own, so this stitches them together). (#117)
+
+---
+
 ## 1.82 — Stop losing strap history we can't yet decode + a board of fixes
 
 - **Fixed (Mac and Android):** NOOP no longer **destroys strap history it can't yet decode**. If a

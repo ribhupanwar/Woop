@@ -148,6 +148,10 @@ object HealthConnectImporter {
         fun bucket(day: String): DayAcc = acc.getOrPut(day) { DayAcc() }
 
         val workouts = ArrayList<WorkoutRow>()
+        // (startEpochS, endEpochS, kcal) of every active-calorie record, so an imported exercise
+        // session can be credited with the calories burned inside its window (#117). Garmin/Fit write
+        // ActiveCaloriesBurned as interval records; ExerciseSessionRecord itself carries no energy.
+        val activeKcalRecords = ArrayList<Triple<Long, Long, Double>>()
 
         try {
             // --- Steps ---
@@ -161,6 +165,7 @@ object HealthConnectImporter {
             // --- Active calories burned ---
             readAll(client, ActiveCaloriesBurnedRecord::class, filter) { r ->
                 bucket(dayOf(r.startTime)).activeKcal += r.energy.inKilocalories
+                activeKcalRecords.add(Triple(r.startTime.epochSecond, r.endTime.epochSecond, r.energy.inKilocalories))
             }
             // --- Heart rate (instantaneous samples) -> per-day average ---
             readAll(client, HeartRateRecord::class, filter) { r ->
@@ -233,7 +238,7 @@ object HealthConnectImporter {
                         sport = exerciseName(r),
                         source = HC_WORKOUT_SOURCE,
                         durationS = (endS - startS).toDouble().coerceAtLeast(0.0),
-                        energyKcal = null,
+                        energyKcal = sumActiveKcalInWindow(activeKcalRecords, startS, endS),
                         avgHr = null,
                         maxHr = null,
                         strain = null,
@@ -477,6 +482,30 @@ object HealthConnectImporter {
         if (a.totalKcal <= 0.0) return null
         val basal = a.totalKcal - a.activeKcal
         return if (basal > 0.0) round1(basal) else null
+    }
+
+    /**
+     * Active-calorie kcal attributable to an exercise session: for every active-calorie record that
+     * overlaps [startS, endS], credit the kcal in proportion to the overlap fraction. Time-weighting
+     * (not a flat overlap test) means a per-minute record fully inside the session counts in full,
+     * while a day-spanning total record only contributes the session's slice — so neither under- nor
+     * grossly over-credits. Returns null when nothing overlaps, so an energy-less session stays blank
+     * rather than showing 0. (#117)
+     */
+    internal fun sumActiveKcalInWindow(
+        records: List<Triple<Long, Long, Double>>,
+        startS: Long,
+        endS: Long,
+    ): Double? {
+        if (endS <= startS) return null
+        var total = 0.0
+        for ((rStart, rEnd, kcal) in records) {
+            val overlap = minOf(endS, rEnd) - maxOf(startS, rStart)
+            if (overlap <= 0L) continue
+            val recLen = (rEnd - rStart).coerceAtLeast(1L)
+            total += kcal * (overlap.toDouble() / recLen.toDouble())
+        }
+        return total.takeIf { it > 0.0 }
     }
 
     /**
