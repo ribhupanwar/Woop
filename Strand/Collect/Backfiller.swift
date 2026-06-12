@@ -66,6 +66,18 @@ final class Backfiller {
     /// Versions already reported this session, so the diagnostic logs each once (no spam).
     private var loggedUnmappedVersions: Set<Int> = []
 
+    /// Per-session persistence tally — the success-side observability the log forensics flagged as the
+    /// blind spot (#150): we logged FAILURES (decoded-to-0) but never SUCCESSES, so a strap log couldn't
+    /// tell a banking strap from a broken one. Reset at begin(); read by BLEManager at session end to emit
+    /// "persisted N rows (M with motion) across K night(s)". Nights are day-keys (ts / 86400).
+    private(set) var sessionRowsPersisted = 0
+    private(set) var sessionMotionRows = 0
+    private var sessionNightKeys: Set<Int> = []
+    var sessionNights: Int { sessionNightKeys.count }
+    /// Logged once per session when the strap reports trim=0xFFFFFFFF — the "no valid flash cursor"
+    /// sentinel: it has no banked history to offload (a clock/charge state, not a decode bug).
+    private var loggedNoCursor = false
+
     /// Durably archives undecodable record frames BEFORE the trim ack (#77 / #91). Returns true once
     /// the bytes are safe (written OR cap-reached — either way the chunk may be acked) and false on a
     /// genuine write failure, in which case `finishChunk` holds the cursor/ack so the strap re-sends.
@@ -102,6 +114,10 @@ final class Backfiller {
         isBackfilling = true
         chunk.removeAll(keepingCapacity: true)
         chunkOpen = true
+        sessionRowsPersisted = 0
+        sessionMotionRows = 0
+        sessionNightKeys.removeAll(keepingCapacity: true)
+        loggedNoCursor = false
     }
 
     /// Feed one raw BLE frame into the state machine. May trigger async store operations.
@@ -136,6 +152,26 @@ final class Backfiller {
         return Array(frame[start..<(start + 8)])
     }
 
+    /// Pure per-chunk persistence tally (#150). `rows` = biometric rows actually inserted (HR, R-R, SpO2,
+    /// skin-temp, resp, gravity — battery/events are housekeeping, not biometric history). `motion` =
+    /// gravity rows (the sleep-critical signal). `nights` = the distinct day-keys (ts / 86400) the chunk's
+    /// records covered. Summed across a session by finishChunk to drive the success summary line.
+    nonisolated static func chunkTally(
+        counts: (hr: Int, rr: Int, events: Int, battery: Int, spo2: Int, skinTemp: Int, resp: Int, gravity: Int),
+        timestamps: [Int]
+    ) -> (rows: Int, motion: Int, nights: Set<Int>) {
+        let rows = counts.hr + counts.rr + counts.spo2 + counts.skinTemp + counts.resp + counts.gravity
+        return (rows, counts.gravity, Set(timestamps.map { $0 / 86400 }))
+    }
+
+    /// The one-line session success summary (#150) — the success-side log that never existed. Returns nil
+    /// when nothing persisted (so a console-only / caught-up session stays quiet and the existing
+    /// empty-banking diagnostics speak instead).
+    nonisolated static func sessionSummaryLine(rows: Int, motion: Int, nights: Int) -> String? {
+        guard rows > 0 else { return nil }
+        return "Backfill: session persisted \(rows) rows (\(motion) with motion) across \(nights) night(s)."
+    }
+
     /// Commit one HISTORY_END chunk: (persist decoded → enqueueRaw when present) → setCursor → ackTrim.
     /// Early-returns on any throw to preserve the safe-trim invariant.
     ///
@@ -147,6 +183,14 @@ final class Backfiller {
     /// `endFrame` carries the 8-byte `end_data` the ack requires.
     private func finishChunk(unix: UInt32, trim: UInt32, endFrame: [UInt8]) async {
         guard let endData = Backfiller.endData(from: endFrame, family: family) else { return }
+
+        // #150 forensics: trim=0xFFFFFFFF is the strap's "no valid flash cursor" sentinel — it has no
+        // banked history to hand over. Surface it once so a log reads as a clock/charge state on the
+        // strap, not a NOOP decode bug (retro-decode can't help here). The ack still proceeds below.
+        if trim == 0xFFFFFFFF, !loggedNoCursor {
+            loggedNoCursor = true
+            log?("Backfill: strap reported no flash cursor (trim=0xFFFFFFFF) — it has no banked history to offload. This is a clock/charge state on the strap, not a decode problem; fully charge it and reconnect so it starts banking.")
+        }
 
         let frames = chunk
         chunk.removeAll(keepingCapacity: true)   // next records accumulate into the next chunk
@@ -208,7 +252,14 @@ final class Backfiller {
             // Commit the decoded rows FIRST (durable). Doing this before the reject archive means a
             // rare insert failure — which returns and re-sends the whole chunk next session — can't
             // leave duplicate lines in the append-only reject archive.
-            do { try await store.insert(decoded, deviceId: deviceId) } catch { return }
+            let counts: (hr: Int, rr: Int, events: Int, battery: Int, spo2: Int, skinTemp: Int, resp: Int, gravity: Int)
+            do { counts = try await store.insert(decoded, deviceId: deviceId) } catch { return }
+            // Success-side observability (#150): tally what actually persisted so the session can emit
+            // "persisted N rows (M with motion) across K night(s)" — the win-rate signal a log never had.
+            let tally = Backfiller.chunkTally(counts: counts, timestamps: decoded.gravity.map(\.ts) + decoded.hr.map(\.ts))
+            sessionRowsPersisted += tally.rows
+            sessionMotionRows += tally.motion
+            sessionNightKeys.formUnion(tally.nights)
 
             // #77 / #91: any genuinely-undecodable type-47 record in this chunk must be ARCHIVED
             // before we ack — the ack frees the strap's copy, so the archive is the only remaining

@@ -2179,6 +2179,13 @@ class WhoopBleClient(
         backfillFrameQueue.clear()
         closeWhoop5BackfillCapture(flushSummary = true)
         log("Backfill: session ended — reason=$reason")
+        // Success-side summary (#150 forensics): we logged failures (decoded-to-0) but never successes,
+        // so a strap log couldn't tell a banking strap from a broken one. Emit the per-session persistence
+        // tally whenever anything actually landed — the win-rate signal a log previously lacked. Mirrors
+        // the Swift exitBackfilling.
+        Backfiller.sessionSummaryLine(
+            backfiller.sessionRowsPersisted, backfiller.sessionMotionRows, backfiller.sessionNights,
+        )?.let { log(it) }
     }
 
     /**

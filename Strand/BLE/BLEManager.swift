@@ -698,6 +698,13 @@ public final class BLEManager: NSObject, ObservableObject {
         backfillTimeout = nil
         backfillFrameQueue.removeAll()
         log("Backfill: session ended — reason=\(reason)")
+        // Success-side summary (#150 forensics): we logged failures (decoded-to-0) but never successes,
+        // so a strap log couldn't tell a banking strap from a broken one. Emit the per-session persistence
+        // tally whenever anything actually landed — the win-rate signal a log previously lacked.
+        if let bf = backfiller,
+           let summary = Backfiller.sessionSummaryLine(rows: bf.sessionRowsPersisted, motion: bf.sessionMotionRows, nights: bf.sessionNights) {
+            log(summary)
+        }
         // Honest sync outcome for a cloud-free user (mirrors Android exitBackfilling, ed6a31d):
         // HISTORY_COMPLETE stamps lastSyncedAt + clears any error; the idle-watchdog timeout surfaces
         // a non-silent error. A disconnect mid-sync bypasses this path (didDisconnectPeripheral resets

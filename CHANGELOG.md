@@ -17,6 +17,20 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.0 — Clearer answers when your strap isn't banking history
+
+- **Improved (Mac, iOS and Android):** your strap log now records what a sync **saved**, not only what
+  failed — a `persisted N rows (M with motion) across K night(s)` line on every successful offload.
+  NOOP previously logged only failures, so a shared log couldn't actually show whether history was
+  banking; now it can. (#150)
+- **Improved (Mac, iOS and Android):** when the strap reports it has no stored history to hand over (its
+  "no flash cursor" state, `trim=0xFFFFFFFF`), NOOP now names the real cause plainly — the strap's clock
+  has lost sync and it isn't saving to flash, a **charge/clock state on the strap, not a NOOP decode
+  bug**. The Troubleshooting and FAQ guides now lead with this — the most common reason recovery and
+  sleep don't appear — with the fix: fully charge to 100% and reconnect. (#150)
+
+---
+
 ## 1.99 — Your imported steps now show on the Today screen (Android)
 
 - **New (Android):** the Today screen's **Steps** tile now shows the steps from your Apple Health /
