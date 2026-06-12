@@ -219,16 +219,19 @@ struct TodayView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
+                // Both hero cards stretch to the taller one's height so their bottoms line up — the
+                // text read-out card was shorter than the ring card, leaving them visually mismatched
+                // in Today's Synthesis (#186).
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
 
-                // Right: the plain-English read-out, equal width.
+                // Right: the plain-English read-out, equal width and height.
                 InsightCard(
                     category: "Charge",
                     status: calibrationStatus ?? "\(synthesisWord(score))",
                     detail: calibrationDetail ?? "\(synthesisDetail(d))",
                     statusColor: score.map { StrandPalette.recoveryColor($0) } ?? StrandPalette.textTertiary
                 )
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
         }
     }

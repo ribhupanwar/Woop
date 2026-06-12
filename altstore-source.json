@@ -18,6 +18,15 @@
       "screenshotURLs": [],
       "versions": [
         {
+          "version": "2.6.9",
+          "buildVersion": "40",
+          "date": "2026-06-12",
+          "localizedDescription": "What's New screen fits iPhone; Today's Synthesis cards align.",
+          "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.6.9/NOOP-v2.6.9-ios.ipa",
+          "size": 5570768,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "2.6.8",
           "buildVersion": "39",
           "date": "2026-06-12",
@@ -82,12 +91,12 @@
           "NSHealthUpdateUsageDescription": "NOOP writes the metrics it computes from your strap back into Apple Health, on-device and only when you allow it."
         }
       },
-      "version": "2.6.8",
-      "buildVersion": "39",
+      "version": "2.6.9",
+      "buildVersion": "40",
       "versionDate": "2026-06-12",
-      "versionDescription": "iPhone import now handles iCloud + large export files.",
-      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.6.8/NOOP-v2.6.8-ios.ipa",
-      "size": 5570192,
+      "versionDescription": "What's New screen fits iPhone; Today's Synthesis cards align.",
+      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.6.9/NOOP-v2.6.9-ios.ipa",
+      "size": 5570768,
       "minOSVersion": "17.0"
     }
   ],

@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "2.6.8"
+    const val CURRENT_VERSION = "2.6.9"
 
     data class Release(
         val version: String,
@@ -36,6 +36,15 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.6.9",
+            title = "iPhone polish: What's New fits, Today cards align",
+            date = "June 2026",
+            items = listOf(
+                "Fixed (iPhone): the What's New screen shown after an update was sized for a desktop window, so it ran off the edges of the phone — you couldn't read the notes or reach the Got it button. It now fits the screen. Thanks @sebastianwoo (#185).",
+                "Fixed (iPhone): in Today's Synthesis, the Charge read-out card is now the same height as the ring card beside it, so the two line up instead of leaving a gap. Thanks @sebastianwoo (#186).",
+            ),
+        ),
         Release(
             version = "2.6.8",
             title = "iPhone import: handle iCloud and large export files",

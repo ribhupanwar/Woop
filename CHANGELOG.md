@@ -17,6 +17,14 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.6.9 — iPhone polish: What's New fits, Today cards align
+
+- **Fixed (iPhone):** the **What's New** screen shown after an update was sized for a desktop window
+  (560pt wide), so it ran off the edges of the phone — you couldn't read the notes or reach **Got it**.
+  It now fits the screen. Thanks @sebastianwoo. (#185)
+- **Fixed (iPhone):** in **Today's Synthesis**, the Charge read-out card is now the same height as the
+  ring card beside it, so the two line up instead of leaving a gap. Thanks @sebastianwoo. (#186)
+
 ## 2.6.8 — iPhone import: handle iCloud and large export files
 
 - **Fixed (iPhone):** importing a WHOOP or Apple Health export could still fail right after you picked
