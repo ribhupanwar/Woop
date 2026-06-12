@@ -493,11 +493,15 @@ struct SettingsView: View {
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 12) {
+                    // Three labelled buttons must share a narrow iPhone row without wrapping mid-word
+                    // (the labels otherwise broke to one character per line). Equal width + shrink-to-fit
+                    // keeps each on a single line; the icon stays. (#175)
                     Button {
                         runExport()
                     } label: {
                         Label("Export…", systemImage: "square.and.arrow.up")
-                            .padding(.horizontal, 6)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity).padding(.horizontal, 6)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(StrandPalette.accent)
@@ -507,7 +511,8 @@ struct SettingsView: View {
                         runImport()
                     } label: {
                         Label("Import…", systemImage: "square.and.arrow.down")
-                            .padding(.horizontal, 6)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity).padding(.horizontal, 6)
                     }
                     .buttonStyle(.bordered)
                     .tint(StrandPalette.accent)
@@ -517,7 +522,8 @@ struct SettingsView: View {
                         runCsvExport()
                     } label: {
                         Label("Export CSV…", systemImage: "tablecells")
-                            .padding(.horizontal, 6)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity).padding(.horizontal, 6)
                     }
                     .buttonStyle(.bordered)
                     .tint(StrandPalette.accent)

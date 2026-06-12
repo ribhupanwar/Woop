@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "2.6.1"
+    static let currentVersion = "2.6.2"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,13 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "2.6.2",
+            title: "iPhone button-label polish",
+            date: "June 2026",
+            items: [
+                "Fixed (iPhone): action buttons that were wrapping mid-word on a narrow screen — the Live screen's Re-scan / Buzz strap / Disconnect row and the Backup Export / Import / Export CSV row now keep each label on one line, shrinking to fit instead of breaking to one character per line. Thanks @marceauboul (#175).",
+            ]),
         Release(
             version: "2.6.1",
             title: "Effort scale fix for imported data",

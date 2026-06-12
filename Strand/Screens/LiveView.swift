@@ -333,16 +333,21 @@ struct LiveView: View {
     // MARK: - Controls
 
     private var controls: some View {
+        // Three buttons share the row's width equally, so on a narrow iPhone each label must shrink to
+        // fit rather than wrap mid-word ("Dis-/con-/nect"). lineLimit(1)+minimumScaleFactor keeps them
+        // on one line; the icon stays. (#175)
         HStack(spacing: 12) {
             Button { model.scan(model: selectedModel) } label: {
                 Label(live.connected ? "Re-scan" : "Scan & Connect",
                       systemImage: "antenna.radiowaves.left.and.right")
+                    .lineLimit(1).minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity).padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent).tint(StrandPalette.accent)
 
             Button { model.buzz() } label: {
                 Label("Buzz strap", systemImage: "waveform.path")
+                    .lineLimit(1).minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity).padding(.vertical, 8)
             }
             .buttonStyle(.bordered).tint(StrandPalette.accent)
@@ -351,6 +356,7 @@ struct LiveView: View {
 
             Button(role: .destructive) { model.disconnect() } label: {
                 Label("Disconnect", systemImage: "xmark.circle")
+                    .lineLimit(1).minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity).padding(.vertical, 8)
             }
             .buttonStyle(.bordered)

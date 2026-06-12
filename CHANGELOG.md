@@ -17,6 +17,12 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.6.2 — iPhone button-label polish
+
+- **Fixed (iPhone):** action buttons that wrapped mid-word on a narrow screen — the **Live** screen's
+  Re-scan / Buzz strap / Disconnect row and the **Backup** Export / Import / Export CSV row now keep each
+  label on one line (shrinking to fit instead of breaking to one character per line). Thanks @marceauboul. (#175)
+
 ## 2.6.1 — Effort scale fix for imported data
 
 - **Fixed:** imported WHOOP **Day Strain** and **workout strain** now correctly land on NOOP's 0–100
