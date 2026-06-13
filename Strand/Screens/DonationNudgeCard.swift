@@ -68,7 +68,7 @@ struct DonationNudgeCard: View {
                     Text("\(DonationStats.downloads.formatted())+ downloads so far — \(DonationStats.donors) donors.")
                         .font(StrandFont.footnote.weight(.semibold))
                         .foregroundStyle(StrandPalette.textPrimary)
-                    Text("If it's saving you a subscription, one month of it — $30, $100, anything — genuinely keeps the project alive. Crypto only; the project stays anonymous.")
+                    Text("If it's saving you a subscription, a suggested $50+ — a fraction of a year of WHOOP — genuinely keeps the project alive. Anything is appreciated. Crypto only; the project stays anonymous.")
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

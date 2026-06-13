@@ -53,11 +53,11 @@ or your access depends on them.
 
 ## New to crypto? Here's the 2-minute version
 
-You don't need to "be into crypto" to send a few dollars:
+You don't need to "be into crypto" to chip in:
 
 1. **Install a mainstream exchange app** — Coinbase, Binance, Kraken, or **Cash App**
    (Cash App buys/sends Bitcoin directly, no extra app).
-2. **Buy a small amount of Bitcoin (BTC) or Ethereum (ETH)** — even $5–10 helps.
+2. **Buy some Bitcoin (BTC) or Ethereum (ETH)** — a suggested **$50+** (a fraction of a year's WHOOP subscription); anything is appreciated, but $50+ is what keeps the project going.
    You can usually pay with a debit card or bank transfer.
 3. **Tap Send / Withdraw**, paste the matching address below, and confirm.
 

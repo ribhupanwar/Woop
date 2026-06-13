@@ -102,8 +102,8 @@ fun DonationNudgeCard() {
                 style = NoopType.footnote, color = Palette.textPrimary,
             )
             Text(
-                "If it's saving you a subscription, one month of it — $30, $100, anything — " +
-                    "genuinely keeps the project alive. Crypto only; the project stays anonymous.",
+                "If it's saving you a subscription, a suggested \$50+ — a fraction of a year of WHOOP — " +
+                    "genuinely keeps the project alive. Anything is appreciated. Crypto only; the project stays anonymous.",
                 style = NoopType.footnote, color = Palette.textSecondary,
             )
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
