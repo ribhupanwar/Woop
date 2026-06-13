@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "2.9.0"
+    const val CURRENT_VERSION = "2.10.0"
 
     data class Release(
         val version: String,
@@ -36,6 +36,18 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.10.0",
+            title = "Sleep-debt, daytime stress, a recovery forecast, and day-by-day navigation",
+            date = "June 2026",
+            items = listOf(
+                "New: a **sleep-debt ledger** on the Sleep screen — a running 14-night balance of sleep banked versus your personal need, with a plain-English read and a per-night chart.",
+                "New: a **daytime stress timeline** on the Stress screen, built from the day's heart rate and R-R — with a gentle nudge toward a Breathe session when it stays elevated.",
+                "New: a **recovery forecast** on the Intelligence screen — an evening estimate of tomorrow morning's Charge from today's effort, planned sleep and your recent baseline. Clearly an estimate, shown once there's enough history.",
+                "New: **navigate Today day by day** — chevrons and a date-picker jump replace the fixed 3-day selector.",
+                "New: a live **strap-battery %** and **recorded-nights streak** on the Today header.",
+            ),
+        ),
         Release(
             version = "2.9.0",
             title = "Background GPS, sleep-time editing, log-ahead, and a sharper Rest tile",

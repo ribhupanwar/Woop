@@ -17,6 +17,26 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.10.0 — Sleep-debt, daytime stress, a recovery forecast, and day-by-day navigation
+
+- **New:** a **sleep-debt ledger** on the Sleep screen — a running 14-night balance of how much sleep
+  you've banked versus your personal need, with a plain-English read and a per-night chart. (#242)
+- **New:** a **daytime stress timeline** on the Stress screen, built from the day's heart rate and R-R,
+  with a gentle nudge toward a Breathe session when it stays elevated. (#239)
+- **New:** a **recovery forecast** on the Intelligence screen — an evening estimate of tomorrow
+  morning's Charge from today's effort, your planned sleep and your recent baseline. Clearly labelled an
+  estimate, with an error band, shown once there's enough history. (#240)
+- **New:** **navigate Today day by day** — chevrons + a date-picker jump replace the fixed 3-day
+  selector, on every platform. Thanks @ujix. (#255)
+- **New (Android):** a live **strap-battery %** and **recorded-nights streak** on the Today header.
+  Thanks @ujix. (#256)
+- **Improved (iPhone/Mac):** the Live tab is noticeably **smoother** — the rapid strap stream no longer
+  re-renders the whole screen on every frame. Thanks @nick318. (#271)
+- **Fixed (iPhone):** tidied the Today Synthesis card alignment and the manual-workout field widths.
+  Thanks @RichrdJ. (#234)
+
+---
+
 ## 2.9.0 — Background GPS, sleep-time editing, log-ahead, and a sharper Rest tile
 
 - **Fixed (Android):** GPS workouts now keep tracking with the screen off. Distance was badly

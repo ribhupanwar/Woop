@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "2.9.0"
+    static let currentVersion = "2.10.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,19 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "2.10.0",
+            title: "Sleep-debt, daytime stress, a recovery forecast, and day-by-day navigation",
+            date: "June 2026",
+            items: [
+                "New: a **sleep-debt ledger** on the Sleep screen — a running 14-night balance of how much sleep you've banked versus your personal need, with a plain-English read and a per-night chart.",
+                "New: a **daytime stress timeline** on the Stress screen, built from the day's heart rate and R-R — with a gentle nudge toward a Breathe session when it stays elevated.",
+                "New: a **recovery forecast** on the Intelligence screen — an evening estimate of tomorrow morning's Charge from today's effort, your planned sleep and your recent baseline. Clearly an estimate, with an error band, shown once there's enough history.",
+                "New: **navigate Today day by day** — chevrons and a date-picker jump replace the fixed 3-day selector, on every platform.",
+                "New (Android): a live **strap-battery %** and **recorded-nights streak** on the Today header.",
+                "Improved (iPhone/Mac): the Live tab is noticeably **smoother** — the rapid strap stream no longer re-renders the whole screen on every frame.",
+                "Fixed (iPhone): tidied the Today Synthesis card alignment and the manual-workout field widths.",
+            ]),
         Release(
             version: "2.9.0",
             title: "Background GPS, sleep-time editing, log-ahead, and a sharper Rest tile",
