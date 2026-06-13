@@ -78,6 +78,12 @@ final class Backfiller {
     /// sentinel: it has no banked history to offload (a clock/charge state, not a decode bug).
     private var loggedNoCursor = false
 
+    /// Distinct historical layout versions logged this session. Unlike `loggedUnmappedVersions` (which
+    /// only fires for layouts NOOP can't decode), this surfaces the layout on a HEALTHY sync too, so a
+    /// shared strap log always reveals what the strap emits (v18/v24/v25/v26). Mirrors the Android
+    /// Backfiller (PR #241, ryanbr); reset per session in `begin`.
+    private var loggedLayoutVersions: Set<Int> = []
+
     /// Durably archives undecodable record frames BEFORE the trim ack (#77 / #91). Returns true once
     /// the bytes are safe (written OR cap-reached — either way the chunk may be acked) and false on a
     /// genuine write failure, in which case `finishChunk` holds the cursor/ack so the strap re-sends.
@@ -118,6 +124,7 @@ final class Backfiller {
         sessionMotionRows = 0
         sessionNightKeys.removeAll(keepingCapacity: true)
         loggedNoCursor = false
+        loggedLayoutVersions.removeAll(keepingCapacity: true)
     }
 
     /// Feed one raw BLE frame into the state machine. May trigger async store operations.
@@ -204,6 +211,13 @@ final class Backfiller {
             // truly required to map REALTIME (type-40/43) device-epoch timestamps, never in a hist chunk.
             let ref = clockRef ?? { let now = Int(Date().timeIntervalSince1970); return ClockRef(device: now, wall: now) }()
             let parsed = frames.map { parseFrame($0, family: family) }
+            // Observability (PR #241): log which layout this strap emits on a HEALTHY sync too — the
+            // unmapped-version path below only fires for layouts NOOP can't decode, so a normal log
+            // never revealed v18/v24/v25/v26. Once per distinct layout this session.
+            if let v = parsed.lazy.compactMap({ $0.parsed["hist_version"]?.intValue }).first,
+               loggedLayoutVersions.insert(v).inserted {
+                log?("Backfill: historical records use layout v\(v)")
+            }
             // Diagnostic (#30): a historical record whose firmware version we don't have a field map for
             // bails out of decode entirely — no HR, no R-R, no GRAVITY — so sleep (which is gravity/
             // motion-driven) can never be computed from it, even though the offload "completes". Surface

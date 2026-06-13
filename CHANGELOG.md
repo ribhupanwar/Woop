@@ -17,6 +17,14 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.8.8 — Better strap-log diagnostics
+
+- **Improved:** shared strap logs now record which historical data layout your strap uses (v18/v24/v25/v26)
+  and the Bluetooth signal strength at connect — invisible day-to-day, but it makes diagnosing a sync issue
+  from a shared log much faster. Thanks @ryanbr. (#241)
+
+---
+
 ## 2.8.7 — Readiness shows its evidence, and a Health Connect distance fix
 
 - **New:** each Readiness signal now shows the numbers behind it — e.g. *HRV 72 vs 60 ms*, *Resting HR 46

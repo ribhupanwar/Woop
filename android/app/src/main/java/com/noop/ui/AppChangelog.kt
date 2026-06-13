@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "2.8.7"
+    const val CURRENT_VERSION = "2.8.8"
 
     data class Release(
         val version: String,
@@ -36,6 +36,14 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.8.8",
+            title = "Better strap-log diagnostics",
+            date = "June 2026",
+            items = listOf(
+                "Improved: shared strap logs now record which historical data layout your strap uses, and the Bluetooth signal strength at connect — invisible day-to-day, but it makes diagnosing a sync issue from a shared log much faster. Thanks @ryanbr. (#241)",
+            ),
+        ),
         Release(
             version = "2.8.7",
             title = "Readiness shows its evidence, and a Health Connect distance fix",
