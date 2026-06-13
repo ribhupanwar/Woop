@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -27,6 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.analytics.Sport
@@ -47,6 +53,7 @@ fun StartWorkoutSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     var selected by remember { mutableStateOf<Sport>(WorkoutSport.default) }
     var gpsOn by remember(selected) { mutableStateOf(selected.isDistanceSport) }
     val filtered = WorkoutSport.all.filter { it.name.contains(query, ignoreCase = true) }
+    val sportScroll = rememberScrollState()
     val startWithGps = rememberRequestLocation { granted ->
         vm.startWorkout(selected, gpsEnabled = gpsOn && granted)
         onDismiss()
@@ -61,7 +68,11 @@ fun StartWorkoutSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                     label = { Text("Search sport") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Column(modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) {
+                Column(
+                    modifier = Modifier.heightIn(max = 240.dp)
+                        .simpleVerticalScrollbar(sportScroll)
+                        .verticalScroll(sportScroll),
+                ) {
                     filtered.forEach { sp ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -160,3 +171,26 @@ fun WorkoutStartSection(vm: AppViewModel) {
         StartWorkoutSheet(vm = vm, onDismiss = { showSportPicker = false })
     }
 }
+
+/**
+ * A thin scroll indicator drawn on the right edge of a vertically-scrolling container, so a capped
+ * list — like the ~80-sport picker (#265) — visibly reads as scrollable rather than complete.
+ * Only paints when there is overflow.
+ */
+private fun Modifier.simpleVerticalScrollbar(state: ScrollState, width: Dp = 3.dp): Modifier =
+    drawWithContent {
+        drawContent()
+        if (state.maxValue > 0) {
+            val viewport = size.height
+            val contentH = viewport + state.maxValue
+            val thumbH = (viewport / contentH) * viewport
+            val thumbY = (state.value.toFloat() / state.maxValue) * (viewport - thumbH)
+            val w = width.toPx()
+            drawRoundRect(
+                color = Palette.textTertiary.copy(alpha = 0.5f),
+                topLeft = Offset(size.width - w, thumbY),
+                size = Size(w, thumbH),
+                cornerRadius = CornerRadius(w / 2, w / 2),
+            )
+        }
+    }
