@@ -4,13 +4,14 @@ import Charts
 // MARK: - Overview HR Chart (§ Today — day-in-review)
 //
 // The Today screen's 24h heart-rate line, annotated like WHOOP's "Overview HR":
-// the rose HR curve overlaid with a sleep band, a recovery marker at wake, a
+// the warm HR curve overlaid with a sleep band, a recovery marker at wake, a
 // strain marker at "now", and a sport glyph at each workout's HR peak. The line +
 // hover affordance mirror `TrendChart`; this view adds the marker layers and pins
 // the x-axis to the HR window so markers never stretch the timeline.
 //
-// Colours stay in NOOP's language (rose line, green recovery, warm strain, indigo
-// sleep) rather than copying WHOOP's blue. Tokens only — never hardcode hex.
+// Colours stay in NOOP's Titanium & Gold language (burnt-orange HR line, gold
+// recovery, amber strain, blue sleep) rather than copying WHOOP's blue. Tokens
+// only — never hardcode hex.
 
 public struct OverviewHRChart: View {
 
@@ -183,7 +184,7 @@ public struct OverviewHRChart: View {
         }
 
         // Wake divider — the sleep→day boundary. Always shown with a sleep band so the band reads
-        // even before recovery calibrates (when the green recovery rule is absent).
+        // even before recovery calibrates (when the gold recovery rule is absent).
         if let sleep, sleep.end > xDomain.lowerBound, sleep.end < xDomain.upperBound {
             RuleMark(x: .value("Wake", clampX(sleep.end)))
                 .foregroundStyle(StrandPalette.sleepLight.opacity(0.5))

@@ -65,18 +65,19 @@ import kotlin.math.sin
 // Every screen composes ONLY these. Fixed dimensions + one spacing scale guarantee
 // the uniform, instrument-grade look from the reference.
 
-// MARK: - Frosted card surface (Bevel) + NoopCard
+// MARK: - Frosted card surface (Titanium & Gold) + NoopCard
 //
-// The Bevel card surface: a dark blue-black fill (cardFillTop → cardFillBottom),
-// rounded corners, a subtle DIAGONAL accent-gradient wash, a hairline rgba(255,255,
-// 255,0.06) border and a soft shadow. `Modifier.frostedCardSurface(tint = …)` is the
-// one place the look lives so NoopCard / ad-hoc surfaces all share it. Pass a domain
-// tint (or null for the neutral brand-green wash).
+// The card surface: a deep-navy fill (cardFillTop → cardFillBottom), rounded corners, a
+// very faint DIAGONAL accent-gradient wash and a flat 1px hairline border — NO shadow
+// (Titanium & Gold cards sit flat on the navy field; depth comes from the hairline + fill,
+// not a drop shadow). `Modifier.frostedCardSurface(tint = …)` is the one place the look
+// lives so NoopCard / ad-hoc surfaces all share it. Pass a domain tint (or null for the
+// neutral gold wash).
 
 /**
- * Paint the Bevel frosted-card surface (fill + diagonal accent wash + hairline border)
- * behind the content. [tint] colours the wash + border bias; null uses a near-neutral
- * brand-green wash. Drawn with `drawBehind` so the animation/recomposition of the card's
+ * Paint the frosted-card surface (navy fill + faint diagonal accent wash + flat hairline
+ * border, no shadow) behind the content. [tint] colours the wash + border bias; null uses a
+ * near-neutral gold wash. Drawn with `drawBehind` so the animation/recomposition of the card's
  * content never reaches this surface subtree. Mirrors StrandDesign's FrostedCardSurface.
  */
 fun Modifier.frostedCardSurface(
@@ -96,12 +97,12 @@ fun Modifier.frostedCardSurface(
         ),
         cornerRadius = corner,
     )
-    // 2) Subtle diagonal accent wash over the dark fill (top-leading → bottom-trailing).
+    // 2) Faint diagonal accent hue wash over the navy fill (top-leading → bottom-trailing).
     drawRoundRect(
         brush = Brush.linearGradient(
             colorStops = arrayOf(
-                0.0f to wash.copy(alpha = 0.10f * washStrength),
-                0.5f to wash.copy(alpha = 0.03f * washStrength),
+                0.0f to wash.copy(alpha = 0.08f * washStrength),
+                0.5f to wash.copy(alpha = 0.02f * washStrength),
                 1.0f to Color.Transparent,
             ),
             start = Offset(0f, 0f),
@@ -109,13 +110,13 @@ fun Modifier.frostedCardSurface(
         ),
         cornerRadius = corner,
     )
-    // 3) Hairline border with a faint diagonal sheen + accent bias.
+    // 3) Flat 1px hairline border (no shadow) with a faint top sheen + accent bias.
     drawRoundRect(
         brush = Brush.linearGradient(
             colorStops = arrayOf(
-                0.0f to Color.White.copy(alpha = 0.08f),
-                0.5f to Palette.hairline.copy(alpha = 0.9f),
-                1.0f to wash.copy(alpha = 0.10f),
+                0.0f to Palette.hairlineStrong.copy(alpha = 0.55f),
+                0.5f to Palette.hairline,
+                1.0f to wash.copy(alpha = 0.14f),
             ),
             start = Offset(0f, 0f),
             end = Offset(size.width, size.height),
@@ -125,11 +126,11 @@ fun Modifier.frostedCardSurface(
     )
 }
 
-// MARK: - NoopCard — the one card surface (Bevel frosted card, 16dp radius)
+// MARK: - NoopCard — the one card surface (Titanium & Gold frosted card, 16dp radius)
 //
 // PUBLIC API is unchanged (modifier, padding, content); an optional [tint] was ADDED
 // (defaulted null) so callers can opt into a per-domain accent wash without breaking
-// existing call sites. Every existing NoopCard re-skins to the frosted Bevel surface.
+// existing call sites. Every existing NoopCard re-skins to the navy fill + flat hairline.
 
 @Composable
 fun NoopCard(
@@ -306,6 +307,13 @@ private fun DrawScope.drawCircleScaled(
 }
 
 // MARK: - StatePill — rounded pill with optional leading dot + tinted label
+//
+// The status chip behind SOLID / BUILDING / CALIBRATING / LIVE. The tone owns the hue:
+//   • SOLID       → StrandTone.Accent/Positive — gold dot + gold@.12 fill + gold@.32 border + gold text
+//   • BUILDING    → StrandTone.Warning re-valued to blue #4A90E2 by the theme lane
+//   • CALIBRATING → StrandTone.Neutral — slate #8A94A4 (textTertiary world)
+//   • LIVE        → gold tone + pulsing=true → the ConnectionDot grows a breathing gold halo
+// Fill .12 / border .32 / text full-strength matches the Titanium & Gold spec on every tone.
 
 @Composable
 fun StatePill(
@@ -320,7 +328,7 @@ fun StatePill(
         modifier = modifier
             .clip(shape)
             .background(tone.color.copy(alpha = 0.12f))
-            .border(1.dp, tone.color.copy(alpha = 0.28f), shape)
+            .border(1.dp, tone.color.copy(alpha = 0.32f), shape)
             .padding(horizontal = 10.dp, vertical = 5.dp)
             .semantics { contentDescription = title },
         verticalAlignment = Alignment.CenterVertically,
@@ -503,21 +511,18 @@ fun <T> SegmentedPillControl(
     ) {
         items.forEach { item ->
             val selected = item == selection
-            // Selected segment fills with the brand-green gradient (accentHover → accent) and a
-            // soft green glow, mirroring StrandDesign's SegmentedPillControl; unselected stays clear.
+            // Selected segment fills with the brand gold gradient and reads in dark goldDeepText;
+            // unselected stays clear with tertiary slate text. Mirrors StrandDesign's SegmentedPillControl.
             val pillShape = RoundedCornerShape(50)
             val pillBg = if (selected) {
-                Modifier.background(
-                    Brush.verticalGradient(listOf(Palette.accentHover, Palette.accent)),
-                    pillShape,
-                )
+                Modifier.background(Brush.linearGradient(*Palette.goldGradient.toTypedArray()), pillShape)
             } else {
                 Modifier
             }
             Text(
                 text = label(item),
                 style = NoopType.captionNumber,
-                color = if (selected) Palette.surfaceBase else Palette.textSecondary,
+                color = if (selected) Palette.goldDeepText else Palette.textTertiary,
                 modifier = Modifier
                     .clip(pillShape)
                     .then(pillBg)
@@ -530,18 +535,23 @@ fun <T> SegmentedPillControl(
 
 // MARK: - BevelGauge (NEW) — the layered ring gauge primitive
 //
-// The shared instrument behind RecoveryRing and StrainGauge: a 240° open gauge with
+// The shared instrument behind RecoveryRing and StrainGauge: an open gauge with
 //   • a soft frosted inner disc (subtle radial fill, hairline rim)
 //   • a faint full-span track ring
 //   • a gradient-stroked progress arc (sweep gradient over the domain ramp)
 //   • a soft outer BLOOM whose intensity scales with the fill (breathing pulse)
 //   • a GLOWING end-cap dot at the arc tip (coloured halo + white core)
-//   • a centred big rounded-bold number with an optional caption + state word
+//   • a centred big bold number with an optional wordmark / caption / state word
 //
 // It owns no domain logic — callers pass the fraction, the ramp stops, the tip colour
 // and the centre read-out strings. RecoveryRing / StrainGauge keep their own public
 // signatures and delegate here, so every screen re-skins without a call-site change.
-// Mirrors StrandDesign/BevelGauge.swift.
+//
+// The geometry defaults to the Bevel 240° instrument (gap at the bottom). Three optional
+// params (defaulted, so every existing call site is untouched) let the RecoveryRing brand
+// glyph diverge: [startDeg]/[spanDeg] override the arc (it uses −90° / ~288° = open ~80%
+// ring, clockwise), [coreDot] paints a SOLID gold core dot at the centre, and [wordmark]
+// stamps a micro ALL-CAPS "NOOP" above the number. Mirrors StrandDesign/BevelGauge.swift.
 
 @Composable
 fun BevelGauge(
@@ -556,10 +566,12 @@ fun BevelGauge(
     diameter: Dp = 200.dp,
     lineWidth: Dp = 16.dp,
     showsLabel: Boolean = true,
+    startDeg: Float = 150f,      // default: lower-left start of the 240° Bevel gauge
+    spanDeg: Float = 240f,       // default: 240° open gauge, gap centered at bottom
+    coreDot: Color? = null,      // RecoveryRing brand glyph: a solid core dot at the centre
+    wordmark: String? = null,    // RecoveryRing brand glyph: micro ALL-CAPS mark above the number
 ) {
     val frac = fraction.toFloat().coerceIn(0f, 1f)
-    val startDeg = 150f          // lower-left
-    val spanDeg = 240f           // 240° open gauge, gap centered at bottom
 
     val animatedFraction by animateFloatAsState(
         targetValue = frac,
@@ -653,13 +665,34 @@ fun BevelGauge(
                         drawCircle(color = tipColor.copy(alpha = 0.7f), radius = stroke * 0.85f, center = bead)
                         drawCircle(color = Color.White, radius = stroke * 0.33f, center = bead)
                     }
+
+                    // Brand glyph core: a small solid gold dot at the very centre (RecoveryRing
+                    // only) with a soft halo, so the open ring + core reads as the NOOP mark. Kept
+                    // small (≈0.4× stroke) so it anchors the read-out without crowding the number.
+                    if (coreDot != null) {
+                        drawCircle(color = coreDot.copy(alpha = 0.18f), radius = stroke * 0.85f, center = center)
+                        drawCircle(color = coreDot, radius = stroke * 0.40f, center = center)
+                    }
                 },
         )
 
         if (showsLabel) {
-            // Big rounded-bold number ≈ diameter * 0.30.
+            // Big bold number ≈ diameter * 0.30.
             val numberSp = diameter.value * 0.30f
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Micro ALL-CAPS NOOP wordmark above the number (RecoveryRing brand glyph).
+                if (wordmark != null) {
+                    Text(
+                        text = wordmark.uppercase(),
+                        style = NoopType.overline.copy(
+                            fontSize = (numberSp * 0.16f).sp,
+                            letterSpacing = (numberSp * 0.055f).sp,  // ≈ .34em wordmark tracking
+                            fontWeight = FontWeight.Bold,
+                        ),
+                        color = Palette.gold,
+                        modifier = Modifier.padding(bottom = 1.dp),
+                    )
+                }
                 Text(
                     text = numberText,
                     style = NoopType.display(numberSp).copy(fontWeight = FontWeight.Bold),
@@ -694,12 +727,14 @@ fun BevelGauge(
     }
 }
 
-// MARK: - RecoveryRing (Bevel layered gauge) — THE signature Charge / Rest component
+// MARK: - RecoveryRing (Titanium & Gold brand glyph) — THE signature Charge / Rest component
 //
 // PUBLIC API is unchanged (score, supporting, diameter, lineWidth, showsLabel); it now
 // delegates its visuals to [BevelGauge]. An optional [valueFormat] was ADDED (defaulted)
 // so the Rest hero can show "Rest 87" while Charge keeps the bare number — same shape as
-// the macOS RecoveryRing.valueFormat. The state word + tip colour sample the recovery ramp.
+// the macOS RecoveryRing.valueFormat. The state word + tip colour sample the recovery (gold)
+// ramp. Unlike the Bevel 240° gauge it draws the BRAND GLYPH: an open ~80% ring starting at
+// −90° (12 o'clock) clockwise, a solid gold centre core dot and a micro "NOOP" wordmark.
 
 @Composable
 fun RecoveryRing(
@@ -721,6 +756,12 @@ fun RecoveryRing(
         diameter = diameter,
         lineWidth = lineWidth,
         showsLabel = showsLabel,
+        // Brand-glyph geometry: open ~80% ring (288° of 360°), 12-o'clock start, clockwise,
+        // plus the solid gold core dot + micro NOOP wordmark that mark the recovery hero.
+        startDeg = -90f,
+        spanDeg = 288f,
+        coreDot = Palette.gold,
+        wordmark = "NOOP",
         modifier = modifier,
     )
 }
@@ -734,7 +775,7 @@ fun RecoveryRing(
 // [valueText] override for the centre numeral, so the arc, number and caption all read on one scale rather
 // than being hardcoded to 0–21. Stays scale-agnostic — the caller owns the conversion (EffortScale is an
 // app concern). Mirrors StrandDesign's StrainGauge so the hero row reads as three matched instruments
-// (Charge green · Effort amber · Rest indigo).
+// (Charge gold · Effort amber · Rest blue).
 
 @Composable
 fun StrainGauge(

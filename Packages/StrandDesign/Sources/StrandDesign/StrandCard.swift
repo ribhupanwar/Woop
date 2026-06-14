@@ -1,16 +1,18 @@
 import SwiftUI
 
-// MARK: - Frosted card surface (NEW — Bevel) + StrandCard
+// MARK: - Frosted card surface (Titanium & Gold) + StrandCard
 //
-// The Bevel card surface: a dark blue-black fill (cardFillTop → cardFillBottom),
-// continuous rounded corners, a subtle DIAGONAL accent-gradient wash, a hairline
-// rgba(255,255,255,0.06) border and a soft shadow. `.frostedCardSurface(tint:…)`
-// is the one place the look lives so StrandCard / NoopCard / ad-hoc surfaces all
-// share it. Pass a domain tint (or nil for the neutral brand-green wash).
+// The card surface: a flat `surfaceRaised` fill, continuous rounded corners and a
+// single 1px `hairline` border — NO shadow (the Titanium look reads off the hairline
+// + tint, not a drop shadow). The TINTED variant deepens into a navy bevel
+// (150° #15243C → #0B1424) under a faint per-domain hue wash + a hue-biased border.
+// `.frostedCardSurface(tint:…)` is the one place the look lives so StrandCard /
+// NoopCard / ad-hoc surfaces all share it. Pass a domain tint (or nil for the neutral
+// flat raised surface).
 
 public extension View {
-    /// Apply the Bevel frosted-card surface as a background. `tint` colours the
-    /// diagonal wash + border bias; nil uses a near-neutral brand wash.
+    /// Apply the frosted-card surface as a background. `tint` colours the diagonal
+    /// wash + border bias; nil uses the flat raised surface with no wash.
     func frostedCardSurface(
         tint: Color? = nil,
         cornerRadius: CGFloat = 18,
@@ -20,8 +22,9 @@ public extension View {
     }
 }
 
-/// The frosted-card background fill, border and shadow. Standalone so it can be a
+/// The frosted-card background fill and border. Standalone so it can be a
 /// `.background { }` (animation never reaches the card's content subtree — #104).
+/// No drop shadow — the Titanium surface reads off the hairline + tint alone.
 public struct FrostedCardSurface: View {
     public var tint: Color?
     public var cornerRadius: CGFloat
@@ -33,24 +36,26 @@ public struct FrostedCardSurface: View {
         self.washStrength = washStrength
     }
 
-    private var washColor: Color { tint ?? StrandPalette.accent }
-
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        // Base fill: tinted cards deepen into the 150° navy bevel (#15243C → #0B1424,
+        // = surfaceOverlay → cardFillBottom); neutral cards sit on the flat raised
+        // surface. The 150° axis ≈ top-trailing → bottom-leading.
+        let baseFill: AnyShapeStyle = tint == nil
+            ? AnyShapeStyle(StrandPalette.surfaceRaised)
+            : AnyShapeStyle(LinearGradient(
+                colors: [StrandPalette.surfaceOverlay, StrandPalette.cardFillBottom],
+                startPoint: .topTrailing, endPoint: .bottomLeading
+            ))
         shape
-            .fill(
-                LinearGradient(
-                    colors: [StrandPalette.cardFillTop, StrandPalette.cardFillBottom],
-                    startPoint: .top, endPoint: .bottom
-                )
-            )
+            .fill(baseFill)
             .overlay(
-                // The subtle diagonal accent wash over the dark fill.
+                // A faint per-domain hue wash — only on tinted cards; neutral stays flat.
                 shape.fill(
                     LinearGradient(
                         colors: [
-                            washColor.opacity(0.10 * washStrength),
-                            washColor.opacity(0.03 * washStrength),
+                            (tint ?? .clear).opacity(0.10 * washStrength),
+                            (tint ?? .clear).opacity(0.03 * washStrength),
                             .clear
                         ],
                         startPoint: .topLeading, endPoint: .bottomTrailing
@@ -58,19 +63,18 @@ public struct FrostedCardSurface: View {
                 )
             )
             .overlay(
+                // Single 1px hairline; tinted cards bias the lower edge toward the hue.
                 shape.strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.08),
-                            StrandPalette.hairline.opacity(0.9),
-                            washColor.opacity(0.10)
-                        ],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
+                    tint == nil
+                        ? AnyShapeStyle(StrandPalette.hairline)
+                        : AnyShapeStyle(LinearGradient(
+                            colors: [StrandPalette.hairline, (tint ?? .clear).opacity(0.22)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        )),
                     lineWidth: 1
                 )
             )
-            .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 10)
+        // No shadow — the Titanium card is flat; the hairline + hue carry the edge.
     }
 }
 

@@ -249,8 +249,12 @@ public struct InsightCard: View {
     }
     public var body: some View {
         // Defaults the card wash to the status colour so the coaching card sits in the
-        // same colour world as the score it summarises (e.g. green for Charge).
-        NoopCard(padding: 18, tint: tint ?? statusColor) {
+        // same colour world as the score it summarises (e.g. gold for Charge). The
+        // insight card reads a touch stronger than a tile: an explicit hue wash
+        // (.14 → .04) + a matching .22 hue border on top of the frosted surface.
+        let hue = tint ?? statusColor
+        let shape = RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
+        return NoopCard(padding: 18, tint: hue) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(category).strandOverline()
                 Text(status).font(StrandFont.rounded(28, weight: .bold)).foregroundStyle(statusColor)
@@ -258,6 +262,15 @@ public struct InsightCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .background(
+            shape.fill(
+                LinearGradient(
+                    colors: [hue.opacity(0.14), hue.opacity(0.04)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+            )
+        )
+        .overlay(shape.strokeBorder(hue.opacity(0.22), lineWidth: 1))
     }
 }
 
@@ -281,13 +294,15 @@ public struct SegmentedPillControl<T: Hashable>: View {
                 } label: {
                     Text(label(item))
                         .font(StrandFont.captionNumber)
-                        .foregroundStyle(sel ? StrandPalette.surfaceBase : StrandPalette.textSecondary)
+                        // Active segment = gold-gradient pill + dark gold-deep ink; inactive
+                        // = tertiary text on the bare inset track.
+                        .foregroundStyle(sel ? StrandPalette.goldDeepText : StrandPalette.textTertiary)
                         .frame(minWidth: 32)
                         .padding(.vertical, 6).padding(.horizontal, 11)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(sel ? AnyShapeStyle(LinearGradient(colors: [StrandPalette.accentHover, StrandPalette.accent], startPoint: .top, endPoint: .bottom)) : AnyShapeStyle(Color.clear))
-                                .shadow(color: sel ? StrandPalette.accent.opacity(0.4) : .clear, radius: sel ? 6 : 0, y: 1)
+                                .fill(sel ? AnyShapeStyle(LinearGradient(gradient: StrandPalette.goldGradient, startPoint: .top, endPoint: .bottom)) : AnyShapeStyle(Color.clear))
+                                .shadow(color: sel ? StrandPalette.gold.opacity(0.4) : .clear, radius: sel ? 6 : 0, y: 1)
                         )
                         // On iOS guarantee the ≥44pt touch target (height only — width is
                         // already ≥54pt) without bloating the denser Mac control, then make
@@ -354,5 +369,170 @@ public extension View {
         #else
         self
         #endif
+    }
+}
+
+// MARK: - Buttons (Titanium & Gold) — ADDED additively, no existing API touched.
+//
+// Three house button styles for primary actions, secondary chrome and ghost/gold
+// CTAs. Drop in via `.buttonStyle(.noopPrimary)` etc. on any `Button`. All read off
+// the new gold tokens so they match Apple ⇄ Android. Pressed = subtle dim + scale.
+
+/// Primary call-to-action: gold-gradient fill, dark gold-deep ink (700), rounded 13.
+public struct NoopPrimaryButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        return configuration.label
+            .font(StrandFont.body.weight(.bold))
+            .foregroundStyle(StrandPalette.goldDeepText)
+            .padding(.vertical, 11).padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(LinearGradient(gradient: StrandPalette.goldGradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+            )
+            // The signature gold cast-shadow (0 10px 22px -8px gold@.6).
+            .shadow(color: StrandPalette.gold.opacity(pressed ? 0.25 : 0.6), radius: 14, x: 0, y: 8)
+            .opacity(pressed ? 0.9 : 1)
+            .scaleEffect(pressed ? 0.98 : 1)
+            .animation(StrandMotion.interactive, value: pressed)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Secondary: inset well + 1px white-12 border + primary text. Quieter than gold.
+public struct NoopSecondaryButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
+        return configuration.label
+            .font(StrandFont.body.weight(.semibold))
+            .foregroundStyle(StrandPalette.textPrimary)
+            .padding(.vertical, 11).padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .background(shape.fill(StrandPalette.surfaceInset))
+            .overlay(shape.strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
+            .opacity(pressed ? 0.82 : 1)
+            .scaleEffect(pressed ? 0.98 : 1)
+            .animation(StrandMotion.interactive, value: pressed)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Ghost / gold: transparent + 1px gold@.3 hairline + gold text. Tertiary CTA.
+public struct NoopGhostButtonStyle: ButtonStyle {
+    public init() {}
+    public func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
+        return configuration.label
+            .font(StrandFont.body.weight(.semibold))
+            .foregroundStyle(StrandPalette.gold)
+            .padding(.vertical, 11).padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .background(shape.fill(StrandPalette.gold.opacity(pressed ? 0.10 : 0)))
+            .overlay(shape.strokeBorder(StrandPalette.gold.opacity(0.3), lineWidth: 1))
+            .scaleEffect(pressed ? 0.98 : 1)
+            .animation(StrandMotion.interactive, value: pressed)
+            .contentShape(Rectangle())
+    }
+}
+
+public extension ButtonStyle where Self == NoopPrimaryButtonStyle {
+    /// Gold-gradient primary CTA.
+    static var noopPrimary: NoopPrimaryButtonStyle { .init() }
+}
+public extension ButtonStyle where Self == NoopSecondaryButtonStyle {
+    /// Inset secondary button.
+    static var noopSecondary: NoopSecondaryButtonStyle { .init() }
+}
+public extension ButtonStyle where Self == NoopGhostButtonStyle {
+    /// Transparent gold-outline ghost button.
+    static var noopGhost: NoopGhostButtonStyle { .init() }
+}
+
+// MARK: - Score state pill (SOLID / BUILDING / CALIBRATING / LIVE)
+//
+// ADDED additively — the existing `StatePill` (tone-based, in StatePill.swift) is
+// untouched. This is the score-lifecycle chip the new design calls for: SOLID = gold
+// fill, BUILDING = blue, CALIBRATING = slate, LIVE = gold dot with a pulsing halo.
+
+public enum ScoreState: Sendable {
+    case solid        // a settled, trustworthy score
+    case building     // accruing nights, not yet settled
+    case calibrating  // baseline still forming
+    case live         // streaming right now
+
+    /// The chip's hue, drawn from the re-pointed palette (gold / blue / slate).
+    public var color: Color {
+        switch self {
+        case .solid, .live: return StrandPalette.gold
+        case .building:     return StrandPalette.sleepLight   // #4A90E2 blue
+        case .calibrating:  return StrandPalette.textTertiary // #8A94A4 slate
+        }
+    }
+    public var label: LocalizedStringKey {
+        switch self {
+        case .solid:       return "Solid"
+        case .building:    return "Building"
+        case .calibrating: return "Calibrating"
+        case .live:        return "Live"
+        }
+    }
+    var pulsing: Bool { self == .live }
+}
+
+/// The score-lifecycle chip: dot + hue@.12 fill + hue@.32 border + hue text. LIVE
+/// pulses its dot. `text` overrides the default state label (e.g. "Building — 2 of 4").
+public struct ScoreStatePill: View {
+    public var state: ScoreState
+    public var text: LocalizedStringKey?
+    public init(_ state: ScoreState, text: LocalizedStringKey? = nil) {
+        self.state = state; self.text = text
+    }
+    public var body: some View {
+        let hue = state.color
+        return HStack(spacing: 6) {
+            PulseDot(color: hue, pulsing: state.pulsing, size: 7)
+            Text(text ?? state.label)
+                .font(StrandFont.overline)
+                .tracking(0.4)
+                .foregroundStyle(hue)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Capsule(style: .continuous).fill(hue.opacity(0.12)))
+        .overlay(Capsule(style: .continuous).stroke(hue.opacity(0.32), lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text ?? state.label)
+    }
+}
+
+/// A small dot with an optional breathing pulse halo (LIVE). Honours Reduce Motion.
+/// Local to the score pill so it doesn't disturb StatePill.swift's ConnectionDot.
+private struct PulseDot: View {
+    var color: Color
+    var pulsing: Bool
+    var size: CGFloat
+    @State private var animate = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        ZStack {
+            if pulsing {
+                Circle().fill(color)
+                    .frame(width: size, height: size)
+                    .scaleEffect(animate ? 2.4 : 1.0)
+                    .opacity(animate ? 0.0 : 0.5)
+                    .blendMode(.plusLighter)
+            }
+            Circle().fill(color)
+                .frame(width: size, height: size)
+                .shadow(color: color.opacity(0.8), radius: pulsing ? 4 : 2)
+        }
+        .frame(width: size, height: size)
+        .onAppear { if pulsing && !reduceMotion { animate = true } }
+        .animation(pulsing && !reduceMotion ? StrandMotion.breathe : nil, value: animate)
+        .accessibilityHidden(true)
     }
 }

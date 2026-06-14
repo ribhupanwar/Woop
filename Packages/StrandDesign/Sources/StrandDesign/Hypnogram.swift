@@ -3,9 +3,11 @@ import SwiftUI
 // MARK: - Hypnogram (§9.4 Sleep)
 //
 // A sleep-stage horizontal banded timeline. Each interval is drawn as a band at
-// the height of its stage (awake top → deep bottom), colored per §9.1 (awake
-// rose, light periwinkle, deep indigo, REM glowing mint). Adjacent intervals are
-// connected by vertical risers so the trace reads as one continuous "staircase".
+// the height of its stage (awake top → deep bottom), colored per §9.1 with the
+// Titanium & Gold sleep tokens — awake pale slate, light blue (#4A90E2), deep
+// blue (#2F6FCB), REM bright blue (#6FA8E8) — so the four stages stay clearly
+// distinguishable (fixes #345). Adjacent intervals are connected by vertical
+// risers so the trace reads as one continuous "staircase".
 
 /// A single stage interval. `start`/`end` are seconds from the start of the night.
 public struct SleepInterval: Identifiable, Sendable {
@@ -124,7 +126,7 @@ public struct Hypnogram: View {
                             let rect = bandRect(for: interval, in: geo.size)
                             let color = StrandPalette.sleepStageColor(interval.stage)
                             let dimmed = hoverIndex != nil && hoverIndex != idx
-                            // glow under REM for the "REM glowing" requirement
+                            // soft bloom under REM so the brightest sleep stage (#6FA8E8) reads as "glowing"
                             if interval.stage == .rem {
                                 RoundedRectangle(cornerRadius: rect.height / 2)
                                     .fill(color)

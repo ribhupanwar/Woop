@@ -19,51 +19,51 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// MARK: - Palette — the "Bevel" re-skin (mirrors StrandDesign/Palette.swift)
+// MARK: - Palette — the "Titanium & Gold" re-skin (mirrors StrandDesign/Palette.swift)
 //
-// A premium dark theme built on a deep BLUE-BLACK canvas (NOT pure black) with
-// per-domain accent "colour worlds" (Charge = green, Effort = amber, Rest = indigo,
-// Stress = teal). NOOP green stays the dominant brand anchor.
+// A premium dark theme built on a deep NAVY canvas (NOT pure black) with per-domain
+// accent "colour worlds": Charge/recovery = GOLD, Effort/strain = amber, Rest/sleep =
+// blue, HRV = teal, high stress = burnt orange. Gold is the dominant brand anchor —
+// no greens anywhere.
 //
 // PUBLIC API IS FROZEN: every token NAME below is depended on by screens across the
-// app, so the names never change — only the VALUES were re-themed to Bevel. New
-// Bevel tokens (domain worlds, gradient pairs, glows, scenic background colours,
-// card fills) are ADDED at the end of the object; nothing existing was removed or
-// renamed. Hex values mirror the macOS/iOS StrandPalette so all three platforms
-// share one visual language.
+// app, so the names never change — only the VALUES were re-themed to Titanium & Gold.
+// New tokens (gold/titanium ramps + their gradients) are ADDED at the end of the
+// object; nothing existing was removed or renamed. Hex values mirror the macOS/iOS
+// StrandPalette so all three platforms share one visual language.
 
 object Palette {
 
-    // Surfaces — deep blue-black canvas, tinted frosted cards (NOT pure black).
-    val surfaceBase = Color(0xFF080A11)    // deep blue-black canvas
-    val surfaceRaised = Color(0xFF141826)  // frosted card fill
-    val surfaceOverlay = Color(0xFF1A1F30) // popovers / sheets / tooltips
-    val surfaceInset = Color(0xFF0E1019)   // wells / chart insets / segmented track
-    val hairline = Color(0xFF262B3C)       // soft blue-grey 1px border (≈ white 6%)
-    val hairlineStrong = Color(0xFF363D52) // hover / emphasis border
+    // Surfaces — deep navy canvas, tinted frosted cards (NOT pure black).
+    val surfaceBase = Color(0xFF070C16)    // deep navy canvas
+    val surfaceRaised = Color(0xFF111B2A)  // frosted card fill
+    val surfaceOverlay = Color(0xFF15243C) // popovers / sheets / tooltips
+    val surfaceInset = Color(0xFF16202F)   // wells / chart insets / segmented track
+    val hairline = Color(0xFF21304A)       // soft navy 1px border (≈ white 6%)
+    val hairlineStrong = Color(0xFF2E3C57) // hover / emphasis border
 
-    // Text — cool off-white scale on the blue-black.
-    val textPrimary = Color(0xFFF2F4FA)
-    val textSecondary = Color(0xFFA6ADC0)
-    val textTertiary = Color(0xFF737A8E)
+    // Text — cool off-white scale on the navy.
+    val textPrimary = Color(0xFFF4F6F8)
+    val textSecondary = Color(0xFFC8CFD8)
+    val textTertiary = Color(0xFF8A94A4)
 
-    // Glow — ambient bloom behind heroes / charts.
-    val glowAmbient = Color(0xFF1C2A4A)
+    // Glow — ambient bloom behind heroes / charts (warm gold hero bloom).
+    val glowAmbient = Color(0xFF3A2D0A)
 
-    // Accent — NOOP green brand anchor (chrome + the Charge world).
-    val accent = Color(0xFF2BCF8E)       // brand health green
-    val accentHover = Color(0xFF4DEBA8)
-    val accentMuted = Color(0xFF12281F)  // dark-green tint (selected rows)
-    val focusRing = Color(0xFF2BCF8E)
+    // Accent — GOLD brand anchor (chrome + the Charge world). Flips most chrome.
+    val accent = Color(0xFFE8B84B)       // brand gold
+    val accentHover = Color(0xFFFCEBA8)
+    val accentMuted = Color(0xFF2A2210)  // dark-gold tint (selected rows)
+    val focusRing = Color(0xFFE8B84B)
     const val disabledOpacity = 0.45f
 
-    // Recovery / Charge gradient — the green "Charge" colour world.
-    // 0.00 coral → 0.30 amber → 0.55 gold → 0.78 green → 1.00 mint.
-    val recovery000 = Color(0xFFFF5C7A) // depleted — coral
-    val recovery030 = Color(0xFFFFB23E) // low — amber
-    val recovery055 = Color(0xFFE8D14B) // moderate — gold
-    val recovery078 = Color(0xFF1D9E75) // primed — deep green
-    val recovery100 = Color(0xFF5DFFB0) // peak — bright mint
+    // Recovery / Charge gradient — the GOLD "Charge" colour world.
+    // 0.00 deep gold → 0.30 → 0.55 gold → 0.78 → 1.00 pale gold.
+    val recovery000 = Color(0xFFC8902F) // depleted — deep gold
+    val recovery030 = Color(0xFFD9A23E) // low — warm gold
+    val recovery055 = Color(0xFFE8B84B) // moderate — gold
+    val recovery078 = Color(0xFFF2CE6E) // primed — light gold
+    val recovery100 = Color(0xFFFCEBA8) // peak — pale gold
 
     /** Ordered gradient stops (position 0..1 → color) for the recovery scale. */
     val recoveryStops: List<Pair<Float, Color>> = listOf(
@@ -75,11 +75,11 @@ object Palette {
     )
 
     // Strain / Effort ramp — the amber "Effort" colour world.
-    // Deep ember → warm gold → bright amber → hot amber peak.
-    val strain000 = Color(0xFFB9740F) // deep ember
-    val strain033 = Color(0xFFE89020) // warm gold
-    val strain066 = Color(0xFFFFA836) // bright amber
-    val strain100 = Color(0xFFFFC861) // hot amber peak
+    // Deep ember → warm amber → bright amber → hot amber peak.
+    val strain000 = Color(0xFF9C5A14) // deep ember
+    val strain033 = Color(0xFFC2762A) // warm amber
+    val strain066 = Color(0xFFD98A3D) // bright amber
+    val strain100 = Color(0xFFF0A85A) // hot amber peak
 
     val strainStops: List<Pair<Float, Color>> = listOf(
         0.00f to strain000,
@@ -88,78 +88,115 @@ object Palette {
         1.00f to strain100,
     )
 
-    // Sleep stages — the indigo / periwinkle "Rest" colour world.
-    val sleepAwake = Color(0xFFFF6F8B) // rose (out of bed)
-    val sleepLight = Color(0xFF8E97E0) // periwinkle
-    val sleepDeep = Color(0xFF6E79D8)  // indigo (lightened for legibility on the frosted card; still clearly darker than Light)
-    val sleepREM = Color(0xFFB4BDFF)   // pale periwinkle (glows)
+    // Sleep stages — the blue "Rest" colour world (now clearly distinct, fixes #345).
+    val sleepAwake = Color(0xFFC2CCDA) // pale slate (out of bed)
+    val sleepLight = Color(0xFF4A90E2) // blue
+    val sleepDeep = Color(0xFF2F6FCB)  // deep blue (clearly darker than Light)
+    val sleepREM = Color(0xFF6FA8E8)   // light blue (glows)
 
-    // HR zones — cool→warm ramp tuned to the Bevel worlds.
-    val zone1 = Color(0xFF5AA8E0) // easy — blue
-    val zone2 = Color(0xFF3ED1A0) // green
-    val zone3 = Color(0xFFE8D14B) // gold
-    val zone4 = Color(0xFFFFA836) // amber
-    val zone5 = Color(0xFFFF6F8B) // max — rose
+    // HR zones — cool→warm ramp tuned to the Titanium & Gold worlds.
+    val zone1 = Color(0xFF4A90E2) // easy — blue
+    val zone2 = Color(0xFF3FA9C9) // teal
+    val zone3 = Color(0xFFE8B84B) // gold
+    val zone4 = Color(0xFFD98A3D) // amber
+    val zone5 = Color(0xFFE0662F) // max — burnt orange
 
     /** HR zones indexed 1..5; index 0 mirrors zone1 for convenience. */
     val hrZones: List<Color> = listOf(zone1, zone1, zone2, zone3, zone4, zone5)
 
     // Status — never reused as recovery colors.
-    val statusPositive = Color(0xFF2BCF8E)
-    val statusWarning = Color(0xFFFFB23E)
-    val statusCritical = Color(0xFFFF5C7A)
+    val statusPositive = Color(0xFFE8B84B)
+    val statusWarning = Color(0xFFD98A3D)
+    val statusCritical = Color(0xFFE0662F)
 
-    // Per-metric accents — HRV / SpO₂ / energy / risk, on-brand for Bevel.
-    val metricCyan = Color(0xFF46C8FF)   // SpO₂ / steps / Apple Health
-    val metricPurple = Color(0xFFB4BDFF) // HRV (shares the Rest world)
-    val metricAmber = Color(0xFFFFC861)  // calories (shares the Effort world)
-    val metricRose = Color(0xFFFF6F8B)   // risk / heart rate / low recovery
+    // Per-metric accents — HRV / SpO₂ / energy / risk, on-brand for Titanium & Gold.
+    val metricCyan = Color(0xFF3FA9C9)   // SpO₂ / steps / Apple Health (teal)
+    val metricPurple = Color(0xFF4A90E2) // HRV (shares the Rest world — blue)
+    val metricAmber = Color(0xFFD98A3D)  // calories (shares the Effort world)
+    val metricRose = Color(0xFFE0662F)   // risk / heart rate / low recovery
 
-    // MARK: - Bevel domain "colour worlds" (NEW)
+    // MARK: - Titanium & Gold domain "colour worlds" (NEW)
     //
     // Each daily score owns a two-stop accent gradient (deep → bright) plus a glow.
     // These drive the layered gauges, frosted-card tints and scenic heroes. Charge
-    // re-uses the brand green; Effort the amber ramp; Rest the indigo/periwinkle.
+    // re-uses the brand gold; Effort the amber ramp; Rest the blue scale; Stress is
+    // a blue → gold → burnt-orange ramp.
 
-    // Charge (recovery) — green world.
-    val chargeColor = Color(0xFF2BCF8E)
-    val chargeDeep = Color(0xFF1D9E75)
-    val chargeBright = Color(0xFF5DFFB0)
-    val chargeGlow = Color(0xFF2BCF8E)
+    // Charge (recovery) — gold world.
+    val chargeColor = Color(0xFFE8B84B)
+    val chargeDeep = Color(0xFFC8902F)
+    val chargeBright = Color(0xFFFCEBA8)
+    val chargeGlow = Color(0xFFE8B84B)
 
     // Effort (strain) — amber world.
-    val effortColor = Color(0xFFFFA836)
-    val effortDeep = Color(0xFFB9740F)
-    val effortBright = Color(0xFFFFC861)
-    val effortGlow = Color(0xFFFFA836)
+    val effortColor = Color(0xFFD98A3D)
+    val effortDeep = Color(0xFF9C5A14)
+    val effortBright = Color(0xFFF0A85A)
+    val effortGlow = Color(0xFFD98A3D)
 
-    // Rest (sleep) — indigo / periwinkle world.
-    val restColor = Color(0xFF7E88E0)
-    val restDeep = Color(0xFF5A63C7)
-    val restBright = Color(0xFFB4BDFF)
-    val restGlow = Color(0xFF8E97E0)
+    // Rest (sleep) — blue world.
+    val restColor = Color(0xFF4A90E2)
+    val restDeep = Color(0xFF2F6FCB)
+    val restBright = Color(0xFF6FA8E8)
+    val restGlow = Color(0xFF4A90E2)
 
-    // Stress — teal world (used by StressScreen's accents).
-    val stressColor = Color(0xFF3FB8B0)
-    val stressDeep = Color(0xFF1F7E78)
-    val stressBright = Color(0xFF6FE0D6)
-    val stressGlow = Color(0xFF3FB8B0)
+    // Stress — blue → gold → burnt-orange world (used by StressScreen's accents).
+    val stressColor = Color(0xFFE8B84B)
+    val stressDeep = Color(0xFF4A90E2)
+    val stressBright = Color(0xFFE0662F)
+    val stressGlow = Color(0xFFE8B84B)
 
     /** Deep → bright accent pairs (gauge stroke + diagonal card wash) per domain. */
     val chargeGradientStops: List<Pair<Float, Color>> = listOf(0.0f to chargeDeep, 1.0f to chargeBright)
     val effortGradientStops: List<Pair<Float, Color>> = listOf(0.0f to effortDeep, 1.0f to effortBright)
     val restGradientStops: List<Pair<Float, Color>> = listOf(0.0f to restDeep, 1.0f to restBright)
-    val stressGradientStops: List<Pair<Float, Color>> = listOf(0.0f to stressDeep, 1.0f to stressBright)
+    // Stress is a 3-stop ramp (calm blue → gold → burnt orange) per the README gauge.
+    val stressGradientStops: List<Pair<Float, Color>> = listOf(
+        0.0f to Color(0xFF4A90E2),
+        0.5f to Color(0xFFE8B84B),
+        1.0f to Color(0xFFE0662F),
+    )
 
     // MARK: Scenic background (NEW) — detail-screen hero gradient + starfield.
     // Radial canvas: warm-lit center → deep edge. Used by ScenicHeroBackground.
-    val scenicCenter = Color(0xFF0B0D14)
-    val scenicEdge = Color(0xFF07080D)
-    val scenicStar = Color(0xFFC9D2F0)
+    val scenicCenter = Color(0xFF15243C)
+    val scenicEdge = Color(0xFF0A1322)
+    val scenicStar = Color(0xFFC8CFD8)
 
     /** Frosted-card tint endpoints (a subtle dark fill the accent wash sits over). */
-    val cardFillTop = Color(0xFF161A26)
-    val cardFillBottom = Color(0xFF101219)
+    val cardFillTop = Color(0xFF15243C)
+    val cardFillBottom = Color(0xFF0B1424)
+
+    // MARK: - Gold & Titanium ramps (NEW) — brand metal surfaces.
+    //
+    // Gold = brand/recovery/Charge. Titanium = neutral metal for tiles, avatars and
+    // icon chrome. Hexes are identical to the Apple StrandPalette so all three
+    // platforms match.
+    val gold = Color(0xFFE8B84B)
+    val goldLight = Color(0xFFFCEBA8)
+    val goldDeep = Color(0xFFC8902F)
+    val goldDeepText = Color(0xFF3A2708)   // text / icons ON gold surfaces
+    val signalYellow = Color(0xFFFFD63D)
+
+    /** Gold gradient stops (light → gold → deep) — buttons, ring fills, FAB (135–155°). */
+    val goldGradient: List<Pair<Float, Color>> = listOf(
+        0.0f to goldLight,
+        0.5f to gold,
+        1.0f to goldDeep,
+    )
+
+    val titaniumTop = Color(0xFFF1F3F5)
+    val titaniumMid = Color(0xFFC9CFD4)
+    val titaniumLow = Color(0xFF969DA4)
+    val titaniumDeep = Color(0xFF6B737B)
+
+    /** Titanium gradient stops (top → mid → low → deep) — tiles / avatars / icon (150°). */
+    val titaniumGradient: List<Pair<Float, Color>> = listOf(
+        0.0f to titaniumTop,
+        0.40f to titaniumMid,
+        0.75f to titaniumLow,
+        1.0f to titaniumDeep,
+    )
 
     // MARK: - Sampling helpers (mirror StrandPalette.sample / recoveryColor)
 
@@ -227,11 +264,11 @@ object Palette {
         Brush.horizontalGradient(*strainStops.toTypedArray())
 }
 
-// MARK: - DomainTheme (NEW — Bevel per-domain colour worlds)
+// MARK: - DomainTheme (NEW — Titanium & Gold per-domain colour worlds)
 //
 // Maps a daily-score domain (Charge / Effort / Rest / Stress) to its accent
 // "colour world": a primary colour, a deep→bright gradient for gauge strokes and
-// card washes, and a glow colour for blooms / end-cap halos. Every Bevel surface
+// card washes, and a glow colour for blooms / end-cap halos. Every surface
 // (layered gauge, frosted card tint, scenic hero) reads its colours from here so a
 // screen only has to name its domain. Mirrors StrandDesign/DomainTheme.swift.
 
@@ -379,13 +416,17 @@ object Metrics {
 
 // MARK: - Typography (ported from StrandDesign/Typography.swift §9.2)
 //
-// SF Pro on macOS; on Android we use the platform default (Roboto/system) with
-// the same sizes/weights. Numeric/live styles request tabular-ish alignment via
-// medium/semibold weights; Compose has no monospacedDigit toggle, so live values
-// use Monospace where exact non-reflow alignment is load-bearing.
+// Helvetica Neue on Apple; on Android we use a Helvetica-Neue FontFamily where one
+// is bundled in res/font, else FontFamily.SansSerif as the documented substitute
+// (no Helvetica asset is bundled, so the platform grotesque stands in) with the same
+// sizes/weights. Numeric/live styles request tabular-ish alignment via medium/
+// semibold weights; Compose has no monospacedDigit toggle, so live values use
+// Monospace where exact non-reflow alignment is load-bearing.
 
 object NoopType {
-    private val sans = FontFamily.Default
+    // Helvetica Neue family — falls back to the platform grotesque (SansSerif) when
+    // no res/font/helvetica_neue asset is bundled, per the v3 type spec.
+    private val sans = FontFamily.SansSerif
     private val monoFamily = FontFamily.Monospace
 
     /** Display 64–80 / Semibold — the recovery ring number. */

@@ -3,11 +3,18 @@ import SwiftUI
 // MARK: - Recovery Ring (§9.3) — THE signature component
 //
 // A 240° open gauge arc (gap at the bottom), thick rounded-cap stroke filled
-// with an AngularGradient sampling the recovery gradient (indigo → mint), filled
-// to score/100 of the 240° span over a faint track. A soft outer BLOOM whose
-// intensity scales with score; a luminous leading bead at the fill tip; a draw-in
-// animation when the value changes. Center shows the big monospaced number (no %),
-// a state word tinted to the sampled color, and an optional supporting line.
+// with an AngularGradient sampling the recovery gradient (Titanium & Gold: the
+// `goldGradient` ramp via `recoveryStops`), filled to score/100 of the 240° span
+// over a faint `surfaceInset` track. A soft outer BLOOM whose intensity scales with
+// score; a luminous leading bead at the fill tip; a draw-in animation when the value
+// changes. Center shows the big Helvetica-700 number (no %), a state word tinted to
+// the sampled color, and an optional supporting line.
+//
+// This is also the app's BRAND GLYPH: an open ~80% ring + a SOLID GOLD CORE DOT
+// ("on-device core"). The recovery ring uniquely carries a micro "NOOP" wordmark
+// above the number (letter-spacing ≈ .34em, tertiary) so the lock-up reads as the
+// "O" in NOOP. The arc geometry, gradient stroke, track and centre number live in
+// the shared `BevelGauge`; this view layers the wordmark + core dot on top.
 
 public struct RecoveryRing: View {
 
@@ -17,7 +24,7 @@ public struct RecoveryRing: View {
     public var supporting: String?
     /// Diameter of the ring.
     public var diameter: CGFloat
-    /// Stroke thickness (14–18pt per spec).
+    /// Stroke thickness — hero 13–14pt per the Titanium & Gold spec (§4).
     public var lineWidth: CGFloat
     /// Whether to show the center read-out (number + state + supporting).
     public var showsLabel: Bool
@@ -30,7 +37,7 @@ public struct RecoveryRing: View {
         score: Double,
         supporting: String? = nil,
         diameter: CGFloat = 240,
-        lineWidth: CGFloat = 16,
+        lineWidth: CGFloat = 14,
         showsLabel: Bool = true,
         showsHover: Bool = true,
         valueFormat: @escaping (Double) -> String = { "Recovery \(Int($0.rounded()))" }
@@ -73,6 +80,11 @@ public struct RecoveryRing: View {
                 animatedFraction: animatedFraction,
                 bloomActive: bloomPulse
             )
+            // Brand layers over the shared gauge: the solid gold CORE DOT (so the
+            // open-ring + core-dot lock-up reads), then the micro "NOOP" wordmark
+            // sitting just ABOVE the centre number.
+            coreDot
+            if showsLabel { wordmark }
             if showsHover, let pt = hoverPoint {
                 PositionedTooltip(
                     anchor: pt,
@@ -112,6 +124,34 @@ public struct RecoveryRing: View {
 
     private var numberString: String {
         String(Int(score.rounded()))
+    }
+
+    // MARK: Brand layers
+
+    /// Micro "NOOP" wordmark above the number — the recovery ring carries the
+    /// lock-up so its centre reads as the "O" in NOOP. ALL-CAPS, tertiary,
+    /// letter-spacing ≈ .34em (× the cap height per the spec). Nudged up so it
+    /// sits clear above BevelGauge's centred number.
+    private var wordmark: some View {
+        let size = diameter * 0.052
+        return Text("NOOP")
+            .font(StrandFont.rounded(size, weight: .bold))
+            .tracking(size * 0.34)                 // ≈ .34em
+            .foregroundStyle(StrandPalette.textTertiary)
+            .offset(y: -diameter * 0.205)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// The brand "on-device core" — a small solid GOLD dot at the exact centre,
+    /// behind the read-out, so the open-ring + core-dot identity stays legible.
+    private var coreDot: some View {
+        Circle()
+            .fill(StrandPalette.gold)
+            .frame(width: diameter * 0.026, height: diameter * 0.026)
+            .opacity(showsLabel ? 0.28 : 1.0)      // recede under the number; full when glyph-only
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

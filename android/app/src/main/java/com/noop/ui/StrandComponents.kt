@@ -85,7 +85,8 @@ internal fun ThreeDaySelectorBar(
                 Text(
                     text = date,
                     style = NoopType.captionNumber,
-                    color = if (selected) Palette.accent else Palette.textTertiary,
+                    // Selected date reads in bright gold-light; unselected sits muted.
+                    color = if (selected) Palette.accentHover else Palette.textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = Metrics.space2),
@@ -168,7 +169,8 @@ internal fun DayNavBar(
             Text(
                 date,
                 style = NoopType.captionNumber,
-                color = Palette.accent,
+                // Active day's date in bright gold-light to match the selected block.
+                color = Palette.accentHover,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = Metrics.space2),

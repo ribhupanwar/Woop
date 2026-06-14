@@ -4,8 +4,9 @@ import SwiftUI
 //
 // The shared instrument behind RecoveryRing and StrainGauge: a 240° open gauge with
 //   • a soft frosted inner disc (subtle radial fill, hairline rim)
-//   • a faint full-span track ring
-//   • a gradient-stroked progress arc (AngularGradient over the domain ramp)
+//   • a faint full-span track ring carved from `surfaceInset` (the Titanium "well")
+//   • a gradient-stroked progress arc (AngularGradient over the domain ramp:
+//     Charge=gold, Effort=amber, Rest=blue, Stress=blue→gold→orange — caller-supplied)
 //   • a soft outer BLOOM whose intensity scales with the fill
 //   • a GLOWING end-cap dot at the arc tip (white core + coloured halo)
 //   • a centred SF Pro **Rounded** bold number with an "of N" caption + state word
@@ -114,9 +115,9 @@ public struct BevelGauge: View {
                 .animation(StrandMotion.breathe(reduced: reduceMotion), value: bloomActive)
                 .blendMode(.plusLighter)
 
-            // Faint full-span track.
+            // Faint full-span track — the inset "well" the gold/amber/blue arc sits in.
             arcShape(to: 1.0)
-                .stroke(StrandPalette.hairline.opacity(0.6),
+                .stroke(StrandPalette.surfaceInset,
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
 
             // Filled gradient arc.
