@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "3.0.0"
+    const val CURRENT_VERSION = "3.0.1"
 
     data class Release(
         val version: String,
@@ -36,6 +36,17 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "3.0.1",
+            title = "Cleaner score rings + a few fixes",
+            date = "June 2026",
+            items = listOf(
+                "Changed: removed the small gold dot in the centre of the Charge / Recovery rings, behind the number — at the v3 launch a few of you (rightly) said it crowded the read-out. The clean ring + number + micro-NOOP wordmark stay; the dot now lives only in the standalone logo.",
+                "Fixed (Android): the HR-zone coaching toggle now actually persists and buzzes your strap when you cross into your top zone — and again as you recover — closing the gap with Mac/iPhone. It was previously a preview-only stub. Thanks @cbarrado (#350).",
+                "Fixed: a real overnight sleep that runs late, or has a brief morning stir then drifts back to sleep, no longer truncates your wake time to late morning (\"woke at noon\"). Your true wake time is kept. Thanks @vulnix0x4 (#353).",
+                "Fixed: Steps prefer your strap's own on-device count (WHOOP 5/MG) over imported data where available. Thanks @netizentryingtofitin (#276).",
+            ),
+        ),
         Release(
             version = "3.0.0",
             title = "A whole new look — \"Titanium & Gold\"",

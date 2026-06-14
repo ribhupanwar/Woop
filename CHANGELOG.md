@@ -17,6 +17,16 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 3.0.1 — Cleaner score rings + a few fixes
+
+- **Changed:** removed the small gold dot in the centre of the Charge / Recovery rings (behind the number) — launch feedback was that it crowded the read-out. The clean ring + number + micro-NOOP wordmark stay; the dot now lives only in the standalone logo.
+- **Fixed:** Steps on Today prefer your strap's own on-device count (WHOOP 5/MG) over Apple Health, matching Android (#276).
+- **Fixed:** a real overnight sleep that runs late (or has a brief morning stir) no longer truncates your wake time to late morning — your true wake time is kept. Thanks @vulnix0x4 (#353).
+- **Fixed (Android):** HR-zone coaching now persists and buzzes your strap entering your top zone / on recovery — closing the gap with Mac/iPhone. Thanks @cbarrado (#350).
+- **Internal:** fixed red CI on `main` (a SwiftUI type-check timeout in the stress gauge; two long-standing Liftosaur importer bugs). Added v25-PPG feasibility guard tests (#307/#194).
+
+---
+
 ## 3.0.0 — A whole new look: "Titanium & Gold"
 
 A complete, ground-up redesign of all three apps. Deep-navy surfaces, a warm gold hero accent, brushed-titanium detail, and a per-domain colour world — blue sleep, amber strain, teal HRV, burnt-orange stress — set in Helvetica across iPhone, Android and Mac.
