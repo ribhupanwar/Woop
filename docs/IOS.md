@@ -24,6 +24,21 @@ Nothing about this touches NOOP's identity or Apple's servers on our side.
    and installs NOOP. First launch may need **Settings → General → VPN & Device Management → trust
    your Apple ID**.
 
+### Add NOOP as a source (recommended — auto-updates)
+
+So you never have to manually re-download, add NOOP's **source** to AltStore/SideStore once — new
+releases then show up (and re-sign) automatically:
+
+**Source URL:** `https://raw.githubusercontent.com/NoopApp/noop/main/altstore-source.json`
+
+- **AltStore:** open AltStore → **Browse** tab → tap **＋** (top-left) → paste the URL → **Add Source**.
+  NOOP appears under the source; tap **Free** / **Get** to install. From then on it updates itself on
+  AltStore's background refresh (you can also pull-to-refresh **My Apps**).
+- **SideStore:** open SideStore → **Browse** / **Sources** → **＋ Add Source** → paste the same URL → add.
+
+The source always tracks the latest release, so you're one tap from the newest build instead of
+hunting for the `.ipa` each time.
+
 > ### Two honest limitations of free-Apple-ID sideloading
 > - **7-day expiry.** Apps signed with a *free* Apple ID stop launching after 7 days and need
 >   re-signing. **AltStore/SideStore refresh this automatically** in the background — keep the
