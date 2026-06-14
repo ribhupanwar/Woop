@@ -17,6 +17,12 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.18.5 — Today tiles no longer cut their value to "10…" (Android)
+
+- **Fixed (Android):** on phones, Today tiles that show a sparkline (Charge, Rest, Respiratory, HRV…) were truncating their value to "10…" or "15…" — the value and the inline trend line were competing for horizontal space. The value now shrinks to fit, the way it already does on Mac/iPhone, so it always reads in full. Thanks @asemfahad (#332).
+
+---
+
 ## 2.18.4 — Dynamic Island toggle now actually turns it off
 
 - **Fixed (iPhone):** turning off "Live heart rate in Dynamic Island" in Settings now genuinely removes it. If the heart had started in an earlier app session, the in-app toggle couldn't reach it to switch it off — only the iOS system switch worked. The app now re-adopts an already-showing Live Activity, so the toggle ends it immediately. Thanks @gingerbeardman (#341).

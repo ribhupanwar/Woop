@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "2.18.4"
+    const val CURRENT_VERSION = "2.18.5"
 
     data class Release(
         val version: String,
@@ -36,6 +36,14 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.18.5",
+            title = "Today tiles no longer cut their value to \"10…\"",
+            date = "June 2026",
+            items = listOf(
+                "Fixed: on phones, Today tiles that show a sparkline (Charge, Rest, Respiratory, HRV…) were truncating their value to \"10…\" or \"15…\" because the value and the inline trend line were competing for width. The value now shrinks to fit the way it already does on Mac/iPhone, so it always reads in full. Thanks @asemfahad (#332).",
+            ),
+        ),
         Release(
             version = "2.18.4",
             title = "Dynamic Island toggle now actually turns it off",

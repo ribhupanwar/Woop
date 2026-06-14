@@ -1574,12 +1574,18 @@ private fun SparkStatTile(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    // Shrink-to-fit (down to 0.6×) so a value never ellipsizes to "38…"/"10…" next to
-                    // the inline sparkline, matching the Swift tile's minimumScaleFactor (#332).
+                    // Shrink-to-fit (down to 0.6×) so a value never ellipsizes to "100%"→"10…" /
+                    // "15.5"→"15…" next to the inline sparkline, matching the Swift tile's
+                    // minimumScaleFactor (#332). fillMaxWidth() is load-bearing: AutoSizeValue only
+                    // shrinks when its Text is given a hard width to overflow against — without it the
+                    // single-line Text takes its intrinsic width, `didOverflowWidth` never trips, and
+                    // the value silently truncates at full size. The plain StatTile worked because it
+                    // passes weight(1f) (a hard width); this column-child needs fillMaxWidth instead.
                     AutoSizeValue(
                         value,
                         style = NoopType.tileValueLarge,
                         color = accent,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     if (caption != null) {
                         Text(
