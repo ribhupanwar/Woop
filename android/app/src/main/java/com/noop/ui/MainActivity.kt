@@ -268,6 +268,28 @@ object NoopPrefs {
         of(context).edit().putInt(KEY_SMART_ALARM_MINUTES, minutes).apply()
     }
 
+    /** HR-zone haptic coaching: buzz the strap on entering the top zone (ease off) and — when the
+     *  recovery buzz is on — on dropping back to Zone 1. Zone-based off the profile's HR-max; mirrors
+     *  macOS. Coaching default off; recovery buzz default on (matches macOS's always-both behaviour).
+     *  Reimplemented from @cbarrado's PR #350. */
+    const val KEY_ZONE_COACHING = "noop.zoneCoaching"
+    const val KEY_ZONE_COACH_RECOVERY = "noop.zoneCoachRecovery"
+
+    fun zoneCoaching(context: Context): Boolean =
+        of(context).getBoolean(KEY_ZONE_COACHING, false)
+
+    fun setZoneCoaching(context: Context, enabled: Boolean) {
+        of(context).edit().putBoolean(KEY_ZONE_COACHING, enabled).apply()
+    }
+
+    /** Whether to also buzz on recovering to Zone 1. Default ON (the macOS behaviour). */
+    fun zoneCoachRecovery(context: Context): Boolean =
+        of(context).getBoolean(KEY_ZONE_COACH_RECOVERY, true)
+
+    fun setZoneCoachRecovery(context: Context, enabled: Boolean) {
+        of(context).edit().putBoolean(KEY_ZONE_COACH_RECOVERY, enabled).apply()
+    }
+
     /** Illness early-warning (banner + notification). Default ON — the watch has always run on
      *  Android, so this is an opt-OUT; macOS is opt-in (behavior.illnessWatch, default off). */
     const val KEY_ILLNESS_WATCH = "noop.illnessWatch"

@@ -8,6 +8,7 @@ import com.noop.alarm.SmartAlarmScheduler
 import com.noop.alarm.SmartAlarmStore
 import com.noop.alarm.WindDownScheduler
 import com.noop.alarm.WindDownStore
+import com.noop.analytics.HrZones
 import com.noop.analytics.IllnessWatch
 import com.noop.analytics.IntelligenceEngine
 import com.noop.analytics.RouteMath
@@ -126,6 +127,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _smartAlarmMinutes = MutableStateFlow(NoopPrefs.smartAlarmMinutes(appContext))
     val smartAlarmMinutes: StateFlow<Int> = _smartAlarmMinutes.asStateFlow()
 
+    // HR-zone haptic coaching (persisted; zone-based, mirrors macOS AppModel.coachZone). Buzzes when you
+    // climb into the top zone (ease off) and — if the recovery buzz is on — when you drop back to Zone 1.
+    // Declared ABOVE the init block (like _smartAlarmEnabled) because the init HR collector calls
+    // coachZone() on its synchronous first (cached) emission; a declaration after init is null there and
+    // would NPE the constructor on a fast device where the strap is already bonded (the #84 class).
+    // Reimplemented from @cbarrado's PR #350.
+    private val _zoneCoaching = MutableStateFlow(NoopPrefs.zoneCoaching(appContext))
+    val zoneCoaching: StateFlow<Boolean> = _zoneCoaching.asStateFlow()
+    private val _zoneCoachRecovery = MutableStateFlow(NoopPrefs.zoneCoachRecovery(appContext))
+    /** Whether to also buzz on recovering to Zone 1 (the macOS default; some users want only the top-zone buzz). */
+    val zoneCoachRecovery: StateFlow<Boolean> = _zoneCoachRecovery.asStateFlow()
+    /** Last HR zone the coach saw (1..5, 0 = below Zone 1); -1 until the first sample. Mirrors macOS lastCoachZone. */
+    private var lastZone = -1
+
     // PHONE smart alarm (#207) — distinct from the strap-firmware buzz alarm above. The state lives in
     // its own [SmartAlarmStore]; the GUARANTEED wake is an exact OS alarm via [SmartAlarmScheduler],
     // independent of Bluetooth, sleep detection, or this process being alive. The overnight watcher
@@ -172,6 +187,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             var lastBonded = false
             ble.state.collect { state ->
                 state.heartRate?.let { ingestHr(it) }
+                coachZone(state)
                 if (state.bonded && !lastBonded) {
                     if (_smartAlarmEnabled.value) applySmartAlarm()
                     // Remember this strap so we can reconnect to it directly on the next launch (#67),
@@ -855,6 +871,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Fire a haptic buzz on the strap (requires a bonded connection). */
     fun buzz(loops: Int = 2) = ble.buzz(loops)
 
+    // --- HR-zone haptic coaching setters + behaviour. State (_zoneCoaching/_zoneCoachRecovery/lastZone)
+    // is declared ABOVE the init block (see the note there) so the synchronous first emission is safe. ---
+
+    fun setZoneCoaching(enabled: Boolean) {
+        _zoneCoaching.value = enabled
+        NoopPrefs.setZoneCoaching(appContext, enabled)
+        if (enabled) lastZone = -1   // a fresh enable shouldn't buzz on the first sample
+    }
+
+    fun setZoneCoachRecovery(enabled: Boolean) {
+        _zoneCoachRecovery.value = enabled
+        NoopPrefs.setZoneCoachRecovery(appContext, enabled)
+    }
+
+    /** HR-zone coaching: buzz on climbing into the top zone (ease off) or back to Zone 1 (recovered).
+     *  Fires once per zone change; mirrors macOS AppModel.coachZone. The buzz decision is the pure
+     *  [zoneCoachBuzzLoops] so it can be unit-tested without a strap. */
+    private fun coachZone(state: LiveState) {
+        if (!_zoneCoaching.value || !state.bonded || !state.worn) return
+        val hr = _bpm.value ?: return
+        if (hr < 30) return
+        val maxHR = profileStore.hrMax.toDouble()
+        if (maxHR <= 0) return
+        val zone = HrZones.zones(maxHR = maxHR).zoneNumber(hr.toDouble())
+        val previous = lastZone
+        lastZone = zone
+        val loops = zoneCoachBuzzLoops(previous, zone, _zoneCoachRecovery.value)
+        if (loops > 0) ble.buzz(loops)
+    }
+
     override fun onCleared() {
         super.onCleared()
         // The BLE client is process-owned (NoopApplication) and may be held up by
@@ -872,5 +918,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         const val FIRST_OFFLOAD_GRACE_MS = 6_000L
         /** On-device scoring cadence — 15 min, matching the strap offload cadence. */
         const val ANALYZE_INTERVAL_MS = 15 * 60 * 1_000L
+    }
+}
+
+/**
+ * HR-zone coaching buzz decision (pure; mirrors macOS AppModel.coachZone). Returns how many haptic
+ * loops to fire on a zone change, or 0 for none:
+ *  - Climbing into the top zone (5) from below → 3 loops ("ease off").
+ *  - Dropping back to Zone 1 or below from above → 1 loop, only when [recoveryEnabled].
+ * No buzz on the first observation ([previousZone] == -1) or when the zone is unchanged.
+ * Reimplemented from @cbarrado's PR #350.
+ */
+internal fun zoneCoachBuzzLoops(previousZone: Int, zone: Int, recoveryEnabled: Boolean): Int {
+    if (previousZone == -1 || zone == previousZone) return 0
+    return when {
+        zone == 5 && previousZone < 5 -> 3
+        zone <= 1 && previousZone > 1 && recoveryEnabled -> 1
+        else -> 0
     }
 }

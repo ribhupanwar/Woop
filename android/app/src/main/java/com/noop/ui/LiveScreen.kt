@@ -108,6 +108,10 @@ fun LiveScreen(viewModel: AppViewModel) {
     val zoneSet = remember(profile.hrMax) { HrZones.zones(maxHR = profile.hrMax.toDouble()) }
     val liveZone = bpm?.let { zoneSet.zoneNumber(it.toDouble()) } ?: 0
 
+    // HR-zone coaching state, shown read-only here; the toggles live in Automations.
+    val zoneCoaching by viewModel.zoneCoaching.collectAsStateWithLifecycle()
+    val zone5Bpm = zoneSet.zones.firstOrNull { it.number == 5 }?.lower?.roundToInt() ?: 0
+
     ScreenScaffold(title = "Live Body Console", subtitle = "Current physiology, strap trust, and session controls") {
 
         // Console header — the pill + a connection-mode badge (+ a live SYNCING badge during a history
@@ -206,6 +210,9 @@ fun LiveScreen(viewModel: AppViewModel) {
 
         // Signal Trust rail — one tile per signal that has to be current for the console to be trusted.
         SignalTrustRail(live = live, bpm = bpm, activeConnection = activeConnection)
+
+        // Max HR + the top-zone entry threshold (read-only; manage coaching in Automations).
+        MaxHrZoneCard(hrMax = profile.hrMax, zone5Bpm = zone5Bpm, coachingOn = zoneCoaching)
 
         // GPS workout sport picker — the shared sheet (also used on the Workouts screen, #115).
         var showSportPicker by remember { mutableStateOf(false) }
@@ -473,6 +480,42 @@ fun LiveScreen(viewModel: AppViewModel) {
 }
 
 // MARK: - Console header
+
+/**
+ * Read-only Max-HR + top-zone card. Max HR is the age-based value from Settings; the Zone 5 entry
+ * (≥ 90% of max) is where HR-zone coaching buzzes. Managing coaching lives in Automations.
+ * Reimplemented from @cbarrado's PR #350.
+ */
+@Composable
+private fun MaxHrZoneCard(hrMax: Int, zone5Bpm: Int, coachingOn: Boolean) {
+    NoopCard {
+        Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap), modifier = Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+                StatTile(
+                    modifier = Modifier.weight(1f),
+                    label = "Max HR",
+                    value = "$hrMax bpm",
+                    accent = Palette.textPrimary,
+                )
+                StatTile(
+                    modifier = Modifier.weight(1f),
+                    label = "Top zone",
+                    value = "≥ $zone5Bpm bpm",
+                    accent = if (coachingOn) Palette.accent else Palette.textTertiary,
+                )
+            }
+            Text(
+                if (coachingOn)
+                    "Strap buzzes when you climb into Zone 5 (≥ $zone5Bpm bpm). Manage it in Automations → Haptic coaching."
+                else
+                    "Turn on HR-zone coaching in Automations for a wrist buzz when you reach Zone 5 (≥ $zone5Bpm bpm).",
+                style = NoopType.footnote,
+                color = Palette.textTertiary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
 
 @Composable
 private fun ConsoleHeader(live: LiveState, activeConnection: Boolean) {

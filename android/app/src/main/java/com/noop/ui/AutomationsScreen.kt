@@ -30,19 +30,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.noop.analytics.HrZones
 import com.noop.ble.PuffinExperiment
+import kotlin.math.roundToInt
 
 /**
  * Automations — turn the strap's physical inputs (double-tap, wrist on/off) and live
- * biometrics into on-device actions and haptic coaching. The toggles persist nothing
- * here yet (the data layer owns settings); they are functional, local UI placeholders
- * that mirror AutomationsView.swift so the wiring agent can bind them to a store.
+ * biometrics into on-device actions and haptic coaching. HR-zone coaching, the smart alarm
+ * and the illness watch are real + persisted (ViewModel-backed); the remaining toggles
+ * (stress nudge, auto-lock) are still local UI placeholders mirroring AutomationsView.swift.
  */
 @Composable
 fun AutomationsScreen(viewModel: AppViewModel) {
     val live by viewModel.live.collectAsStateWithLifecycle()
 
-    var zoneCoaching by remember { mutableStateOf(false) }
     var stressNudge by remember { mutableStateOf(false) }
     var autoLockOnWristOff by remember { mutableStateOf(false) }
     // Smart alarm is real + persisted (issue #51): backed by the ViewModel, which arms the strap's
@@ -56,6 +57,16 @@ fun AutomationsScreen(viewModel: AppViewModel) {
     // so the UI can say so instead of promising a wake that never fires.
     val ctx = LocalContext.current
     val experimentalOn = PuffinExperiment.from(ctx).isEnabled
+
+    // HR-zone coaching is real + persisted (zone-based, mirrors macOS): the ViewModel owns the toggle +
+    // recovery option and buzzes the strap on entering the top zone (and Zone 1 if recovery is on).
+    val profile = remember { ProfileStore.from(ctx.applicationContext) }
+    val zoneCoaching by viewModel.zoneCoaching.collectAsStateWithLifecycle()
+    val zoneCoachRecovery by viewModel.zoneCoachRecovery.collectAsStateWithLifecycle()
+    // The Zone 5 entry threshold (≥ 90% of HR-max), from the same HrZones model used everywhere.
+    val zone5Bpm = remember(profile.hrMax) {
+        HrZones.zones(maxHR = profile.hrMax.toDouble()).zones.firstOrNull { it.number == 5 }?.lower?.roundToInt() ?: 0
+    }
 
     ScreenScaffold(
         title = "Automations",
@@ -91,10 +102,19 @@ fun AutomationsScreen(viewModel: AppViewModel) {
         ) {
             ToggleRow(
                 label = "HR-zone coaching",
-                help = "Buzz when you hit your top zone (ease off) and again when you recover. Uses your max HR from settings.",
+                help = "A triple-buzz when you climb into your top zone (Zone 5, ≥ $zone5Bpm bpm) — a cue to ease off. Max HR comes from Settings.",
                 checked = zoneCoaching,
-                onChange = { zoneCoaching = it },
+                onChange = { viewModel.setZoneCoaching(it) },
             )
+            if (zoneCoaching) {
+                RowDivider()
+                ToggleRow(
+                    label = "Recovery buzz",
+                    help = "Also buzz once when your heart rate drops back to Zone 1 — a cue that you've recovered.",
+                    checked = zoneCoachRecovery,
+                    onChange = { viewModel.setZoneCoachRecovery(it) },
+                )
+            }
             RowDivider()
             ToggleRow(
                 label = "Resting stress nudge (experimental)",
