@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="docs/assets/hero-v3.png" alt="NOOP v3 — Titanium &amp; Gold: the free, offline WHOOP app for iPhone, Android and Mac" width="900">
-</p>
-
-<p align="center">
   <img src="docs/assets/logo-v3.png" alt="NOOP" width="72">
 </p>
 
