@@ -18,6 +18,15 @@
       "screenshotURLs": [],
       "versions": [
         {
+          "version": "2.15.1",
+          "buildVersion": "62",
+          "date": "2026-06-14",
+          "localizedDescription": "Last Workouts tile fix",
+          "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.15.1/NOOP-v2.15.1-ios.ipa",
+          "size": 6495501,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "2.15.0",
           "buildVersion": "61",
           "date": "2026-06-14",
@@ -280,12 +289,12 @@
           "NSHealthUpdateUsageDescription": "NOOP writes the metrics it computes from your strap back into Apple Health, on-device and only when you allow it."
         }
       },
-      "version": "2.15.0",
-      "buildVersion": "61",
+      "version": "2.15.1",
+      "buildVersion": "62",
       "versionDate": "2026-06-14",
-      "versionDescription": "A beautiful new look on every screen, plus four fixes",
-      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.15.0/NOOP-v2.15.0-ios.ipa",
-      "size": 6496522,
+      "versionDescription": "Last Workouts tile fix",
+      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v2.15.1/NOOP-v2.15.1-ios.ipa",
+      "size": 6495501,
       "minOSVersion": "17.0"
     }
   ],
