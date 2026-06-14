@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "2.14.1"
+    static let currentVersion = "2.15.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,17 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "2.15.0",
+            title: "The new look everywhere — plus sleep, Effort & Bluetooth fixes",
+            date: "June 2026",
+            items: [
+                "The new look, everywhere: every screen now wears NOOP's premium dark design — scenic backdrops, glowing ring gauges and frosted per-domain cards across Sleep, Recovery, Stress, Workouts, Live, Health, Trends, Insights, Breathe, Coach and Settings, on Mac, iPhone and Android.",
+                "Fixed (sleep day): if you fall asleep before midnight and wake before ~4am in a timezone other than UTC, Today now shows last night's sleep instead of the night before. Thanks @maddognik (#304).",
+                "Fixed (sleep detection): on WHOOP 5.0 a full night is no longer chopped into tiny fragments and dropped — NOOP now holds the night together from your heart rate when motion data is sparse. Thanks @umarXBT (#308).",
+                "Fixed (Effort scale): the Effort gauge on Today, Live and Workouts now follows your 0–100 / 0–21 preference instead of always showing 0–21, and older imported days are re-scored onto the 0–100 axis. Thanks @maddognik (#313).",
+                "Fixed (Android Bluetooth): turning Bluetooth off — or flight mode — no longer leaves NOOP showing a phantom \"connected\" or crashing on the next buzz; it now cleanly shows disconnected and reconnects when Bluetooth returns. Thanks @pilleuspulcher-blip (#314).",
+            ]),
         Release(
             version: "2.14.1",
             title: "Continuous workouts no longer split",

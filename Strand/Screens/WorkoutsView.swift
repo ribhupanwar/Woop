@@ -255,7 +255,8 @@ struct WorkoutsView: View {
                 .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.effortColor)
             StrainGauge(
-                strain: (avgStrain / 100.0) * 21.0,
+                strain: UnitFormatter.effortValue(avgStrain, scale: effortScale),
+                outOf: effortScale == .whoop ? 21 : 100,
                 diameter: 168, lineWidth: 15,
                 showsLabel: hasData, showsHover: false,
                 valueFormat: { _ in UnitFormatter.effortDisplay(avgStrain, scale: effortScale) }

@@ -681,16 +681,23 @@ class WhoopRepository(private val dao: WhoopDao) {
         }
 
         /**
-         * Same precedence for sleep sessions, keyed by the UTC day the night ends on.
-         * Port of macOS Repository.mergeSleep (the macOS keyer used the local tz; this
-         * port keys on UTC for consistency with AnalyticsEngine's UTC day attribution).
+         * Same precedence for sleep sessions, keyed by the LOCAL day the night ends on (#304).
+         * Brought into line with macOS Repository.mergeSleep, which keys on the local wake-day. A
+         * UTC key put a night that ends after local-but-before-UTC midnight (a UTC+ user waking
+         * early) under yesterday's UTC date, so the dashboard's local "today" read missed it and
+         * surfaced the previous night. The local key matches how IntelligenceEngine buckets nights
+         * and how the resolver looks up "today". REUSES the existing
+         * `AnalyticsEngine.dayString(ts, offsetSec)` overload — do NOT add a new offset overload,
+         * it clashes on the JVM signature and breaks the build.
          */
         internal fun mergeSleep(
             imported: List<SleepSession>,
             computed: List<SleepSession>,
         ): List<SleepSession> {
-            fun endDay(s: SleepSession): String =
-                com.noop.analytics.AnalyticsEngine.dayString(s.endTs)
+            fun endDay(s: SleepSession): String {
+                val offsetSec = (java.util.TimeZone.getDefault().getOffset(s.endTs * 1000) / 1000).toLong()
+                return com.noop.analytics.AnalyticsEngine.dayString(s.endTs, offsetSec)
+            }
             val byDay = LinkedHashMap<String, SleepSession>()
             for (s in computed) byDay[endDay(s)] = s
             for (s in imported) byDay[endDay(s)] = s

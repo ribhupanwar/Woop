@@ -142,7 +142,9 @@ private fun EffortGauge(liveStrain: Double, effortScale: EffortScale) {
         ) {
             Overline("Effort building", color = Palette.effortColor)
             StrainGauge(
-                strain = (liveStrain / 100.0) * 21.0,
+                strain = UnitFormatter.effortValue(liveStrain, effortScale),
+                outOf = if (effortScale == EffortScale.WHOOP) 21.0 else 100.0,
+                valueText = UnitFormatter.effortDisplay(liveStrain, effortScale),
                 diameter = 150.dp,
                 lineWidth = 14.dp,
             )

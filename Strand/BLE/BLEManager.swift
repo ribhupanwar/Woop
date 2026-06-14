@@ -519,6 +519,10 @@ public final class BLEManager: NSObject, ObservableObject {
     ///     sites are unaffected. Pass `.withResponse` for acked commands (e.g. historicalDataResult).
     public func send(_ command: WhoopCommand, payload: [UInt8] = [0x00],
                      writeType: CBCharacteristicWriteType = .withoutResponse) {
+        // #314 parity: CoreBluetooth already covers both Android defects here — this `p.state == .connected`
+        // guard makes a write a no-op once the radio powers off (no DeadObjectException to crash on), and
+        // centralManagerDidUpdateState publishes state.connected = false on .poweredOff, so the iOS/macOS UI
+        // can't show a stale-connected link. The Android fix re-creates both behaviours; no Swift change needed.
         guard state.connected, let p = peripheral, p.state == .connected, let ch = cmdCharacteristic else {
             let reason = state.connected ? "command characteristic unavailable" : "not connected"
             log("send(\(command.label)) ignored — \(reason)")

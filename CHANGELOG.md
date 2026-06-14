@@ -17,6 +17,23 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 2.15.0 — The new look everywhere, plus sleep, Effort & Bluetooth fixes
+
+- **The new look, everywhere.** Every screen now wears NOOP's premium dark design — scenic
+  backdrops, glowing ring gauges for Charge/Effort/Rest, and frosted per-domain cards — across
+  Sleep, Recovery, Stress, Workouts, Live, Health, Trends, Insights, Breathe, Coach and Settings,
+  on Mac, iPhone and Android. Same data, same on-device privacy.
+- **Fixed (sleep day):** if you fall asleep before midnight and wake before ~4am in a timezone
+  other than UTC, Today now shows last night's sleep instead of the night before. Thanks @maddognik (#304).
+- **Fixed (sleep detection):** on WHOOP 5.0 a full night is no longer chopped into tiny fragments
+  and dropped — NOOP holds the night together from your heart rate when motion data is sparse. Thanks @umarXBT (#308).
+- **Fixed (Effort scale):** the Effort gauge on Today, Live and Workouts now follows your 0–100 /
+  0–21 preference instead of always showing 0–21, and older imported days are re-scored onto the 0–100 axis. Thanks @maddognik (#313).
+- **Fixed (Android Bluetooth):** turning Bluetooth off — or flight mode — no longer leaves NOOP
+  showing a phantom "connected" or crashing on the next buzz; it cleanly shows disconnected and reconnects when Bluetooth returns. Thanks @pilleuspulcher-blip (#314).
+
+---
+
 ## 2.14.1 — Continuous workouts no longer split, plus delete a sleep session
 
 - **Fixed:** a long, continuous workout — like a 4-hour ride — no longer fragments into several tiny

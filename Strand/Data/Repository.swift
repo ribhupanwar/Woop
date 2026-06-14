@@ -133,9 +133,31 @@ final class Repository: ObservableObject {
     /// day's row instead of an empty new-calendar-day row that blanks the dashboard (#144). nil if no row
     /// for that day yet (the dashboard then shows its empty/pending state). Presentation-only — stored
     /// row keys are untouched.
+    ///
+    /// Non-UTC pre-04:00 carve-out (#304): a user who falls asleep before midnight and wakes before the
+    /// 04:00 rollover has the just-finished night banked under the NEW local calendar day (sleep is keyed
+    /// by the local wake-day — `mergeSleep` / IntelligenceEngine), while `logicalDayKey` still points at
+    /// yesterday. Resolving strictly by logical day would then surface the PREVIOUS night. So: if the
+    /// local calendar day differs from the logical day AND a row for the local day has a banked night
+    /// (`totalSleepMin != nil`), prefer that row. Otherwise fall back to the logical-day row — which keeps
+    /// the #144 anti-blank guard (no night banked yet ⇒ keep yesterday's logical row, never blank).
     var today: DailyMetric? {
-        let key = Repository.logicalDayKey(Date())
-        return days.last(where: { $0.day == key })
+        let now = Date()
+        return Repository.resolveToday(days: days,
+                                       logicalKey: Repository.logicalDayKey(now),
+                                       localKey: Repository.localDayKey(now))
+    }
+
+    /// Pure resolver behind `today` (extracted so the #304 boundary is testable without a live clock):
+    /// prefer the LOCAL-calendar-day row when it differs from the logical day AND has a banked night
+    /// (`totalSleepMin != nil`); otherwise the logical-day row (preserving the #144 anti-blank guard).
+    /// `localKey == logicalKey` (the common daytime case) collapses to the plain logical-day lookup.
+    nonisolated static func resolveToday(days: [DailyMetric], logicalKey: String, localKey: String) -> DailyMetric? {
+        if localKey != logicalKey,
+           let localRow = days.last(where: { $0.day == localKey && $0.totalSleepMin != nil }) {
+            return localRow
+        }
+        return days.last(where: { $0.day == logicalKey })
     }
     /// The trailing 7 CALENDAR days ending today (for the week strip), oldest→newest — not the last 7
     /// stored rows, which on a stale import were old data. ISO yyyy-MM-dd compares chronologically.

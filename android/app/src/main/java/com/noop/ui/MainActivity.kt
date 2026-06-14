@@ -277,6 +277,17 @@ object NoopPrefs {
         of(context).edit().putString(KEY_ILLNESS_LAST_NOTIFIED_DAY, day).apply()
     }
 
+    /** Whether the one-shot #313 full-history Effort rescore has run. Set true once it completes so the
+     *  on-upgrade pass that regenerates deep-history strain on the 0–100 axis never re-runs. */
+    const val KEY_EFFORT_RESCORE_DONE = "noop.effortRescore.v313.done"
+
+    fun effortRescoreDone(context: Context): Boolean =
+        of(context).getBoolean(KEY_EFFORT_RESCORE_DONE, false)
+
+    fun setEffortRescoreDone(context: Context) {
+        of(context).edit().putBoolean(KEY_EFFORT_RESCORE_DONE, true).apply()
+    }
+
     /** The last strap we bonded to (address + model), persisted so NOOP can reconnect to it directly on
      *  the next launch — e.g. after an APK update restarts the process (#67). On-device only; never sent. */
     const val KEY_LAST_DEVICE_ADDR = "noop.lastDeviceAddress"

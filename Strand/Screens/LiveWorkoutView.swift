@@ -93,8 +93,9 @@ struct LiveWorkoutView: View {
     }
 
     /// The accumulating Effort, on the same layered StrainGauge the rest of the app uses — the live
-    /// `liveStrain` is on NOOP's 0–100 Effort axis, so map it down to the gauge's 0–21 span for the
-    /// arc + numeral (mirrors TodayView's effort hero). Display-only — the captured value stays 0–100.
+    /// `liveStrain` is on NOOP's 0–100 Effort axis. The gauge renders on the user's selected Effort
+    /// scale (#313): 0–100 native, or rescaled to WHOOP's 0–21, matching the rest of the app's
+    /// read-outs (mirrors TodayView's effort hero). Display-only — the captured value stays 0–100.
     private var effortGauge: some View {
         let strain = model.activeWorkout?.liveStrain ?? 0
         return NoopCard(padding: 18, tint: StrandPalette.effortColor) {
@@ -103,7 +104,8 @@ struct LiveWorkoutView: View {
                     .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.effortColor)
                 StrainGauge(
-                    strain: (strain / 100.0) * 21.0,
+                    strain: UnitFormatter.effortValue(strain, scale: effortScale),
+                    outOf: effortScale == .whoop ? 21 : 100,
                     diameter: 150, lineWidth: 14, showsHover: false,
                     valueFormat: { _ in UnitFormatter.effortDisplay(strain, scale: effortScale) }
                 )

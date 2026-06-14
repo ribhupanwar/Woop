@@ -88,6 +88,48 @@ object IntelligenceEngine {
         analyzeRecentOnCpu(repo, profile, maxDays, importedDeviceId, maxHROverride, nowSeconds)
     }
 
+    /** History span for the one-shot Effort rescore — large enough to cover any real wear history,
+     *  matching the Swift `historyDays` default. */
+    const val EFFORT_RESCORE_HISTORY_DAYS: Int = 4000
+
+    /**
+     * One-shot, on-upgrade FULL-history Effort rescore (#313 PART B). The Effort hero gauge + numbers
+     * moved from the old 0–21 axis to NOOP's own 0–100 axis. On-device computed rows since v2.6.0 already
+     * store 0–100, but rows the engine computed on an OLDER build (capped at [maxDays] per run, so deep
+     * history was never revisited) may still hold 0–21 strain.
+     *
+     * The SAFE fix is to recompute strain FROM SOURCE for every day with raw HR — those regenerate at
+     * 0–100 with NO double-rescale risk — rather than a blind `strain*100/21` multiply that would
+     * double-rescale the large population already on 0–100 (→ ~0–476). We do that by running the normal
+     * [analyzeRecent] once with the [maxDays] cap lifted to the full history, then persist a flag (via the
+     * injected [flagGet]/[flagSet]) so it runs exactly once. IMPORTED rows are never rewritten here (the
+     * engine only ever writes under the "-noop" computed source) — those are handled by re-import. A day
+     * already on 0–100 is recomputed from the same raw HR and lands on 0–100 again: UNCHANGED axis.
+     *
+     * The flag get/set are passed in so this stays a pure-JVM analytics object (no Android Context). The
+     * caller (AppViewModel) wires them to [com.noop.ui.NoopPrefs]. Mirrors Swift
+     * IntelligenceEngine.runEffortRescoreIfNeeded.
+     */
+    suspend fun runEffortRescoreIfNeeded(
+        repo: WhoopRepository,
+        profile: UserProfile = UserProfile(),
+        importedDeviceId: String = "my-whoop",
+        maxHROverride: Double? = null,
+        flagGet: () -> Boolean,
+        flagSet: () -> Unit,
+        historyDays: Int = EFFORT_RESCORE_HISTORY_DAYS,
+    ) {
+        if (flagGet()) return
+        analyzeRecent(
+            repo = repo,
+            profile = profile,
+            maxDays = historyDays,
+            importedDeviceId = importedDeviceId,
+            maxHROverride = maxHROverride,
+        )
+        flagSet()
+    }
+
     private suspend fun analyzeRecentOnCpu(
         repo: WhoopRepository,
         profile: UserProfile = UserProfile(),

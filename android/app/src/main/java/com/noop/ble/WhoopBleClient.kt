@@ -187,6 +187,88 @@ data class LiveState(
  *   - Every android.bluetooth call below is annotated @SuppressLint("MissingPermission"); the
  *     ViewModel/Activity owns the permission request and must not call into here until granted.
  */
+/**
+ * Thin injectable indirection over the raw [BluetoothGatt] operations the client calls.
+ *
+ * Production wires [RealGattOps] (a straight delegate to a live `BluetoothGatt`). Unit tests inject a
+ * stub whose methods throw `android.os.DeadObjectException` to exercise the crash-safety teardown
+ * (#314) WITHOUT pulling in Robolectric or a full GATT mock. The interface is deliberately minimal —
+ * only the GATT calls that can throw a `DeadObjectException` once the OS Bluetooth binder dies (the
+ * radio was turned off mid-link) are routed through it; everything else stays on the concrete handle.
+ *
+ * The boolean returns mirror `BluetoothGatt`'s own contract (true == the op was accepted by the
+ * stack). A THROW is distinct from a `false` return: `false` is a transient BUSY (retry), a throw is
+ * a dead binder (tear down). See [WhoopBleClient.safeGatt].
+ */
+interface GattOps {
+    fun writeCharacteristicCompat(
+        ch: BluetoothGattCharacteristic,
+        value: ByteArray,
+        writeType: Int,
+    ): Boolean
+
+    fun writeDescriptorCompat(
+        descriptor: BluetoothGattDescriptor,
+        value: ByteArray,
+    ): Boolean
+
+    fun readCharacteristicCompat(ch: BluetoothGattCharacteristic): Boolean
+    fun setCharacteristicNotificationCompat(ch: BluetoothGattCharacteristic, enable: Boolean): Boolean
+    fun requestMtuCompat(mtu: Int): Boolean
+    fun readRemoteRssiCompat(): Boolean
+    fun discoverServicesCompat(): Boolean
+}
+
+/**
+ * Production [GattOps]: a straight delegate to a live [BluetoothGatt]. The TIRAMISU+/legacy branch
+ * for the value-bearing write/descriptor calls lives here (one place) so the client call sites read
+ * uniformly. Permission is owned by the caller (the client is @SuppressLint("MissingPermission")).
+ */
+@SuppressLint("MissingPermission")
+class RealGattOps(private val gatt: BluetoothGatt) : GattOps {
+    override fun writeCharacteristicCompat(
+        ch: BluetoothGattCharacteristic,
+        value: ByteArray,
+        writeType: Int,
+    ): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeCharacteristic(ch, value, writeType) == BluetoothGatt.GATT_SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            run {
+                ch.writeType = writeType
+                ch.value = value
+                gatt.writeCharacteristic(ch)
+            }
+        }
+
+    override fun writeDescriptorCompat(
+        descriptor: BluetoothGattDescriptor,
+        value: ByteArray,
+    ): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(descriptor, value) == BluetoothGatt.GATT_SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            run {
+                descriptor.value = value
+                gatt.writeDescriptor(descriptor)
+            }
+        }
+
+    override fun readCharacteristicCompat(ch: BluetoothGattCharacteristic): Boolean =
+        gatt.readCharacteristic(ch)
+
+    override fun setCharacteristicNotificationCompat(
+        ch: BluetoothGattCharacteristic,
+        enable: Boolean,
+    ): Boolean = gatt.setCharacteristicNotification(ch, enable)
+
+    override fun requestMtuCompat(mtu: Int): Boolean = gatt.requestMtu(mtu)
+    override fun readRemoteRssiCompat(): Boolean = gatt.readRemoteRssi()
+    override fun discoverServicesCompat(): Boolean = gatt.discoverServices()
+}
+
 class WhoopBleClient(
     private val context: Context,
     /**
@@ -209,6 +291,13 @@ class WhoopBleClient(
      * scan. Port of the macOS `PuffinExperiment` gate. NEVER consulted for WHOOP 4.0.
      */
     private val puffinExperiment: PuffinExperiment = PuffinExperiment.from(context),
+    /**
+     * Builds the [GattOps] indirection from a live [BluetoothGatt]. Production uses [RealGattOps];
+     * unit tests inject a factory that returns a stub whose calls throw `DeadObjectException` to
+     * exercise the crash-safety teardown (#314) without Robolectric. Default keeps every existing
+     * call site unchanged.
+     */
+    private val gattOpsFactory: (BluetoothGatt) -> GattOps = ::RealGattOps,
 ) {
 
     companion object {
@@ -376,6 +465,40 @@ class WhoopBleClient(
             connected && bonded && !backfilling
 
         /**
+         * #314: should a Throwable that escaped a raw GATT call trigger a full link teardown?
+         *
+         * Once the OS Bluetooth radio is turned off mid-link the binder dies, and `BluetoothGatt`'s
+         * write/read/descriptor/mtu/discover calls throw `android.os.DeadObjectException` (an unchecked
+         * `RuntimeException`); we also see `IllegalStateException` (adapter off) and `SecurityException`
+         * (permission revoked). ALL of these mean the link is unusable, so the honest answer is always
+         * `true` — there is no recoverable GATT throw. Kept as a pure, instance-free predicate so the
+         * catch policy in [safeGatt] is unit-testable without a live GATT stack (the actual call sites
+         * need a real binder, which the unit harness has no way to fake). The named types are documented
+         * here because they are the ones observed in #314 and the prompt's required catch set.
+         */
+        fun shouldTeardownOnGattThrow(t: Throwable): Boolean = when (t) {
+            is android.os.DeadObjectException,   // binder died — the #314 crash
+            is IllegalStateException,            // adapter/stack in a bad state
+            is SecurityException,                // BLUETOOTH_CONNECT revoked mid-link
+            -> true
+            // Any other RuntimeException out of a GATT call is equally unrecoverable: there is no path
+            // where continuing to drive a throwing GATT is correct, so tear down rather than crash.
+            else -> true
+        }
+
+        /**
+         * The LiveState the teardown path publishes after the link drops (#314). Pure model of the
+         * `connected = false` + biometrics-cleared transition so a test can assert the UI flips to
+         * disconnected without a live instance. Mirrors what `handleDisconnect` applies via
+         * `LiveState.clearedBiometrics().copy(...)`.
+         */
+        fun disconnectedLiveState(previous: LiveState): LiveState =
+            previous.clearedBiometrics().copy(
+                connected = false, bonded = false, encryptedBond = false,
+                backfilling = false, syncChunksThisSession = 0, charging = null,
+            )
+
+        /**
          * Pure classification of a COMPLETED (HISTORY_COMPLETE) offload, extracted from exitBackfilling
          * so it's unit-testable without a live GATT stack. Mirrors Swift
          * `BLEManager.classifyCompletedOffload`.
@@ -429,6 +552,9 @@ class WhoopBleClient(
     private val scanner: BluetoothLeScanner? get() = adapter?.bluetoothLeScanner
 
     private var gatt: BluetoothGatt? = null
+    /** Injectable indirection over [gatt]'s raw GATT calls (see [GattOps]). Rebuilt whenever [gatt] is
+     *  (re)assigned in [connectToDevice], cleared in the teardown path alongside `gatt = null`. */
+    private var gattOps: GattOps? = null
     private var cmdCharacteristic: BluetoothGattCharacteristic? = null
 
     /** Frame reassembler for the fragmented custom notify chars (port of Reassembler). Reassigned per
@@ -739,12 +865,21 @@ class WhoopBleClient(
     private var pendingRetry: PendingWrite? = null
     private var writeRetries = 0
 
+    /** The BUSY-retry kick for [drainWriteQueue], held as a NAMED runnable (not an inline lambda) so the
+     *  teardown path can cancel a still-pending retry — otherwise a queued retry fires after the link is
+     *  dead and re-enters the now-dead write, re-throwing `DeadObjectException` (#314). */
+    private val drainWriteRetryRunnable = Runnable { drainWriteQueue() }
+
     /** Descriptor-write queue: enabling notifications is also a one-at-a-time GATT operation. */
     private val cccdQueue = ConcurrentLinkedQueue<BluetoothGattCharacteristic>()
     private var cccdInFlight = false
     /** Bounded retries for a transiently-BUSY CCCD write, so a single rejected subscribe doesn't
      *  permanently kill a stream (HR/battery/events). Reset per connection in [reset]. */
     private var cccdRetries = 0
+    /** The BUSY-retry kick for [drainCccdQueue], a NAMED runnable so teardown can cancel a pending
+     *  subscribe-retry that would otherwise re-enter a dead descriptor write (#314). It re-drains using
+     *  the CURRENT [gatt]; if the link is already torn down ([gatt] is null) the drain is a no-op. */
+    private val drainCccdRetryRunnable = Runnable { gatt?.let { drainCccdQueue(it) } }
     /** Set once startSession() has fired the first command, so it runs exactly once per connection. */
     private var sessionStarted = false
 
@@ -872,7 +1007,63 @@ class WhoopBleClient(
         handler.removeCallbacks(scanTimeoutRunnable)
         stopScan()
         _state.value = _state.value.copy(scanning = false, statusNote = null)
-        gatt?.disconnect()   // onConnectionStateChange(DISCONNECTED) does the teardown + close.
+        // disconnect() can throw on a dead binder (radio off, #314). If it does, the OS won't deliver
+        // onConnectionStateChange(DISCONNECTED), so tear down directly instead of crashing.
+        try {
+            gatt?.disconnect()   // onConnectionStateChange(DISCONNECTED) does the teardown + close.
+        } catch (t: Throwable) {
+            log("gatt.disconnect() threw ${t.javaClass.simpleName}; tearing down directly")
+            teardownAfterGattFailure()
+        }
+    }
+
+    /**
+     * The OS Bluetooth radio was turned OFF (or is turning off). #314: turning Bluetooth off does NOT
+     * deliver onConnectionStateChange(DISCONNECTED) for our GATT, so the orphaned link lingered —
+     * gatt/cmdCharacteristic stayed non-null, state.connected stayed true, and the UI kept showing live
+     * HR/buzz/sync that wasn't real (and the next write crashed on a dead binder). Called from
+     * [WhoopConnectionService]'s ACTION_STATE_CHANGED receiver. Runs the FULL teardown synchronously on
+     * the main looper so the UI flips to disconnected immediately. Idempotent — a no-op if already down.
+     *
+     * NOTE: the auto-reconnect that [teardownAfterGattFailure] suppresses (it sets intentionalDisconnect)
+     * is exactly what we want here too: the [connect] adapter.isEnabled gate would reject a reconnect
+     * while the radio is off anyway, and [onBluetoothRadioOn] re-arms the connect when it comes back.
+     */
+    fun onBluetoothRadioOff() {
+        handler.post {
+            if (gatt == null && !_state.value.connected) {
+                log("Bluetooth radio off — already disconnected")
+                return@post
+            }
+            log("Bluetooth radio turned off — tearing down the orphaned link (#314)")
+            teardownAfterGattFailure()
+            // teardownAfterGattFailure → handleDisconnect already publishes connected=false; make the
+            // "off" reason explicit for the UI so it reads "Bluetooth is off" rather than "Reconnecting…".
+            _state.value = _state.value.copy(
+                connected = false, scanning = false,
+                statusNote = "Bluetooth is off. Turn it on to reconnect.",
+            )
+        }
+    }
+
+    /**
+     * The OS Bluetooth radio came back ON. Resume the connection the user last had: reconnect directly
+     * to the remembered strap if we have one, else re-scan for the selected family. The connect path's
+     * own adapter.isEnabled gate is now satisfied. Called from the ACTION_STATE_CHANGED receiver.
+     */
+    fun onBluetoothRadioOn() {
+        handler.post {
+            if (gatt != null || _state.value.connected) return@post   // already (re)connected
+            val dev = lastDevice
+            if (dev != null) {
+                log("Bluetooth radio back on — reconnecting directly to the last strap")
+                intentionalDisconnect = false
+                connectToDevice(dev, autoConnect = true)
+            } else {
+                log("Bluetooth radio back on — rescanning for your ${selectedModel.displayName}")
+                connect(selectedModel)
+            }
+        }
     }
 
     /**
@@ -1004,9 +1195,11 @@ class WhoopBleClient(
             send(CommandNumber.GET_BATTERY_LEVEL)
             return
         }
+        val ops = gattOps ?: return
         val batt = g.getService(BATTERY_SERVICE)?.getCharacteristic(BATTERY_CHAR)
         if (batt != null && (batt.properties and BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
-            g.readCharacteristic(batt)
+            // safeGatt: a dead binder here (radio off mid-link, #314) tears down instead of crashing.
+            safeGatt("readCharacteristic(battery)") { ops.readCharacteristicCompat(batt) }
             log("Reading standard Battery Level (0x2A19)")
         } else {
             log("Battery Level read unavailable; relying on notifications")
@@ -1150,8 +1343,10 @@ class WhoopBleClient(
     @SuppressLint("MissingPermission")
     private fun kickServiceDiscovery(g: BluetoothGatt, reason: String) {
         if (!serviceDiscoveryKicked.compareAndSet(false, true)) return
+        val ops = gattOps ?: return
         log("Discovering services ($reason)")
-        g.discoverServices()
+        // safeGatt: discovery on a dead binder (radio off, #314) tears down rather than crashing.
+        safeGatt("discoverServices") { ops.discoverServicesCompat() }
     }
 
     @SuppressLint("MissingPermission")
@@ -1161,7 +1356,8 @@ class WhoopBleClient(
         // Remember the device so a later dropout can reconnect straight to it (#61).
         lastDevice = device
         // Close any prior/pending GATT so a direct-reconnect attempt doesn't leak the old client.
-        gatt?.close()
+        // close() can throw on a dead binder (#314); swallow it — we're replacing the handle anyway.
+        try { gatt?.close() } catch (t: Throwable) { log("prior gatt.close() threw ${t.javaClass.simpleName} (ignored)") }
         // autoConnect=false → a fast, direct connect (CoreBluetooth central.connect default), used for
         // the scan-discovered first connect. autoConnect=true → the OS reconnects whenever the bonded
         // strap is reachable WITHOUT needing an advertisement (used by the dropout auto-reconnect, #61).
@@ -1190,6 +1386,7 @@ class WhoopBleClient(
             else ->
                 device.connectGatt(context, autoConnect, gattCallback)
         }
+        gattOps = gatt?.let { gattOpsFactory(it) }
     }
 
     // ====================================================================================
@@ -1212,15 +1409,23 @@ class WhoopBleClient(
                     // handshake: Android runs ONE GATT op at a time, so reading RSSI here (before
                     // requestMtu) could make requestMtu return false → MTU skipped → offload capped. A
                     // stray read after setup is harmless (just no RSSI line). (PR #241)
-                    handler.postDelayed({ gatt?.readRemoteRssi() }, RSSI_READ_DELAY_MS)
+                    // safeGatt: a late RSSI read can land just after the radio went off (#314) — guard it.
+                    handler.postDelayed({
+                        gattOps?.let { safeGatt("readRemoteRssi") { it.readRemoteRssiCompat() } }
+                    }, RSSI_READ_DELAY_MS)
                     // Request the larger MTU BEFORE discovery/subscribe so the offload isn't capped at
                     // 20-byte notifications (the official app does this in its GATT init). Discovery is
                     // gated on the result with a fallback timeout, so a stack that ignores requestMtu
                     // can't stall the connect. (PR #85)
-                    if (g.requestMtu(GATT_MTU)) {
+                    val mtuOps = gattOps
+                    val mtuOk = mtuOps != null &&
+                        safeGatt("requestMtu") { mtuOps.requestMtuCompat(GATT_MTU) }
+                    if (mtuOk) {
                         log("Connected — requesting MTU $GATT_MTU before discovery")
                         handler.postDelayed({ kickServiceDiscovery(g, "mtu timeout") }, MTU_FALLBACK_MS)
-                    } else {
+                    } else if (gatt != null) {
+                        // requestMtu returned false (stack ignored it) but the link is still alive —
+                        // discover directly. If safeGatt tore down (dead binder), gatt is null: skip.
                         kickServiceDiscovery(g, "requestMtu rejected")
                     }
                 }
@@ -1785,7 +1990,14 @@ class WhoopBleClient(
                 // disconnect re-bonds and resumes streaming (the automatic version of the manual fix).
                 log("No data for ${silentMs / 1000}s — bouncing link to resume live stream")
                 intentionalDisconnect = false    // make sure the auto-reconnect fires
-                gatt?.disconnect()               // → handleDisconnect → reset() (cancels this) → reconnect
+                // disconnect() throwing on a dead binder (#314) would crash from the keep-alive timer;
+                // tear down directly so the bounce degrades to a clean disconnect.
+                try {
+                    gatt?.disconnect()           // → handleDisconnect → reset() (cancels this) → reconnect
+                } catch (t: Throwable) {
+                    log("keep-alive bounce: gatt.disconnect() threw ${t.javaClass.simpleName}; tearing down")
+                    teardownAfterGattFailure()
+                }
             } else {
                 // Recover a silently-dropped subscription once the stream has gone quiet (any family) —
                 // but only ONCE per quiet episode. Re-subscribing all notify chars every 30s tick floods
@@ -2013,7 +2225,8 @@ class WhoopBleClient(
             return
         }
         if (writeInFlight) return
-        val g = gatt ?: return
+        gatt ?: return
+        val ops = gattOps ?: return
         val ch = cmdCharacteristic ?: return
         // A frame rejected BUSY last tick takes priority so it keeps its place in the command sequence.
         val item = pendingRetry ?: writeQueue.poll() ?: return
@@ -2026,15 +2239,12 @@ class WhoopBleClient(
             BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         }
 
-        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(ch, item.frame, writeType) == BluetoothGatt.GATT_SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            run {
-                ch.writeType = writeType
-                ch.value = item.frame
-                g.writeCharacteristic(ch)
-            }
+        // safeGatt: a throw here means the binder died (radio turned off mid-link, #314) — it tears the
+        // link down and returns false. After teardown the queues are cleared and gatt is null, so the
+        // recursive re-drain below immediately no-ops; we don't fall through into a retry against a dead
+        // binder.
+        val ok = safeGatt("writeCharacteristic") {
+            ops.writeCharacteristicCompat(ch, item.frame, writeType)
         }
 
         if (!ok) {
@@ -2042,14 +2252,18 @@ class WhoopBleClient(
             // worst when the slot was freed too eagerly). Re-hold THIS frame and retry shortly instead
             // of dropping it: a dropped TOGGLE_REALTIME_HR / SET_CLOCK / offload-ack silently breaks
             // live HR, the clock, or the backfill (issue #77 — a Pixel 7 on Android 16 saw exactly this).
+            // If safeGatt already tore down (dead binder), gatt is now null — bail before scheduling a
+            // retry that would re-enter the dead write.
             writeInFlight = false
+            if (gatt == null) return
             if (writeRetries < MAX_WRITE_RETRIES) {
                 writeRetries++
                 log("writeCharacteristic busy; retry $writeRetries/$MAX_WRITE_RETRIES")
                 pendingRetry = item
                 // Escalating backoff (12, 24, … capped ~96ms) — ride out a congestion spike instead of
-                // exhausting the budget in a few tens of ms while the stack is still busy (#77).
-                handler.postDelayed({ drainWriteQueue() }, WRITE_RETRY_DELAY_MS * minOf(writeRetries, 8))
+                // exhausting the budget in a few tens of ms while the stack is still busy (#77). NAMED
+                // runnable so teardown can cancel a pending retry (#314).
+                handler.postDelayed(drainWriteRetryRunnable, WRITE_RETRY_DELAY_MS * minOf(writeRetries, 8))
             } else {
                 // Genuinely stuck after several tries — drop this one frame so it can't wedge the queue.
                 log("writeCharacteristic rejected by stack; dropping one frame (after $MAX_WRITE_RETRIES retries)")
@@ -2077,20 +2291,15 @@ class WhoopBleClient(
      */
     @SuppressLint("MissingPermission")
     private fun writeBondFrame(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
+        val ops = gattOps ?: return
         seq = (seq + 1) and 0xFF
         val bondFrame = Framing.buildCommand(CommandNumber.GET_BATTERY_LEVEL, byteArrayOf(0), seq)
         log("Bonding: confirmed write GET_BATTERY_LEVEL to 61080002")
         writeInFlight = true   // hold the slot until onCharacteristicWrite fires (with response).
-        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(ch, bondFrame, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
-                BluetoothGatt.GATT_SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            run {
-                ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                ch.value = bondFrame
-                g.writeCharacteristic(ch)
-            }
+        // safeGatt: a throw means the binder died (#314) — teardown, return false, fall into the
+        // "rejected" branch which just clears the (now-stale) in-flight slot.
+        val ok = safeGatt("writeBondFrame") {
+            ops.writeCharacteristicCompat(ch, bondFrame, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
         }
         if (!ok) {
             writeInFlight = false
@@ -2108,6 +2317,7 @@ class WhoopBleClient(
     @SuppressLint("MissingPermission")
     private fun writeClientHello(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
         val hello = DeviceFamily.WHOOP5.clientHello ?: return
+        val ops = gattOps ?: return
         // CONFIRMED (with-response) write — mirrors the macOS v1.5 fix and the hardware-verified finding
         // that the CLIENT_HELLO confirmed write triggers the strap's just-works bond. A 5/MG strap won't
         // stream HR (even over the standard 0x2A37 profile) on an UNauthenticated link, so the old
@@ -2115,16 +2325,8 @@ class WhoopBleClient(
         // Hold the slot until the ACK; the opt-in puffin probe now fires post-bond (onCharacteristicWrite).
         log("WHOOP 5/MG: writing CLIENT_HELLO to fd4b0002 with response (to trigger bonding, experimental).")
         writeInFlight = true
-        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeCharacteristic(ch, hello, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
-                BluetoothGatt.GATT_SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            run {
-                ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                ch.value = hello
-                g.writeCharacteristic(ch)
-            }
+        val ok = safeGatt("writeClientHello") {
+            ops.writeCharacteristicCompat(ch, hello, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
         }
         if (!ok) {
             writeInFlight = false
@@ -2189,11 +2391,16 @@ class WhoopBleClient(
             startSession(g)
             return
         }
+        val ops = gattOps ?: return
         cccdInFlight = true
 
         // Tell the local stack to surface notifications, then write the CCCD so the remote starts
-        // sending them. CoreBluetooth's setNotifyValue(true) does both implicitly.
-        g.setCharacteristicNotification(ch, true)
+        // sending them. CoreBluetooth's setNotifyValue(true) does both implicitly. Both are routed
+        // through safeGatt so a dead binder (#314) tears down instead of crashing.
+        val notifyOk = safeGatt("setCharacteristicNotification") {
+            ops.setCharacteristicNotificationCompat(ch, true)
+        }
+        if (!notifyOk && gatt == null) return   // safeGatt tore down — link is gone
         val cccd = ch.getDescriptor(CCCD)
         if (cccd == null) {
             log("No CCCD on ${ch.uuid}; skipping")
@@ -2202,24 +2409,20 @@ class WhoopBleClient(
             return
         }
         val enableValue = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-        val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            g.writeDescriptor(cccd, enableValue) == BluetoothGatt.GATT_SUCCESS
-        } else {
-            @Suppress("DEPRECATION")
-            run {
-                cccd.value = enableValue
-                g.writeDescriptor(cccd)
-            }
+        val ok = safeGatt("writeDescriptor") {
+            ops.writeDescriptorCompat(cccd, enableValue)
         }
         if (!ok) {
             cccdInFlight = false
+            if (gatt == null) return   // safeGatt tore down — don't schedule a retry against a dead link
             if (cccdRetries < MAX_CCCD_RETRIES) {
                 // Transient BUSY (the stack slot hasn't freed): re-queue this subscribe and retry
-                // shortly. Order among the notify chars doesn't matter, so re-add at the tail.
+                // shortly. Order among the notify chars doesn't matter, so re-add at the tail. NAMED
+                // runnable so teardown can cancel a pending retry (#314).
                 cccdRetries++
                 log("writeDescriptor busy for ${ch.uuid}; retry $cccdRetries/$MAX_CCCD_RETRIES")
                 cccdQueue.add(ch)
-                handler.postDelayed({ drainCccdQueue(g) }, CCCD_RETRY_DELAY_MS)
+                handler.postDelayed(drainCccdRetryRunnable, CCCD_RETRY_DELAY_MS)
             } else {
                 log("writeDescriptor rejected for ${ch.uuid} (gave up after $MAX_CCCD_RETRIES retries)")
                 drainCccdQueue(g)
@@ -2576,6 +2779,62 @@ class WhoopBleClient(
     }
 
     // ====================================================================================
+    // MARK: GATT crash-safety  (#314 — dead-binder guards)
+    // ====================================================================================
+
+    /**
+     * Run a raw GATT operation, swallowing the dead-binder exceptions that escape `BluetoothGatt`
+     * once the OS Bluetooth radio is turned off mid-link, and route into full teardown if one fires.
+     *
+     * The bug (#314, Pixel 7): turning Bluetooth off doesn't disconnect NOOP's `BluetoothGatt`; the
+     * next write hits a dead binder and `writeCharacteristic` throws `android.os.DeadObjectException`
+     * (an unchecked `RuntimeException`) — which the GATT layer never declared, so nothing caught it
+     * and the app crashed on the next buzz/sync. We also see `IllegalStateException` (adapter off) and
+     * `SecurityException` (permission revoked) from the same calls. On ANY of these the link is gone:
+     * tear down so the UI flips to disconnected instead of crashing.
+     *
+     * @return the block's boolean (stack-accepted) on success, or `false` if the binder was dead — a
+     *   `false` lets callers run their normal "rejected by stack" path, which after teardown is inert
+     *   (the queues are cleared and `gatt` is null, so the recursive re-drain immediately no-ops).
+     */
+    private fun safeGatt(reason: String, block: () -> Boolean): Boolean =
+        try {
+            block()
+        } catch (t: Throwable) {
+            // DeadObjectException / IllegalStateException / SecurityException all mean the link is
+            // unusable. Catching Throwable here is deliberate: any GATT call that throws AT ALL once
+            // the binder is dead must not crash the app — there's no recovery, only teardown. The
+            // policy (always tear down) is single-sourced in shouldTeardownOnGattThrow so it's testable.
+            if (shouldTeardownOnGattThrow(t)) {
+                log("GATT op '$reason' failed (${t.javaClass.simpleName}); tearing down link")
+                teardownAfterGattFailure()
+            }
+            false
+        }
+
+    /**
+     * Full teardown after a raw GATT call threw because the binder died (#314). Mirrors the
+     * intentional-disconnect teardown but is reached from the catch path, so it must do everything
+     * [handleDisconnect]+[reset] do AND cancel the two BUSY-retry kicks — a still-pending
+     * [drainWriteRetryRunnable]/[drainCccdRetryRunnable] would otherwise fire after the link is dead
+     * and re-enter the dead write, throwing again. Marks the disconnect intentional so no auto-rescan
+     * loops against a powered-off radio (the adapter.isEnabled gate already suppresses connect, but
+     * suppressing the rescan keeps the log clean and avoids a tight retry loop).
+     */
+    private fun teardownAfterGattFailure() {
+        // Cancel any scheduled BUSY-retry kicks BEFORE handleDisconnect/reset clears the queues, so a
+        // retry can't re-enter drainWriteQueue/drainCccdQueue against the dead binder.
+        handler.removeCallbacks(drainWriteRetryRunnable)
+        handler.removeCallbacks(drainCccdRetryRunnable)
+        intentionalDisconnect = true   // don't auto-rescan against a dead/off radio
+        // reset() (inside handleDisconnect) clears writeInFlight + the write/cccd queues + pendingRetry
+        // and cancels the keep-alive/backfill timers; handleDisconnect publishes connected=false and
+        // closes + nulls gatt. Also drop the GattOps wrapper so a late call can't reach the dead gatt.
+        handleDisconnect(BluetoothGatt.GATT_FAILURE)
+        gattOps = null
+    }
+
+    // ====================================================================================
     // MARK: Disconnect / teardown  (port of didDisconnectPeripheral)
     // ====================================================================================
 
@@ -2603,8 +2862,11 @@ class WhoopBleClient(
         )
         reset()
 
-        gatt?.close()
+        // close() can itself throw DeadObjectException on a dead binder — teardown must NEVER throw,
+        // or the catch in safeGatt re-raises and we're back to the #314 crash. Swallow it.
+        try { gatt?.close() } catch (t: Throwable) { log("gatt.close() threw ${t.javaClass.simpleName} during teardown (ignored)") }
         gatt = null
+        gattOps = null
         cmdCharacteristic = null
 
         if (!intentionalDisconnect) {
@@ -2664,6 +2926,10 @@ class WhoopBleClient(
         writeInFlight = false
         pendingRetry = null
         writeRetries = 0
+        // Cancel any scheduled BUSY-retry kicks so a queued retry can't fire after teardown and
+        // re-enter a dead write/descriptor (#314).
+        handler.removeCallbacks(drainWriteRetryRunnable)
+        handler.removeCallbacks(drainCccdRetryRunnable)
         resubscribedSinceData = false
         cccdInFlight = false
         cccdRetries = 0

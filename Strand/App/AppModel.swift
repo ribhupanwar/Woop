@@ -166,6 +166,10 @@ final class AppModel: ObservableObject {
             guard let self else { return }
             await self.repo.refresh()                          // surface any imported data at once
             try? await Task.sleep(nanoseconds: 6_000_000_000)  // give the first offload a moment
+            // One-shot on-upgrade Effort rescore (#313): recompute strain from source across the FULL
+            // history once, so any deep-history rows an older build left on the 0–21 axis regenerate on
+            // the 0–100 axis. Guarded by a persisted flag, so this is a no-op on every subsequent launch.
+            await self.intelligence.runEffortRescoreIfNeeded()
             while !Task.isCancelled {
                 await self.intelligence.analyzeRecent()
                 try? await Task.sleep(nanoseconds: 900_000_000_000)  // 15 min, matches the offload cadence

@@ -5,8 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
@@ -97,6 +100,31 @@ class WhoopConnectionService : Service() {
     private val ble get() = (application as NoopApplication).ble
     private val repo get() = (application as NoopApplication).repository
 
+    /**
+     * Watches the OS Bluetooth radio so turning it off immediately tears down NOOP's orphaned GATT
+     * link (#314). Without this there is no ACTION_STATE_CHANGED listener at all, so the radio going off
+     * never reaches [WhoopBleClient] — the link stays "connected", the UI keeps showing live HR/buzz/sync
+     * that isn't real, and the next write crashes on a dead binder (iOS/macOS are immune because
+     * CoreBluetooth's send() is state-guarded). Registered while the FGS is alive (it is the long-lived
+     * owner of the connection) and unregistered in [onDestroy]. STATE_TURNING_OFF/OFF → teardown +
+     * connected=false; STATE_ON → resume the connection.
+     */
+    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != BluetoothAdapter.ACTION_STATE_CHANGED) return
+            when (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)) {
+                // Catch TURNING_OFF (the earliest signal) AND OFF — by TURNING_OFF the binder is already
+                // on its way down, so tearing down here pre-empts the crash window.
+                BluetoothAdapter.STATE_TURNING_OFF, BluetoothAdapter.STATE_OFF -> ble.onBluetoothRadioOff()
+                BluetoothAdapter.STATE_ON -> ble.onBluetoothRadioOn()
+            }
+        }
+    }
+
+    /** True once [bluetoothStateReceiver] is registered, so repeat onStartCommands don't double-register
+     *  (which would later throw on a single unregister). */
+    private var bluetoothReceiverRegistered = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -115,6 +143,19 @@ class WhoopConnectionService : Service() {
         if (!startForegroundCompat(buildNotification(ble.state.value, null))) {
             stopSelf()
             return START_NOT_STICKY
+        }
+
+        // Listen for the OS Bluetooth radio toggling so turning it off tears the link down at once (#314).
+        // Guarded so repeat onStartCommands (every connect / OS restart) don't stack registrations.
+        if (!bluetoothReceiverRegistered) {
+            runCatching {
+                ContextCompat.registerReceiver(
+                    this,
+                    bluetoothStateReceiver,
+                    IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+                    ContextCompat.RECEIVER_NOT_EXPORTED,
+                )
+            }.onSuccess { bluetoothReceiverRegistered = true }
         }
 
         // Keep the ongoing notification in step with the live connection state AND today's recovery
@@ -343,6 +384,12 @@ class WhoopConnectionService : Service() {
     }
 
     override fun onDestroy() {
+        if (bluetoothReceiverRegistered) {
+            // unregisterReceiver throws if it was never registered; the flag guards that, and runCatching
+            // covers the rare case the OS already reclaimed it.
+            runCatching { unregisterReceiver(bluetoothStateReceiver) }
+            bluetoothReceiverRegistered = false
+        }
         scope.cancel()
         super.onDestroy()
     }

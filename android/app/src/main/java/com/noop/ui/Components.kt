@@ -688,28 +688,38 @@ fun RecoveryRing(
     )
 }
 
-// MARK: - StrainGauge (NEW) — the Effort hero gauge on the 0–21 scale
+// MARK: - StrainGauge (NEW) — the Effort hero gauge
 //
-// The Effort sibling of RecoveryRing: a [BevelGauge] over the amber strain ramp, with
-// the centre number on WHOOP's 0–21 axis and an "of 21" caption. The arc fills to
-// strain/21. Mirrors StrandDesign's StrainGauge so the hero row reads as three matched
-// instruments (Charge green · Effort amber · Rest indigo).
+// The Effort sibling of RecoveryRing: a [BevelGauge] over the amber strain ramp. The arc fills to
+// strain/outOf, with an "of N" caption naming the scale max. `outOf` is the maximum of the scale the
+// passed [strain] is ON (default 21, WHOOP's Day-Strain axis). The Effort hero passes the value already
+// converted to the user's selected display scale (#313) plus its matching max (100 or 21) and an optional
+// [valueText] override for the centre numeral, so the arc, number and caption all read on one scale rather
+// than being hardcoded to 0–21. Stays scale-agnostic — the caller owns the conversion (EffortScale is an
+// app concern). Mirrors StrandDesign's StrainGauge so the hero row reads as three matched instruments
+// (Charge green · Effort amber · Rest indigo).
 
 @Composable
 fun StrainGauge(
     strain: Double,
     modifier: Modifier = Modifier,
+    outOf: Double = 21.0,
+    valueText: String? = null,
     diameter: Dp = 240.dp,
     lineWidth: Dp = 16.dp,
     showsLabel: Boolean = true,
 ) {
-    val clamped = strain.coerceIn(0.0, 21.0)
+    val clamped = strain.coerceIn(0.0, outOf)
+    val fraction = if (outOf > 0) clamped / outOf else 0.0
     BevelGauge(
-        fraction = clamped / 21.0,
+        fraction = fraction,
         stops = Palette.strainStops,
-        tipColor = Palette.strainColor((clamped / 21.0) * 100.0),
-        numberText = if (clamped % 1.0 == 0.0) clamped.toInt().toString() else String.format(java.util.Locale.US, "%.1f", clamped),
-        captionText = "of 21",
+        // The strain ramp colour expects a 0–21 value; map the fraction onto that span so the tint is
+        // identical whether the gauge shows 0–100 or 0–21.
+        tipColor = Palette.strainColor(fraction * 100.0),
+        numberText = valueText
+            ?: if (clamped % 1.0 == 0.0) clamped.toInt().toString() else String.format(java.util.Locale.US, "%.1f", clamped),
+        captionText = "of ${outOf.toInt()}",
         diameter = diameter,
         lineWidth = lineWidth,
         showsLabel = showsLabel,

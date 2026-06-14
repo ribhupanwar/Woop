@@ -1,5 +1,6 @@
 package com.noop.ui
 
+import com.noop.data.DailyMetric
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -51,6 +52,22 @@ internal fun logicalDayStartEpochSecond(
     zone: ZoneId = now.zone,
     rolloverHour: Int = LOGICAL_DAY_ROLLOVER_HOUR,
 ): Long = logicalDay(now, rolloverHour).atStartOfDay(zone).toEpochSecond()
+
+/**
+ * Pure resolver behind the dashboard's "today" row (#304), extracted so the boundary is testable
+ * without a live clock. Prefer the LOCAL-calendar-day row when it differs from the logical day AND has a
+ * banked night (totalSleepMin != null) — the non-UTC pre-04:00 case, where the just-finished night is
+ * banked under the new local calendar day while [logicalKey] still points at yesterday. Otherwise fall
+ * back to the logical-day row, preserving the #144 anti-blank guard (never blank when a night isn't
+ * banked yet). [localKey] == [logicalKey] (the common daytime case) collapses to the plain logical
+ * lookup. Mirrors Swift Repository.resolveToday.
+ */
+internal fun resolveTodayRow(days: List<DailyMetric>, logicalKey: String, localKey: String): DailyMetric? {
+    if (localKey != logicalKey) {
+        days.lastOrNull { it.day == localKey && it.totalSleepMin != null }?.let { return it }
+    }
+    return days.lastOrNull { it.day == logicalKey }
+}
 
 /** 04:00 local — the hour the logical day rolls. Between midnight and this hour, Today stays put. */
 internal const val LOGICAL_DAY_ROLLOVER_HOUR: Int = 4

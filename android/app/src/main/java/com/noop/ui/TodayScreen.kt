@@ -110,7 +110,13 @@ fun TodayScreen(viewModel: AppViewModel, onSupport: () -> Unit = {}) {
     // that blanks the dashboard (#144). Past offsets count back from this anchor. Presentation-only.
     val todayDate = logicalDayNow()
     val selectedDay = remember(selectedDayOffset, todayDate) { todayDate.minusDays(selectedDayOffset.toLong()) }
-    val selectedDayKey = remember(selectedDay) { selectedDay.toString() }
+    // The key the day-scoped read-outs (Rest score, HR window, sleep band) key on. At offset 0 it
+    // follows the resolver's `today?.day` so it tracks the row actually surfaced — including the non-UTC
+    // pre-04:00 case (#304) where Today is the LOCAL-calendar-day row, not the logical-day one. Falls
+    // back to the logical key when no row is banked yet. Past offsets use the logical key directly.
+    val selectedDayKey = remember(selectedDay, today, selectedDayOffset) {
+        if (selectedDayOffset == 0) today?.day ?: selectedDay.toString() else selectedDay.toString()
+    }
     val historicalMetric = remember(days, selectedDayKey) { days.lastOrNull { it.day == selectedDayKey } }
     val displayMetric = remember(today, historicalMetric, selectedDayOffset) {
         if (selectedDayOffset == 0) today ?: historicalMetric else historicalMetric
@@ -355,6 +361,7 @@ fun TodayScreen(viewModel: AppViewModel, onSupport: () -> Unit = {}) {
             day = displayMetric,
             restScore = restScoreForDay,
             recoveryCalibration = recoveryCalibration,
+            effortScale = effortScale,
             onScoreInfo = openGuide,
         )
 
@@ -543,6 +550,7 @@ private fun ScoreHeroRow(
     day: DailyMetric?,
     restScore: Double?,
     recoveryCalibration: Int?,
+    effortScale: EffortScale,
     onScoreInfo: (ScoreSection) -> Unit,
 ) {
     val recovery = day?.recovery
@@ -574,8 +582,10 @@ private fun ScoreHeroRow(
                     if (recovery == null) RingEmptyOverlay(recoveryCalibration)
                 }
             }
-            // EFFORT — strain on the 0–21 gauge. The stored strain is on NOOP's 0–100 Effort axis,
-            // so map it back down to the gauge's 0–21 span for the arc + number.
+            // EFFORT — strain on the gauge, honouring the 0–100 / WHOOP-0–21 toggle (#313). The stored
+            // strain is on NOOP's 0–100 Effort axis; render it on the user's selected scale so the arc,
+            // centre number and "of N" caption all match the rest of the app's Effort read-outs.
+            val effortOutOf = if (effortScale == EffortScale.WHOOP) 21.0 else 100.0
             HeroScoreCell(
                 modifier = Modifier.weight(1f),
                 domain = DomainTheme.Effort,
@@ -583,7 +593,9 @@ private fun ScoreHeroRow(
             ) { ringDiameter ->
                 Box(contentAlignment = Alignment.Center) {
                     StrainGauge(
-                        strain = strain?.let { (it / 100.0) * 21.0 } ?: 0.0,
+                        strain = strain?.let { UnitFormatter.effortValue(it, effortScale) } ?: 0.0,
+                        outOf = effortOutOf,
+                        valueText = strain?.let { UnitFormatter.effortDisplay(it, effortScale) },
                         diameter = ringDiameter,
                         lineWidth = ringDiameter * 0.10f,
                         showsLabel = strain != null,

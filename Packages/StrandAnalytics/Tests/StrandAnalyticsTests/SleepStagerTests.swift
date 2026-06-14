@@ -418,6 +418,101 @@ final class SleepStagerTests: XCTestCase {
         assertRuns(SleepStager.mergeFragments(single), [("light", 3)], "single run kept")
     }
 
+    // MARK: - Sparse-gravity robustness (#308)
+
+    /// Still gravity sampled sparsely — one sample every `everyS` seconds (constant orientation,
+    /// so every inter-sample delta is 0 → "still"). Reproduces the WHOOP 5.0 v18/v26 backfill where
+    /// gravity is clumped/sparse, leaving multiple >maxGapMin gaps across the night.
+    private func sparseStillGravity(start: Int, durationS: Int, everyS: Int) -> [GravitySample] {
+        stride(from: 0, to: durationS, by: everyS).map { GravitySample(ts: start + $0, x: 0, y: 0, z: 1.0) }
+    }
+
+    func testSparseGravityNightNotShredded() {
+        // A ~6 h overnight window: DENSE 1 Hz sleep-band HR (50 bpm) but SPARSE gravity — one still
+        // sample every 25 min, so every inter-sample gap (1500 s) exceeds maxGapMin (1200 s). Before
+        // #308 buildRuns broke the run at every gap and detectSleep dropped every <60-min fragment,
+        // collapsing the night to ~0. Now the sparse path keeps it as ONE continuous ~6 h session.
+        let start = nightStart(01)                  // 01:00, center stays overnight
+        let dur = 6 * 60 * 60                        // 6 h
+        let grav = sparseStillGravity(start: start, durationS: dur, everyS: 25 * 60)
+        let hr = hrStream(start: start, durationS: dur, bpm: 50)
+
+        // The gate must classify this gravity as sparse (median gap 1500 s > 1200 s).
+        XCTAssertTrue(SleepStager.isGravitySparse(grav, hr: hr), "clumped gravity must read as sparse")
+
+        let sessions = SleepStager.detectSleep(hr: hr, gravity: grav)
+        XCTAssertEqual(sessions.count, 1, "a sparse-gravity night must be ONE session, not shredded")
+        let s = sessions[0]
+        // One ~6 h span (bounded by first/last gravity sample), not a sub-60-min fragment.
+        XCTAssertGreaterThan(Double(s.end - s.start), 5.0 * 60 * 60,
+                             "the bridged session must be ~6 h, not a sub-hour fragment")
+        XCTAssertEqual(s.restingHR, 50)
+    }
+
+    func testDenseGravityNightUnchangedBySparsePath() {
+        // Snapshot/regression guard for the 4.0 path: a DENSE 1 Hz still gravity night must NOT be
+        // classified sparse, and must produce the SAME single stable session it did before #308 —
+        // identical start, end and resting HR. Proves the sparse branches never touch the dense path.
+        let start = nightStart(02)
+        let dur = 6 * 60 * 60
+        let grav = stillGravity(start: start, durationS: dur)    // dense 1 Hz
+        let hr = hrStream(start: start, durationS: dur, bpm: 50)
+
+        XCTAssertFalse(SleepStager.isGravitySparse(grav, hr: hr), "dense 1 Hz gravity must NOT read as sparse")
+
+        let sessions = SleepStager.detectSleep(hr: hr, gravity: grav)
+        XCTAssertEqual(sessions.count, 1)
+        let s = sessions[0]
+        // Stable bounds: dense gravity tiles the whole window, so the session is [start, last sample].
+        XCTAssertEqual(s.start, start)
+        XCTAssertEqual(s.end, start + dur - 1)   // last 1 Hz sample is at start+dur-1
+        XCTAssertEqual(s.restingHR, 50)
+    }
+
+    func testBuildRunsDenseGravityByteIdenticalToLegacy() {
+        // Direct byte-identity proof: buildRuns with the sparse override OFF (the default) returns
+        // exactly the same runs as passing sparse:false, on a gravity stream with a real >maxGapMin
+        // gap. The legacy two-arg call and the sparse=false call must be indistinguishable.
+        let start = 5_000_000
+        // Two still blocks separated by a 30-min (>20 min) gap → legacy buildRuns splits them.
+        let blockA = stillGravity(start: start, durationS: 40 * 60)
+        let gapStart = start + 40 * 60 + 30 * 60
+        let blockB = stillGravity(start: gapStart, durationS: 40 * 60)
+        let grav = blockA + blockB
+        let deltas = SleepStager.gravityDeltas(grav)
+        let flags = SleepStager.classifyStill(grav, deltas)
+
+        let legacy = SleepStager.buildRuns(grav, flags)                      // default sparse:false
+        let explicit = SleepStager.buildRuns(grav, flags, sparse: false)
+        XCTAssertEqual(legacy.count, explicit.count)
+        for (a, b) in zip(legacy, explicit) {
+            XCTAssertEqual(a.stage, b.stage); XCTAssertEqual(a.start, b.start); XCTAssertEqual(a.end, b.end)
+        }
+        // The dense >20-min gap still splits the night (a real wake), so there are ≥2 runs.
+        XCTAssertGreaterThanOrEqual(legacy.count, 2, "a real >20-min gap must still split the dense path")
+    }
+
+    func testGravitySparseGateConditions() {
+        // The gate trips on EITHER a short gravity span vs HR span OR a large median gravity gap.
+        let start = 6_000_000
+        let hr = hrStream(start: start, durationS: 6 * 60 * 60, bpm: 50)
+
+        // (a) Span test: gravity confined to the first 30 min of a 6 h HR window (< 0.5 frac).
+        let clumped = stillGravity(start: start, durationS: 30 * 60)
+        XCTAssertTrue(SleepStager.isGravitySparse(clumped, hr: hr), "short gravity span → sparse")
+
+        // (b) Median-gap test: gravity spans the night but every gap is 25 min (> 20 min).
+        let bigGaps = sparseStillGravity(start: start, durationS: 6 * 60 * 60, everyS: 25 * 60)
+        XCTAssertTrue(SleepStager.isGravitySparse(bigGaps, hr: hr), "large median gap → sparse")
+
+        // (c) Dense gravity over the same span is NOT sparse.
+        let dense = stillGravity(start: start, durationS: 6 * 60 * 60)
+        XCTAssertFalse(SleepStager.isGravitySparse(dense, hr: hr), "dense gravity → not sparse")
+
+        // (d) Degenerate HR (<2 samples) keeps the dense path regardless of gravity.
+        XCTAssertFalse(SleepStager.isGravitySparse(bigGaps, hr: []), "no HR span → keep dense path")
+    }
+
     func testSessionAvgHRVRejectsEctopicSpikes() {
         // A 5-min window of steady ~900 ms beats (≈67 bpm) with a +600 ms ectopic
         // spike every 15th beat — the shape of PPG-derived 0x2A37 RR on a WHOOP 5/MG.

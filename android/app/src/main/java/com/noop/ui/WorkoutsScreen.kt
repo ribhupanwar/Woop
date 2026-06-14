@@ -258,7 +258,9 @@ private fun EffortHero(
                 ) {
                     Overline("Typical effort", color = Palette.effortColor)
                     StrainGauge(
-                        strain = (avgStrain / 100.0) * 21.0,
+                        strain = UnitFormatter.effortValue(avgStrain, effortScale),
+                        outOf = if (effortScale == EffortScale.WHOOP) 21.0 else 100.0,
+                        valueText = UnitFormatter.effortDisplay(avgStrain, effortScale),
                         diameter = 140.dp,
                         lineWidth = 14.dp,
                         showsLabel = strains.isNotEmpty(),

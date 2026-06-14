@@ -117,6 +117,38 @@ object SleepStager {
     /** Consecutive sleep epochs required to declare onset. */
     const val onsetPersistEpochs: Int = 3
 
+    // ── Sparse-gravity robustness (#308) ──────────────────────────────────────
+    //
+    // On an un-unlocked WHOOP 5.0 the strap backfills mostly v18/v26 records where gravity is
+    // sparse/clumped (~25% coverage), so the gravity-only Stage-0 spine fragments the night at
+    // every >maxGapMin gravity gap and detectSleep drops every <minSleepMin fragment — collapsing
+    // a ~6 h night to ~1 h. The fix derives the in-bed spine from a sustained low-HR stretch and
+    // uses gravity stillness only to REFINE it, but is GATED ENTIRELY behind a "gravity is sparse"
+    // condition so dense WHOOP-4.0 nights stay BYTE-IDENTICAL (a 4.0 regression is unacceptable).
+    // Mirrors Swift.
+
+    /**
+     * Gravity is "sparse" when its timespan covers less than this fraction of the HR-sample
+     * timespan. A dense 4.0 night has gravity spanning the whole HR window (≈1.0) and never trips
+     * this; a 5.0 backfill clumps gravity into a fraction of the night.
+     */
+    const val sparseGravitySpanFrac: Double = 0.5
+
+    /**
+     * When sparse, HR drives the in-bed spine: an HR sample is "sleep-band" when its bpm ≤
+     * baseline × this. Reuses the overnight HR-confirmation multiplier so the band is the same one
+     * detectSleep already trusts to confirm a run.
+     */
+    const val hrSleepBandMult: Double = hrSleepBaselineMult
+
+    /**
+     * When sparse, two adjacent sleep runs separated ONLY by a gravity gap up to this many minutes
+     * are merged if the intervening HR stays in the sleep band — so a real night is not shredded
+     * into sub-minSleepMin fragments by gravity dropouts. Sized at the daytime-nap floor (a real
+     * continuous night never has a true >90 min wake bridge mid-sleep).
+     */
+    const val sparseBridgeGapMin: Int = 90
+
     // ── Stage 1–3 constants (sleep_features.py) ──────────────────────────────
 
     const val epochS: Double = 30.0
@@ -207,6 +239,54 @@ object SleepStager {
         return maxOf(minWindowSamples, (stillWindowMin * 60 / interval).toInt())
     }
 
+    // ── Sparse-gravity gate (#308) ─────────────────────────────────────────────
+
+    /**
+     * Median spacing between consecutive timestamps with NO upper cap (unlike medianIntervalS,
+     * which restricts to <300 s to infer a sample rate). Used to detect clumped/sparse gravity
+     * where the dropouts themselves are the signal. 0 for <2 samples.
+     */
+    internal fun medianGapS(times: List<Long>): Double {
+        if (times.size < 2) return 0.0
+        val gaps = ArrayList<Double>(times.size)
+        for (i in 0 until times.size - 1) {
+            val g = (times[i + 1] - times[i]).toDouble()
+            if (g > 0) gaps.add(g)
+        }
+        if (gaps.isEmpty()) return 0.0
+        gaps.sort()
+        return gaps[gaps.size / 2]
+    }
+
+    /**
+     * True when gravity is too sparse for the gravity-only spine to be trusted across gaps: the
+     * gravity timespan covers < sparseGravitySpanFrac of the HR-sample timespan, OR the median
+     * gravity inter-sample gap exceeds maxGapMin. Requires a real HR span to compare against — with
+     * no/degenerate HR the dense path is kept (false), so a 4.0 with absent HR is never reclassified
+     * as sparse.
+     */
+    internal fun isGravitySparse(grav: List<GravitySample>, hr: List<HrSample>): Boolean {
+        if (grav.size < 2 || hr.size < 2) return false
+        val hrSpan = (hr[hr.size - 1].ts - hr[0].ts).toDouble()
+        if (hrSpan <= 0) return false
+        val gravSpan = (grav[grav.size - 1].ts - grav[0].ts).toDouble()
+        if (gravSpan < sparseGravitySpanFrac * hrSpan) return true
+        return medianGapS(grav.map { it.ts }) > (maxGapMin * 60).toDouble()
+    }
+
+    /**
+     * True when HR stays in the sleep band (≤ baseline × hrSleepBandMult) across (a, b], used to
+     * decide whether a pure gravity gap is a real wake or just a dropout. With no baseline or no HR
+     * in the interval, the answer is false (cannot vouch for the gap → treat as a real break).
+     */
+    internal fun hrSleepBandAcross(a: Long, b: Long, hr: List<HrSample>, baseline: Double?): Boolean {
+        if (baseline == null) return false
+        val seg = hr.filter { it.ts > a && it.ts <= b }
+        if (seg.isEmpty()) return false
+        val meanHR = seg.sumOf { it.bpm }.toDouble() / seg.size.toDouble()
+        return meanHR <= baseline * hrSleepBandMult
+    }
+
     /** Per-record sleep flags from a rolling fraction of "still" samples. */
     internal fun classifyStill(grav: List<GravitySample>, deltas: List<Double>): List<Boolean> {
         val n = grav.size
@@ -236,8 +316,16 @@ object SleepStager {
     /**
      * Collapse per-record flags into contiguous runs, breaking on class change
      * or a gap > maxGapMin minutes.
+     *
+     * When [sparse] (gravity is too clumped to bridge gaps — #308), a PURE gravity data-gap (no
+     * contrary motion) does NOT close a SLEEP run while HR stays in the sleep band across the gap:
+     * the strap simply banked no motion there, not a wake. A class change always still closes the
+     * run, and the dense path ([sparse] == false) is byte-identical to the original. Mirrors Swift.
      */
-    internal fun buildRuns(grav: List<GravitySample>, flags: List<Boolean>): List<Period> {
+    internal fun buildRuns(
+        grav: List<GravitySample>, flags: List<Boolean>,
+        sparse: Boolean = false, hr: List<HrSample> = emptyList(), baseline: Double? = null,
+    ): List<Period> {
         val n = grav.size
         if (n == 0) return emptyList()
         val times = grav.map { it.ts }
@@ -251,7 +339,14 @@ object SleepStager {
                 close = true
             } else {
                 val classChanged = flags[i] != flags[runStart]
-                val gapExceeded = (times[i] - times[i - 1]) > maxGapS
+                var gapExceeded = (times[i] - times[i - 1]) > maxGapS
+                // Sparse override: a pure gravity gap (no class change) does not break a sleep run
+                // when HR stays in the sleep band across it — the gap is a dropout, not a wake.
+                if (sparse && gapExceeded && !classChanged && flags[runStart] &&
+                    hrSleepBandAcross(times[i - 1], times[i], hr, baseline)
+                ) {
+                    gapExceeded = false
+                }
                 close = classChanged || gapExceeded
             }
             if (close) {
@@ -308,6 +403,34 @@ object SleepStager {
             }
         }
         return merged
+    }
+
+    /**
+     * Sparse-gravity bridge (#308): merge two adjacent SLEEP runs separated ONLY by a gap up to
+     * sparseBridgeGapMin minutes when the intervening HR stays in the sleep band — so a real night
+     * fragmented by gravity dropouts is re-stitched into one continuous in-bed span BEFORE the
+     * minSleepMin gate drops the pieces. Active runs and over-threshold gaps are left untouched; the
+     * span between two bridged sleep runs (an "active"/gap run, if present) is absorbed. A no-op when
+     * [sparse] == false, so the dense 4.0 path is unchanged. Mirrors Swift.
+     */
+    internal fun bridgeSparseSleep(
+        periods: List<Period>, sparse: Boolean, hr: List<HrSample>, baseline: Double?,
+    ): List<Period> {
+        if (!sparse || periods.isEmpty()) return periods
+        val bridgeGapS = (sparseBridgeGapMin * 60).toLong()
+        val out = ArrayList<Period>()
+        for (p in periods) {
+            val last = out.lastOrNull()
+            if (last != null && last.stage == "sleep" && p.stage == "sleep") {
+                val gap = p.start - last.end
+                if (gap in 0..bridgeGapS && hrSleepBandAcross(last.end, p.start, hr, baseline)) {
+                    out[out.size - 1] = Period(stage = "sleep", start = last.start, end = p.end)
+                    continue
+                }
+            }
+            out.add(p)
+        }
+        return out
     }
 
     // ── HR refinement ────────────────────────────────────────────────────────
@@ -387,12 +510,20 @@ object SleepStager {
         val rrS = rr.sortedBy { it.ts }
         val respS = resp.sortedBy { it.ts }
 
+        val baseline = hrBaseline(hrS)
+        // Sparse-gravity gate (#308): an un-unlocked WHOOP 5.0 backfills mostly v18/v26 records
+        // where gravity is clumped (~25% coverage), so the gravity-only spine fragments the night.
+        // ONLY when sparse do the three robustness branches engage; a dense 4.0 night is `false`
+        // here and follows the exact original path (byte-identical).
+        val sparse = isGravitySparse(grav, hrS)
+
         val deltas = gravityDeltas(grav)
         val flags = classifyStill(grav, deltas)
-        var runs = buildRuns(grav, flags)
+        var runs = buildRuns(grav, flags, sparse = sparse, hr = hrS, baseline = baseline)
         runs = mergePeriods(runs)
+        // Re-stitch sleep runs fragmented by pure gravity dropouts (sparse only) before minSleepMin.
+        runs = bridgeSparseSleep(runs, sparse = sparse, hr = hrS, baseline = baseline)
 
-        val baseline = hrBaseline(hrS)
         val minSleepS = (minSleepMin * 60).toLong()
 
         val sessions = ArrayList<DetectedSleep>()

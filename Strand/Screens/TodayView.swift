@@ -96,7 +96,14 @@ struct TodayView: View {
         let base = Repository.logicalDay(Date())
         return Calendar.current.date(byAdding: .day, value: -selectedDayOffset, to: base) ?? base
     }
-    private var selectedDayKey: String { Repository.localDayKey(selectedLogicalDay) }
+    /// The day key the day-scoped read-outs (Rest score, HR window, sleep band) key on. At offset 0 it
+    /// follows `repo.today?.day` so it tracks the row the resolver actually surfaces — including the
+    /// non-UTC pre-04:00 case (#304) where Today is the LOCAL-calendar-day row, not the logical-day one.
+    /// Falls back to the logical key when no row is banked yet. Past offsets use the logical key directly.
+    private var selectedDayKey: String {
+        if selectedDayOffset == 0, let todayKey = repo.today?.day { return todayKey }
+        return Repository.localDayKey(selectedLogicalDay)
+    }
 
     /// The DailyMetric shown for the selected day. Offset 0 prefers the live `repo.today` (so the small
     /// hours after midnight still show the logical day's banked row), past offsets look the stored row up
@@ -468,13 +475,15 @@ struct TodayView: View {
                         if score == nil { ringEmptyOverlay(d: d) }
                     }
                 }
-                // EFFORT — strain on the 0–21 gauge.
+                // EFFORT — strain on the gauge, honouring the 0–100 / WHOOP-0–21 toggle (#313).
                 heroScoreCell(domain: .effort, section: .effort) {
                     ZStack {
                         StrainGauge(
-                            strain: effortGaugeValue(d) ?? 0, diameter: 132,
+                            strain: effortGaugeValue(d) ?? 0,
+                            outOf: effortGaugeMax, diameter: 132,
                             lineWidth: 13,
-                            showsLabel: d?.strain != nil, showsHover: d?.strain != nil
+                            showsLabel: d?.strain != nil, showsHover: d?.strain != nil,
+                            valueFormat: { _ in UnitFormatter.effortDisplay(d?.strain ?? 0, scale: effortScale) }
                         )
                         if d?.strain == nil { ringNoData() }
                     }
@@ -514,11 +523,17 @@ struct TodayView: View {
         }
     }
 
-    /// Strain value to feed the Effort gauge (0–21 scale). The stored `strain` is on NOOP's
-    /// 0–100 Effort axis, so map it back down to the gauge's 0–21 span for the arc + number.
+    /// Strain value to feed the Effort gauge, on the SELECTED display scale (#313). The stored
+    /// `strain` is on NOOP's 0–100 Effort axis; `UnitFormatter.effortValue` converts it to the
+    /// user's chosen scale (0–100 native, or ×21/100 down to WHOOP's 0–21) so the arc + number
+    /// match the rest of the app's Effort read-outs. Pairs with `effortGaugeMax` for the "of N".
     private func effortGaugeValue(_ d: DailyMetric?) -> Double? {
-        d?.strain.map { ($0 / 100.0) * 21.0 }
+        d?.strain.map { UnitFormatter.effortValue($0, scale: effortScale) }
     }
+
+    /// The Effort gauge's scale maximum — 100 on NOOP's native axis, 21 on the WHOOP axis. Drives
+    /// the arc fraction and the gauge's "of N" caption so both follow the toggle (#313).
+    private var effortGaugeMax: Double { effortScale == .whoop ? 21 : 100 }
 
     /// Honest overlay shown over the Charge ring when recovery is nil: calibrating count or No data.
     @ViewBuilder

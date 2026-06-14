@@ -133,8 +133,15 @@ fun SleepScreen(
             val now = System.currentTimeMillis() / 1000L
             val imported = vm.repo.sleepSessions("my-whoop", 0L, now)
             val computed = vm.repo.sleepSessions(vm.repo.computedDeviceId("my-whoop"), 0L, now)
-            val importedDays = imported.map { AnalyticsEngine.dayString(it.endTs) }.toHashSet()
-            val computedOnly = computed.filter { AnalyticsEngine.dayString(it.endTs) !in importedDays }
+            // Key by the LOCAL wake-day (#304), matching WhoopRepository.mergeSleep — a UTC key
+            // mis-attributed a UTC+ user's early-morning wake to yesterday. REUSE the existing
+            // dayString(ts, offsetSec) overload; do not add a new one (it clashes on the JVM).
+            fun localEndDay(ts: Long): String {
+                val offsetSec = (java.util.TimeZone.getDefault().getOffset(ts * 1000) / 1000).toLong()
+                return AnalyticsEngine.dayString(ts, offsetSec)
+            }
+            val importedDays = imported.map { localEndDay(it.endTs) }.toHashSet()
+            val computedOnly = computed.filter { localEndDay(it.endTs) !in importedDays }
             (imported + computedOnly).sortedBy { it.startTs }
         }.getOrDefault(emptyList())
         nightOffset = 0

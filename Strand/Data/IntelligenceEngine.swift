@@ -33,6 +33,32 @@ final class IntelligenceEngine: ObservableObject {
         self.repo = repo; self.profile = profile; self.deviceId = deviceId
     }
 
+    /// UserDefaults flag guarding the one-shot #313 full-history Effort rescore (below). Set once the
+    /// pass completes so it never re-runs.
+    static let effortRescoreFlagKey = "intelligence.effortRescore.v313.done"
+
+    /// One-shot, on-upgrade FULL-history Effort rescore (#313 PART B). The Effort hero gauge + numbers
+    /// moved from the old 0–21 axis to NOOP's own 0–100 axis. On-device computed rows since v2.6.1
+    /// already store 0–100, but rows the engine computed on an OLDER build (capped at `maxDays` per run,
+    /// so deep history was never revisited) may still hold 0–21 strain.
+    ///
+    /// The SAFE fix is to recompute strain FROM SOURCE for every day with raw HR — those regenerate at
+    /// 0–100 with NO double-rescale risk — rather than a blind `strain*21→100` multiply that would
+    /// double-rescale the large population already on 0–100 (→ ~0–476). We do that by running the normal
+    /// `analyzeRecent` once with the `maxDays` cap lifted to the full history, then persist a flag so it
+    /// runs exactly once. IMPORTED rows are never rewritten here (the engine only ever writes under the
+    /// "-noop" computed source) — those are handled by re-import. A day already on 0–100 is recomputed
+    /// from the same raw HR and lands on 0–100 again: UNCHANGED axis (verified by test).
+    func runEffortRescoreIfNeeded(historyDays: Int = 4000) async {
+        guard !UserDefaults.standard.bool(forKey: Self.effortRescoreFlagKey) else { return }
+        await analyzeRecent(maxDays: historyDays)
+        // Only mark done if the pass actually completed (wasn't skipped because another tick held the
+        // `computing` lock). `computing` is false here once analyzeRecent's `defer` has run; a skipped
+        // call returns with `note` unset by it. Use the lock state: if a concurrent run was in progress
+        // the flag stays unset so the next launch retries — cheap, and correctness over a one-time cost.
+        if !computing { UserDefaults.standard.set(true, forKey: Self.effortRescoreFlagKey) }
+    }
+
     /// Compute on-device scores for each of the last `maxDays` that actually has raw HR data.
     /// Personal baselines (HRV / resting HR) are folded from the imported history, so even the first
     /// live night can be scored against your norm.

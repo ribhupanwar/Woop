@@ -2,15 +2,25 @@ import SwiftUI
 
 // MARK: - Strain Gauge (§9.1 strain ramp)
 //
-// Ember → magenta gauge for the 0–21 Whoop strain scale. Same open-gauge
+// Ember → magenta gauge for the strain/effort scale. Same open-gauge
 // instrument language as the Recovery Ring, but warm (output / heat) instead of
-// the cool recovery scale. Filled to strain/21 of a 240° arc, with a soft bloom
+// the cool recovery scale. Filled to strain/outOf of a 240° arc, with a soft bloom
 // and a leading bead at the tip.
+//
+// `outOf` is the maximum of the scale the passed `strain` is ON (default 21 for the
+// WHOOP Day-Strain axis). The Effort hero gauge passes the value already converted to
+// the user's selected display scale (#268) plus its matching max (100 or 21), so the
+// arc fraction, the centre numeral and the "of N" caption all read on the same scale
+// instead of being hardcoded to 0–21. The gauge stays scale-agnostic — the caller owns
+// the conversion (EffortScale lives in the app layer, not this design package).
 
 public struct StrainGauge: View {
 
-    /// Strain value on the 0...21 scale.
+    /// Strain value on the displayed scale (its maximum is `outOf`).
     public var strain: Double
+    /// The maximum of the scale `strain` is on — the arc fills `strain/outOf` and the caption
+    /// reads "of \(outOf)". Defaults to 21 (WHOOP Day Strain) so existing call sites are unchanged.
+    public var outOf: Double
     /// Optional supporting line, e.g. "moderate cardiovascular load".
     public var supporting: String?
     public var diameter: CGFloat
@@ -23,6 +33,7 @@ public struct StrainGauge: View {
 
     public init(
         strain: Double,
+        outOf: Double = 21,
         supporting: String? = nil,
         diameter: CGFloat = 200,
         lineWidth: CGFloat = 14,
@@ -31,6 +42,7 @@ public struct StrainGauge: View {
         valueFormat: @escaping (Double) -> String = { String(format: "Strain %.1f", $0) }
     ) {
         self.strain = strain
+        self.outOf = outOf
         self.supporting = supporting
         self.diameter = diameter
         self.lineWidth = lineWidth
@@ -43,14 +55,15 @@ public struct StrainGauge: View {
     @State private var hoverPoint: CGPoint? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A short load word for the strain value, mirroring the recovery state idea.
+    /// A short load word for the strain value, mirroring the recovery state idea. Computed off the
+    /// fraction (not the raw value) so the bands read the same on the 0–100 and 0–21 display scales.
     private var strainWord: String {
-        switch strain {
-        case ..<6:   return "LIGHT"
-        case ..<10:  return "MODERATE"
-        case ..<14:  return "STRENUOUS"
-        case ..<18:  return "HIGH"
-        default:     return "ALL-OUT"
+        switch fraction {
+        case ..<(6.0 / 21):   return "LIGHT"
+        case ..<(10.0 / 21):  return "MODERATE"
+        case ..<(14.0 / 21):  return "STRENUOUS"
+        case ..<(18.0 / 21):  return "HIGH"
+        default:              return "ALL-OUT"
         }
     }
 
@@ -58,8 +71,10 @@ public struct StrainGauge: View {
     @State private var animatedFraction: Double = 0
     @State private var bloomPulse = false
 
-    private var fraction: Double { min(max(strain / 21.0, 0), 1) }
-    private var tipColor: Color { StrandPalette.strainColor(strain) }
+    private var fraction: Double { min(max(strain / outOf, 0), 1) }
+    /// The strain ramp colour expects a 0–21 value; map the fraction onto that span so the tint
+    /// is identical whether the gauge is showing 0–100 or 0–21.
+    private var tipColor: Color { StrandPalette.strainColor(fraction * 21.0) }
 
     public var body: some View {
         ZStack {
@@ -68,7 +83,7 @@ public struct StrainGauge: View {
                 stops: StrandPalette.strainStops,
                 tipColor: tipColor,
                 numberText: strainString,
-                captionText: showsLabel ? "of 21" : nil,
+                captionText: showsLabel ? "of \(Int(outOf.rounded()))" : nil,
                 stateText: showsLabel ? strainWord : nil,
                 supporting: supporting,
                 diameter: diameter,

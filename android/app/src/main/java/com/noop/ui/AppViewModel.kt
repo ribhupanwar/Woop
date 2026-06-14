@@ -190,8 +190,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Resolve via the LOGICAL day (rolls at 04:00 local), so between midnight and 4am we keep
                 // showing the prior logical day's row instead of an empty new-calendar-day row (#144).
                 // Presentation-only: stored row keys are untouched.
-                val todayKey = logicalDayKeyNow()   // ISO yyyy-MM-dd, local logical day
-                _today.value = days.lastOrNull { it.day == todayKey }
+                //
+                // Non-UTC pre-04:00 carve-out (#304): a user who sleeps before midnight and wakes before
+                // the 04:00 rollover has the just-finished night banked under the NEW local calendar day
+                // (sleep is keyed by the local wake-day), while the logical key still points at yesterday.
+                // So: if the local calendar day differs from the logical day AND a row for the local day
+                // has a banked night (totalSleepMin != null), prefer it; otherwise fall back to the
+                // logical-day row, preserving the #144 anti-blank guard (no night yet ⇒ keep yesterday's).
+                val logicalKey = logicalDayKeyNow()       // ISO yyyy-MM-dd, local logical day
+                val localKey = java.time.LocalDate.now().toString()
+                _today.value = resolveTodayRow(days, logicalKey, localKey)
                 val previousAlert = _healthAlert.value
                 _healthAlert.value =
                     if (_illnessWatchEnabled.value) IllnessWatch.evaluate(days) else null
@@ -226,6 +234,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Mirrors macOS AppModel's launch + 15-min analyze loop.
         viewModelScope.launch {
             delay(FIRST_OFFLOAD_GRACE_MS) // give the first offload a moment
+            // One-shot on-upgrade Effort rescore (#313): recompute strain from source across the FULL
+            // history once, so any deep-history rows an older build left on the 0–21 axis regenerate on
+            // the 0–100 axis. Guarded by a persisted flag, so it's a no-op on every subsequent launch.
+            runCatching {
+                IntelligenceEngine.runEffortRescoreIfNeeded(
+                    repo = repository,
+                    profile = currentProfile(),
+                    importedDeviceId = deviceId,
+                    maxHROverride = profileStore.hrMaxOverride.takeIf { it > 0 }?.toDouble(),
+                    flagGet = { NoopPrefs.effortRescoreDone(appContext) },
+                    flagSet = { NoopPrefs.setEffortRescoreDone(appContext) },
+                )
+            }.onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
             while (isActive) {
                 runCatching {
                     IntelligenceEngine.analyzeRecent(
