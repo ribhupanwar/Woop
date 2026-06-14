@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "2.18.5"
+    static let currentVersion = "3.0.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,16 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "3.0.0",
+            title: "A whole new look — \"Titanium & Gold\"",
+            date: "June 2026",
+            items: [
+                "New: NOOP's biggest redesign yet — \"Titanium & Gold\". A deep-navy canvas, a warm gold accent, brushed-titanium detail and a per-domain colour world (blue sleep, amber strain, teal HRV, burnt-orange stress), in Helvetica, across iPhone, Android and Mac.",
+                "New: a brand-new machined-titanium app icon with a gold core — plus a Settings → App Icon toggle to switch to a darker \"blued-titanium\" version.",
+                "New: a refreshed in-app brand mark on the splash, onboarding and navigation.",
+                "Polish: a consistency pass across every screen — tidier cards, cleaner date selectors (no more dark-yellow blocks), smoother transitions, and a tab bar where the centre \"+\" sits in its own space. Live heart rate now lives on the \"+\" quick-actions menu.",
+            ]),
         Release(
             version: "2.18.5",
             title: "Today tiles no longer cut their value to \"10…\" (Android)",

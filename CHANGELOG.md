@@ -17,6 +17,17 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 3.0.0 — A whole new look: "Titanium & Gold"
+
+A complete, ground-up redesign of all three apps. Deep-navy surfaces, a warm gold hero accent, brushed-titanium detail, and a per-domain colour world — blue sleep, amber strain, teal HRV, burnt-orange stress — set in Helvetica across iPhone, Android and Mac.
+
+- **New look (all platforms):** "Titanium & Gold" — repainted every screen: layered ring gauges, frosted per-domain cards, cleaner hierarchy.
+- **New app icon:** the recovery ring engraved into machined titanium with a gold core — plus a **Settings → App Icon toggle** to switch to a darker "blued-titanium" variant.
+- **New in-app brand mark** on the splash, onboarding and navigation.
+- **Refined UI/UX:** a consistency pass across the board — tidier cards, cleaner date selectors (no more dark-yellow blocks), smoother transitions, and a tab bar with the centre "+" in its own space (Live heart rate moved to the "+" quick-actions menu).
+
+---
+
 ## 2.18.5 — Today tiles no longer cut their value to "10…" (Android)
 
 - **Fixed (Android):** on phones, Today tiles that show a sparkline (Charge, Rest, Respiratory, HRV…) were truncating their value to "10…" or "15…" — the value and the inline trend line were competing for horizontal space. The value now shrinks to fit, the way it already does on Mac/iPhone, so it always reads in full. Thanks @asemfahad (#332).
