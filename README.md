@@ -273,6 +273,24 @@ NOOP is an independent, **experimental** project — capable, but a work in prog
 | **WHOOP 4.0** | ✅ The tested, supported path. Live HR, recovery, strain, sleep, history offload — the full experience. (v1.95 also unlocked sleep + recovery on the newer "v25" 4.0 firmware layout that earlier versions could only read live HR from.) |
 | **WHOOP 5.0 / MG** | 🧪 **Live heart rate works** (confirmed on real hardware). Pick "WHOOP 5.0 / MG" before connecting — and see the pairing note below, because you can't just scan for it. Deeper 5/MG metrics (recovery, strain, sleep) are still being mapped; there's an opt-in **Settings → Experimental** toggle for 5/MG owners who want to help document the protocol. |
 
+> ### WHOOP 5.0 / MG analysis limits
+>
+> NOOP's analysis screens and algorithms can only be as complete as the sensor inputs it can
+> reliably decode. On WHOOP 5.0 / MG, important overnight inputs remain unavailable or incomplete:
+>
+> | Input / output | Current direct-from-strap status |
+> |---|---|
+> | Sleep duration / detection | Experimental; can fall back to heart rate when motion is sparse |
+> | Sleep stages | Approximate and not reliable while full overnight motion and cardiorespiratory inputs remain incomplete |
+> | Skin temperature | Raw values decode on supported historical layouts; not available consistently across 5/MG firmware |
+> | Blood oxygen / SpO₂ | Not recoverable offline from current time-multiplexed PPG data |
+> | Overnight HRV and respiratory rate | Incomplete unless sufficient R-R intervals are captured |
+>
+> In short: seeing the Sleep, Health, Readiness, or Insights screens doesn't mean their deepest
+> analysis is available from a WHOOP 5.0 / MG alone yet — scoring and correlations can't conjure a
+> measurement the strap hasn't given up. Decoding these inputs reliably is what we're working on, and
+> it's the prerequisite for the full 5/MG picture. We'd always rather tell you that straight.
+>
 > ### Pairing a WHOOP 5.0 / MG — read this first
 >
 > A WHOOP strap holds an encrypted Bluetooth **bond with only one device at a time**, and yours is
