@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.ble.SourceCoordinator
 import com.noop.data.DeviceStatus
-import com.noop.data.Metric
 import com.noop.data.PairedDeviceRow
 import kotlinx.coroutines.launch
 
@@ -246,6 +245,7 @@ private fun DeviceCard(
     onReAdd: (() -> Unit)? = null,
     onDeleteData: (() -> Unit)? = null,
 ) {
+    val profile = deviceProfile(device)
     NoopCard(
         modifier = Modifier.alpha(if (dimmed) 0.6f else 1f),
         padding = 18.dp,
@@ -267,25 +267,19 @@ private fun DeviceCard(
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     Text(displayName(device), style = NoopType.headline, color = Palette.textPrimary)
-                    Text("${device.brand} · ${device.model}", style = NoopType.subhead, color = Palette.textSecondary)
+                    Text(profile.displayModel, style = NoopType.subhead, color = Palette.textSecondary)
                 }
                 StatePill(device, isActive, isLiveConnected)
             }
 
-            val capabilities = capabilityLine(device)
-            if (capabilities.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Filled.FavoriteBorder,
-                        contentDescription = null,
-                        tint = Palette.textTertiary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(capabilities, style = NoopType.caption, color = Palette.textSecondary)
-                }
+            // What this device CAPTURES — honest, per-model (not the generic stored set, which would
+            // mislabel e.g. a "Blood oxygen" chip when no SpO₂ % ever comes off the strap).
+            CapabilityInfoRow(Icons.Filled.FavoriteBorder, profile.captures)
+            // What NOOP USES it for — the scores / screens this device drives.
+            CapabilityInfoRow(Icons.Filled.Bolt, profile.powers)
+            // Honest footnote: the "*" estimates + the SpO₂/steps caveats.
+            if (profile.footnote.isNotEmpty()) {
+                Text(profile.footnote, style = NoopType.footnote, color = Palette.textTertiary)
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -613,19 +607,73 @@ internal fun displayName(device: PairedDeviceRow): String {
 private fun deviceIcon(device: PairedDeviceRow): ImageVector =
     if (SourceCoordinator.isWhoop(device)) Icons.Filled.Watch else Icons.Filled.FavoriteBorder
 
-/** "Heart rate · HRV · …" from the device's capabilities, in a stable, readable order. Mirrors Swift. */
-private fun capabilityLine(device: PairedDeviceRow): String {
-    val labels = linkedMapOf(
-        Metric.hr to "Heart rate",
-        Metric.hrv to "HRV",
-        Metric.spo2 to "Blood oxygen",
-        Metric.skinTemp to "Skin temp",
-        Metric.steps to "Steps",
-        Metric.sleep to "Sleep",
-        Metric.strainLoad to "Strain",
+/**
+ * Honest, per-model capability + function summary for a device card — mirrors the Swift
+ * `DeviceCapabilityProfile`. Derived from brand/model, NOT the generic stored capability set (which
+ * would render an identical line for a 4.0 and a 5/MG and mislabel "Blood oxygen" when no SpO₂ % ever
+ * comes off any WHOOP strap — raw red/IR only; a real % is import-only). "*" in a label = an on-device
+ * estimate, not a raw sensor. Source-verified against the decode + scoring paths (capability audit).
+ */
+private data class DeviceCapabilityProfile(
+    val displayModel: String,  // clean card subtitle (replaces the redundant "WHOOP · WHOOP")
+    val captures: String,      // "·"-joined honest capture labels for THIS model
+    val powers: String,        // the NOOP scores / screens this device drives
+    val footnote: String,      // one short honest caveat line ("*" estimates + the SpO₂/steps notes)
+)
+
+private fun deviceProfile(device: PairedDeviceRow): DeviceCapabilityProfile {
+    // Generic heart-rate strap: live HR + R-R only; drives the live console + Effort, nothing nightly.
+    if (!SourceCoordinator.isWhoop(device)) {
+        return DeviceCapabilityProfile(
+            displayModel = "Heart-rate strap",
+            captures = "Heart rate · HRV (live)* · Strain",
+            powers = "Powers the live console + Effort — no Charge, Rest or Sleep",
+            footnote = "Live HR + R-R only · no sleep, recovery, skin temp, SpO₂, steps or battery " +
+                "(those are WHOOP-only).",
+        )
+    }
+    val whoopPowers = "Powers Charge, Effort, Rest, Sleep + Health Monitor"
+    val model = device.model.lowercase()
+    // WHOOP 5.0 / MG — adds a (raw) step count the 4.0 can't read over BLE.
+    if (model.contains("5") || model.contains("mg")) {
+        return DeviceCapabilityProfile(
+            displayModel = "WHOOP 5.0 / MG",
+            captures = "Heart rate · HRV · Skin temp* · Resp rate* · Steps* · Sleep · Strain · Battery",
+            powers = whoopPowers,
+            footnote = "* on-device estimate — skin temp is a nightly ±°C deviation, steps are a raw " +
+                "motion count (#78). No SpO₂ % off the strap; import a WHOOP CSV for a real %.",
+        )
+    }
+    // WHOOP 4.0 — NOOP's primary band; no steps over BLE.
+    if (model.contains("4")) {
+        return DeviceCapabilityProfile(
+            displayModel = "WHOOP 4.0",
+            captures = "Heart rate · HRV · Skin temp* · Resp rate* · Sleep · Strain · Battery",
+            powers = whoopPowers,
+            footnote = "* on-device estimate — skin temp is a nightly ±°C deviation (firmware-dependent); " +
+                "no steps over BLE on a 4.0. No SpO₂ % off the strap; import a WHOOP CSV for a real %.",
+        )
+    }
+    // Legacy / unknown WHOOP (the seeded device, model just "WHOOP") — show only the common-to-all set.
+    return DeviceCapabilityProfile(
+        displayModel = "WHOOP",
+        captures = "Heart rate · HRV · Skin temp* · Resp rate* · Sleep · Strain · Battery",
+        powers = whoopPowers,
+        footnote = "Exact model unknown — shows what every WHOOP can do. * on-device estimate · " +
+            "no SpO₂ % off the strap (import a WHOOP CSV for that).",
     )
-    val have = device.capabilities.split(",").map { it.trim() }.toSet()
-    return labels.entries.filter { it.key.name in have }.joinToString(" · ") { it.value }
+}
+
+/** One icon-prefixed info row (captures / powers) for a device card, matching the caption style. */
+@Composable
+private fun CapabilityInfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(icon, contentDescription = null, tint = Palette.textTertiary, modifier = Modifier.size(14.dp))
+        Text(text, style = NoopType.caption, color = Palette.textSecondary)
+    }
 }
 
 private fun lastSeenLine(device: PairedDeviceRow, isLiveConnected: Boolean): String = when {
