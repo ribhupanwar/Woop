@@ -18,6 +18,15 @@
       "screenshotURLs": [],
       "versions": [
         {
+          "version": "3.3.1",
+          "buildVersion": "82",
+          "date": "2026-06-15",
+          "localizedDescription": "More quick-relabel sports (CrossFit, Hiking, Tennis)",
+          "downloadURL": "https://github.com/NoopApp/noop/releases/download/v3.3.1/NOOP-v3.3.1-ios.ipa",
+          "size": 13746450,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "3.3.0",
           "buildVersion": "81",
           "date": "2026-06-15",
@@ -460,12 +469,12 @@
           "NSHealthUpdateUsageDescription": "NOOP writes the metrics it computes from your strap back into Apple Health, on-device and only when you allow it."
         }
       },
-      "version": "3.3.0",
-      "buildVersion": "81",
+      "version": "3.3.1",
+      "buildVersion": "82",
       "versionDate": "2026-06-15",
-      "versionDescription": "Strap battery alerts (low/full) on all platforms",
-      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v3.3.0/NOOP-v3.3.0-ios.ipa",
-      "size": 13747091,
+      "versionDescription": "More quick-relabel sports (CrossFit, Hiking, Tennis)",
+      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v3.3.1/NOOP-v3.3.1-ios.ipa",
+      "size": 13746450,
       "minOSVersion": "17.0"
     }
   ],
