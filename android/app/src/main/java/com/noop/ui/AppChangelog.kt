@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "3.3.0"
+    const val CURRENT_VERSION = "3.3.1"
 
     data class Release(
         val version: String,
@@ -36,6 +36,14 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "3.3.1",
+            title = "More quick-relabel sports",
+            date = "June 2026",
+            items = listOf(
+                "Added CrossFit, Hiking and Tennis to the quick re-label list when you change a detected workout's type (every platform). More workout-management discoverability improvements are on the way. Thanks @marceauboul (#318).",
+            ),
+        ),
         Release(
             version = "3.3.0",
             title = "Strap battery alerts",

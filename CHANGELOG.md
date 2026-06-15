@@ -17,6 +17,12 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 3.3.1 — More quick-relabel sports
+
+- **Workouts (#318):** added **CrossFit, Hiking and Tennis** to the quick re-label presets when you change a detected workout's type (Swift + Kotlin, all platforms). Broader workout-management discoverability improvements (a more visible edit/delete affordance) are being designed as a proper follow-up — the iPhone session table scrolls horizontally, so an always-visible control needs a considered layout change rather than a button bolted to the end of the row. Thanks @marceauboul.
+
+---
+
 ## 3.3.0 — Strap battery alerts
 
 - **New — strap battery alerts (all platforms):** get a system notification when your WHOOP's battery runs **low (≤15%)** or finishes **charging (100%)**, so you don't get caught out before bed. A shared `BatteryAlertPolicy` fires each alert **at most once per crossing** with a re-arm hysteresis band (low re-arms only above 25% or while charging; full re-arms only after it drops below 100%), and the once-per-crossing flags are **persisted**, so a battery hovering near 15% won't nag and the gate survives an app restart. On by default; toggle under **Settings → Automations**. Reimplemented from @ujix's starting point with the jitter/restart fixes (#368).
