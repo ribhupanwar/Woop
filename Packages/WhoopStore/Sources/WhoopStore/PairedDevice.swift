@@ -8,6 +8,7 @@ public struct PairedDevice: Equatable, Sendable, Identifiable {
     public var brand: String              // "WHOOP", "Polar", "Garmin", "Oura"
     public var model: String              // "WHOOP 4.0", "H10", "Forerunner 265", "Oura (import)"
     public var nickname: String?          // user-renamable; nil → show brand+model
+    public var peripheralId: String?      // CBPeripheral.identifier.uuidString (iOS/Mac); nil until adopted
     public var sourceKind: SourceKind
     public var capabilities: Set<Metric>
     public var status: DeviceStatus
@@ -15,9 +16,11 @@ public struct PairedDevice: Equatable, Sendable, Identifiable {
     public var lastSeenAt: Int
 
     public init(id: String, brand: String, model: String, nickname: String? = nil,
+                peripheralId: String? = nil,
                 sourceKind: SourceKind, capabilities: Set<Metric>, status: DeviceStatus,
                 addedAt: Int, lastSeenAt: Int) {
         self.id = id; self.brand = brand; self.model = model; self.nickname = nickname
+        self.peripheralId = peripheralId
         self.sourceKind = sourceKind; self.capabilities = capabilities; self.status = status
         self.addedAt = addedAt; self.lastSeenAt = lastSeenAt
     }

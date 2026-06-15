@@ -40,7 +40,7 @@ final class MigrationTests: XCTestCase {
             let cols = try await store.columnNamesForTest(table: table)
             XCTAssertTrue(cols.contains("synced"), "\(table) missing synced column")
         }
-        XCTAssertEqual(WhoopStoreInfo.schemaVersion, 15)
+        XCTAssertEqual(WhoopStoreInfo.schemaVersion, 16)
     }
 
     /// v13 adds the `userEdited` flag to sleepSession (user-corrected wake times survive re-sync).
@@ -55,5 +55,12 @@ final class MigrationTests: XCTestCase {
         let store = try await WhoopStore.inMemory()
         let cols = try await store.columnNamesForTest(table: "sleepSession")
         XCTAssertTrue(cols.contains("startTsAdjusted"), "sleepSession missing v14 startTsAdjusted column")
+    }
+
+    /// v16 adds `peripheralId` to pairedDevice (stable per-strap BLE identity for multi-WHOOP support).
+    func testV16AddsPeripheralIdColumnToPairedDevice() async throws {
+        let store = try await WhoopStore.inMemory()
+        let cols = try await store.columnNamesForTest(table: "pairedDevice")
+        XCTAssertTrue(cols.contains("peripheralId"), "pairedDevice missing v16 peripheralId column")
     }
 }

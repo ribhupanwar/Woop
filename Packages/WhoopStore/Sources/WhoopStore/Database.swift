@@ -300,6 +300,16 @@ extension WhoopStore {
                 VALUES ('my-whoop', 'WHOOP', 'WHOOP', NULL, 'liveBLE', 'hr,hrv,spo2,skinTemp,sleep,strainLoad', 'active', \(now), \(now));
             """)
         }
+
+        // v16: stable per-strap identity for multi-WHOOP support. `peripheralId` holds the BLE
+        // CBPeripheral.identifier.uuidString (iOS/Mac) so NOOP can tell physical straps apart and
+        // map a connected peripheral back to its registry row. Additive + nullable: the seeded
+        // 'my-whoop' row keeps peripheralId NULL (it still connects to "any WHOOP" today; it adopts
+        // its peripheral id later). New straps get id "whoop-<peripheralId>". Old readers that don't
+        // SELECT it keep working.
+        migrator.registerMigration("v16-paired-device-peripheral") { db in
+            try db.execute(sql: "ALTER TABLE pairedDevice ADD COLUMN peripheralId TEXT")
+        }
         return migrator
     }
 }

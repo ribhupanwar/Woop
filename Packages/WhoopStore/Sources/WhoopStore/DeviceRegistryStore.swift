@@ -45,6 +45,24 @@ public struct DeviceRegistryStore {
         }
     }
 
+    /// Adopt (or clear) the stable BLE identity for a registry row. `peripheralId` is the
+    /// CBPeripheral.identifier.uuidString on iOS/Mac; passing nil un-adopts it.
+    public func setPeripheralId(_ id: String, peripheralId: String?) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "UPDATE pairedDevice SET peripheralId = ? WHERE id = ?",
+                           arguments: [peripheralId, id])
+        }
+    }
+
+    /// Find the registry row that has adopted a given BLE peripheral, if any. Used to map a
+    /// connected CBPeripheral back to its `PairedDevice` so multiple straps stay distinct.
+    public func device(forPeripheralId peripheralId: String) throws -> PairedDevice? {
+        try dbQueue.read { db in
+            try Row.fetchOne(db, sql: "SELECT * FROM pairedDevice WHERE peripheralId = ? LIMIT 1",
+                             arguments: [peripheralId]).map(Self.decode)
+        }
+    }
+
     /// Every table whose rows are keyed by `deviceId` (the per-device sample/derived tables). This is
     /// the authoritative list `deleteAllData` clears — kept in sync with the `deviceId`-keyed tables in
     /// `Database.swift`. The `pairedDevice` registry row itself is NOT here (a delete-data operation
@@ -91,12 +109,12 @@ public struct DeviceRegistryStore {
     // MARK: mapping
     private static func upsert(_ db: Database, _ d: PairedDevice) throws {
         try db.execute(sql: """
-            INSERT INTO pairedDevice (id, brand, model, nickname, sourceKind, capabilities, status, addedAt, lastSeenAt)
-            VALUES (?,?,?,?,?,?,?,?,?)
+            INSERT INTO pairedDevice (id, brand, model, nickname, peripheralId, sourceKind, capabilities, status, addedAt, lastSeenAt)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET brand=excluded.brand, model=excluded.model, nickname=excluded.nickname,
-                sourceKind=excluded.sourceKind, capabilities=excluded.capabilities, status=excluded.status,
-                lastSeenAt=excluded.lastSeenAt
-        """, arguments: [d.id, d.brand, d.model, d.nickname, d.sourceKind.rawValue,
+                peripheralId=excluded.peripheralId, sourceKind=excluded.sourceKind, capabilities=excluded.capabilities,
+                status=excluded.status, lastSeenAt=excluded.lastSeenAt
+        """, arguments: [d.id, d.brand, d.model, d.nickname, d.peripheralId, d.sourceKind.rawValue,
                          d.capabilities.map(\.rawValue).sorted().joined(separator: ","),
                          d.status.rawValue, d.addedAt, d.lastSeenAt])
     }
@@ -104,6 +122,7 @@ public struct DeviceRegistryStore {
     private static func decode(_ row: Row) -> PairedDevice {
         let caps = (row["capabilities"] as String).split(separator: ",").compactMap { Metric(rawValue: String($0)) }
         return PairedDevice(id: row["id"], brand: row["brand"], model: row["model"], nickname: row["nickname"],
+                            peripheralId: row["peripheralId"],
                             sourceKind: SourceKind(rawValue: row["sourceKind"]) ?? .liveBLE,
                             capabilities: Set(caps), status: DeviceStatus(rawValue: row["status"]) ?? .paired,
                             addedAt: row["addedAt"], lastSeenAt: row["lastSeenAt"])

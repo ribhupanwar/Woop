@@ -78,6 +78,20 @@ final class DeviceRegistry: ObservableObject {
         reload()
     }
 
+    /// Adopt (or clear, when nil) the stable BLE identity for a device — the
+    /// CBPeripheral.identifier.uuidString on iOS/Mac. Lets NOOP tell physical straps apart and map a
+    /// connected peripheral back to its registry row. Refreshes the published list. Best-effort.
+    func setPeripheralId(_ id: String, peripheralId: String?) {
+        try? store.setPeripheralId(id, peripheralId: peripheralId)
+        reload()
+    }
+
+    /// Find the paired device that has adopted a given BLE peripheral, if any. A plain read of the
+    /// store (no reload) — returns nil on any error or when no row has adopted that peripheral yet.
+    func device(forPeripheralId peripheralId: String) -> PairedDevice? {
+        (try? store.device(forPeripheralId: peripheralId)) ?? nil
+    }
+
     /// Refine the seeded neutral "WHOOP" model on the 'my-whoop' row to the strap the user actually
     /// picked (migration v15 seeds a placeholder the app can't fill at migration time, since the
     /// selected model lives in the app's UserDefaults). No-op when it already matches. Best-effort.
