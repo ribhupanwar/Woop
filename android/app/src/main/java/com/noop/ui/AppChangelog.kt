@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "3.7.1"
+    const val CURRENT_VERSION = "3.8.0"
 
     data class Release(
         val version: String,
@@ -36,6 +36,16 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "3.8.0",
+            title = "Connect a heart-rate strap (early access)",
+            date = "June 2026",
+            items = listOf(
+                "A new Devices screen. NOOP can now read more than just a WHOOP. Pair a standard Bluetooth heart-rate strap — Polar, Wahoo, Coospo, a Garmin HRM, or the Amazfit Helio's heart-rate broadcast — for live heart rate + HRV. Manage everything under Devices: see what's paired, switch which strap is active, rename or remove one.",
+                "WHOOP stays the primary, fully-supported band. Other straps are an early, opt-in addition — they stream live HR + HRV, but not WHOOP's deeper sleep, recovery and strain. Only one strap is ever active at a time, and NOOP never mixes data from two devices.",
+                "Early and experimental. This is the first build that talks to non-WHOOP straps, so the live connection is still being proven on real hardware — pair one, tell us how it goes, and grab a strap log if it misbehaves. Your WHOOP setup is completely unchanged.",
+            ),
+        ),
         Release(
             version = "3.7.1",
             title = "Tidier Today gauges",

@@ -17,6 +17,14 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 3.8.0 — Connect a heart-rate strap (early access)
+
+- **A new Devices screen — NOOP reads more than just WHOOP now.** Pair a **standard Bluetooth heart-rate strap** (Polar, Wahoo, Coospo, a Garmin HRM, or the Amazfit Helio's HR broadcast) for **live heart rate + HRV**. The new **Devices** screen (System group) lists what's paired, lets you switch which strap is active, rename, or remove one (with a separate, deliberate "delete this device's data" path). Built on a device registry + a per-day source-ownership rule so **only one strap is ever active at a time and NOOP never mixes or double-counts data from two devices**.
+- **WHOOP stays the priority.** It remains the primary, fully-supported band; other straps are an early, opt-in addition that stream live HR + HRV only (not WHOOP's deeper sleep/recovery/strain). The generic-strap path is fully isolated from the WHOOP BLE path — with no strap paired, behaviour is byte-identical to before, so WHOOP users are completely unaffected.
+- **Early and experimental.** This is the first build that talks to non-WHOOP straps; the live connection is still being proven on real hardware. The Devices screen, pairing flow and data isolation are verified (and the iPhone/Mac screen is render-checked), but the live radio handshake needs real straps to confirm — pair one and let us know. Cross-platform (iPhone, Mac, Android).
+
+---
+
 ## 3.7.1 — Tidier Today gauges
 
 - **iPhone/Mac — Today gauges no longer squish (#403):** on larger iPhones the three **Charge / Effort / Rest** synthesis rings rendered cramped, with each ring's state word (LOW / MODERATE / PEAK) overflowing the arc and colliding with the number. Each ring now sizes to its actual card width (with its line width scaling to match), and the state word scales with the ring — pinned to its original size on the big single-score rings (byte-identical there) and shrinking only on the small three-up rings, while keeping Dynamic-Type accessibility scaling. Android's gauges were already responsive, so this is an iPhone/Mac fix. Thanks @claypilat.
