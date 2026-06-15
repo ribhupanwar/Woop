@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "3.3.1"
+    static let currentVersion = "3.4.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,15 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "3.4.0",
+            title: "Tidier Today hero, strap renaming, smarter journal",
+            date: "June 2026",
+            items: [
+                "**Today:** your three daily scores — **Charge / Effort / Rest** — now sit in one tidy row of rings, instead of leaving Rest stranded on its own line beside an empty space. Thanks @vulnix0x4 (#394).",
+                "**WHOOP 4.0 — rename your strap (iPhone/Mac):** picked up a second-hand band stuck on the previous owner's name? You can now rename its Bluetooth advertising name under **Settings → Strap** while it's connected. The strap reboots to apply, and it's reversible any time. Thanks @rad182 (#393).",
+                "**Android journal:** opening today's journal now **pre-fills last night's answers** (one tap to confirm or change — recurring habits like \"read before bed\" no longer need re-entering), with bigger Yes/No tap targets. Thanks @ujix (#372).",
+            ]),
         Release(
             version: "3.3.1",
             title: "More quick-relabel sports",

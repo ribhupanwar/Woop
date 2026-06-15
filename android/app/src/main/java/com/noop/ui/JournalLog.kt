@@ -308,7 +308,7 @@ private fun JournalChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .background(if (selected) Palette.accent else Palette.surfaceInset)
             .border(1.dp, if (selected) Palette.accent else Palette.hairline, shape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     )
 }
 

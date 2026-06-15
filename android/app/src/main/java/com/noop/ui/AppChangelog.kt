@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "3.3.1"
+    const val CURRENT_VERSION = "3.4.0"
 
     data class Release(
         val version: String,
@@ -36,6 +36,16 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "3.4.0",
+            title = "Tidier Today hero, strap renaming, smarter journal",
+            date = "June 2026",
+            items = listOf(
+                "Android journal: opening today's journal now pre-fills last night's answers (one tap to confirm or change — recurring habits like \"read before bed\" no longer need re-entering), with bigger Yes/No tap targets. Thanks @ujix (#372).",
+                "Today: the three daily scores (Charge / Effort / Rest) now sit in one tidy row of rings (an iPhone/Mac layout fix). Thanks @vulnix0x4 (#394).",
+                "WHOOP 4.0 strap renaming landed on iPhone/Mac (rename the band's Bluetooth name — handy for a second-hand strap). Android versioned in lockstep. Thanks @rad182 (#393).",
+            ),
+        ),
         Release(
             version = "3.3.1",
             title = "More quick-relabel sports",

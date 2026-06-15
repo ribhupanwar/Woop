@@ -173,6 +173,7 @@ fun InsightsScreen(vm: AppViewModel) {
     var dayOffset by remember { mutableStateOf(0L) }
     var importedQuestions by remember { mutableStateOf<List<String>>(emptyList()) }
     var dayAnswers by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var preFilledFromYesterday by remember { mutableStateOf(false) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var customQuestions by remember { mutableStateOf(loadCustomJournalQuestions(ctx)) }
@@ -189,7 +190,30 @@ fun InsightsScreen(vm: AppViewModel) {
         behaviours = byBehaviour.mapValues { it.value.toSet() }
         importedQuestions = imported.map { it.question }.distinct()
         val key = journalDayKey(dayOffset)
-        dayAnswers = native.filter { it.day == key }.associate { it.question to it.answeredYes }
+        var answers = native.filter { it.day == key }.associate { it.question to it.answeredYes }
+        // Pre-fill from last night when opening today's journal with no entries yet — makes
+        // recurring patterns (e.g. no alcohol, read before bed) one tap to confirm instead of re-enter.
+        if (answers.isEmpty() && dayOffset == 0L) {
+            val yesterdayAnswers = native
+                .filter { it.day == journalDayKey(1L) }
+                .associate { it.question to it.answeredYes }
+            if (yesterdayAnswers.isNotEmpty()) {
+                // Upsert real rows for today so the effects engine counts the day as logged
+                // and onClear can delete the row it finds. Without this the chips looked
+                // pre-filled but no row existed, so "confirm" persisted nothing and
+                // "clear" tried to delete a phantom.
+                vm.repo.upsertJournal(yesterdayAnswers.map { (q, yes) ->
+                    JournalEntry(JOURNAL_DEVICE_ID, key, q, yes)
+                })
+                answers = yesterdayAnswers
+                preFilledFromYesterday = true
+            } else {
+                preFilledFromYesterday = false
+            }
+        } else {
+            preFilledFromYesterday = false
+        }
+        dayAnswers = answers
         journalLoaded = true
     }
 
@@ -218,6 +242,14 @@ fun InsightsScreen(vm: AppViewModel) {
     ScreenScaffold(title = "Insights", subtitle = "Interrogate what affects what.") {
 
         // --- Native journal logging (always reachable — the account-free way in) ---
+        if (preFilledFromYesterday) {
+            Text(
+                "Pre-filled from last night — tap to confirm or change.",
+                style = NoopType.footnote,
+                color = Palette.textTertiary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         JournalLogCard(
             catalog = mergeJournalCatalog(importedQuestions, customQuestions, hiddenQuestions),
             answers = dayAnswers,

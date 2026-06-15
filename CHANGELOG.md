@@ -17,6 +17,14 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 3.4.0 — Tidier Today hero, strap renaming, smarter journal
+
+- **Today hero (#394):** the three daily scores — Charge / Effort / Rest — now sit in one equal three-up row of rings, instead of the old adaptive grid that fit only two per phone width and orphaned Rest beside an empty cell. Rings shrink to fit and drop the micro wordmark so the number stays legible. Thanks @vulnix0x4.
+- **WHOOP 4.0 strap renaming (iPhone/Mac, #393):** rename your strap's BLE advertising name from **Settings → Strap** while it's connected — useful for a second-hand band stuck on a previous owner's name. Uses the documented `SET_ADVERTISING_NAME_HARVARD` (cmd 77, paired with the `GET` NOOP already reads on connect); the strap reboots to apply, reversible any time, WHOOP-4-only. Thanks @rad182.
+- **Android journal pre-fill (#372):** opening today's journal with no entries yet pre-fills last night's answers — **upserting real rows** so the effects engine counts the day and a tap genuinely confirms (or clears) — with a disclosing banner and bigger Yes/No tap targets. Thanks @ujix.
+
+---
+
 ## 3.3.1 — More quick-relabel sports
 
 - **Workouts (#318):** added **CrossFit, Hiking and Tennis** to the quick re-label presets when you change a detected workout's type (Swift + Kotlin, all platforms). Broader workout-management discoverability improvements (a more visible edit/delete affordance) are being designed as a proper follow-up — the iPhone session table scrolls horizontally, so an always-visible control needs a considered layout change rather than a button bolted to the end of the row. Thanks @marceauboul.
