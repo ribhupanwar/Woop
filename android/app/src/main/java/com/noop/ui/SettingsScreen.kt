@@ -42,6 +42,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -641,6 +643,51 @@ fun SettingsScreen(vm: AppViewModel) {
                         enabled = live.connected || live.bonded,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.statusCritical),
                     ) { Text("Disconnect", style = NoopType.captionNumber) }
+                }
+
+                // Rename the strap's BLE advertising name (WHOOP 4.0 only). Writes the name to the strap
+                // firmware (cmd 77); it reboots to apply, so the new name shows on the next connect. Handy
+                // for a second-hand band stuck on the previous owner's name. Reversible.
+                if (live.connected && !live.whoop5Detected) {
+                    var nameDraft by remember(live.advertisingName) { mutableStateOf(live.advertisingName ?: "") }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Strap name", style = NoopType.subhead, color = Palette.textPrimary)
+                        Text(
+                            "Rename your strap's Bluetooth name — useful for a second-hand band. The strap " +
+                                "reboots to apply, then reconnects with the new name.",
+                            style = NoopType.footnote,
+                            color = Palette.textTertiary,
+                        )
+                        OutlinedTextField(
+                            value = nameDraft,
+                            onValueChange = { nameDraft = it.take(24) },
+                            singleLine = true,
+                            placeholder = { Text("WHOOP", style = NoopType.body, color = Palette.textTertiary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Palette.textPrimary,
+                                unfocusedTextColor = Palette.textPrimary,
+                                focusedBorderColor = Palette.accent,
+                                unfocusedBorderColor = Palette.hairline,
+                                cursorColor = Palette.accent,
+                                focusedContainerColor = Palette.surfaceInset,
+                                unfocusedContainerColor = Palette.surfaceInset,
+                            ),
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Button(
+                                onClick = { vm.ble.renameStrap(nameDraft) },
+                                enabled = live.bonded && nameDraft.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Palette.accent,
+                                    contentColor = Palette.surfaceBase,
+                                ),
+                            ) { Text("Rename", style = NoopType.captionNumber) }
+                            live.renameStatus?.let {
+                                Text(it, style = NoopType.footnote, color = Palette.textSecondary, modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
                 }
 
                 // Keep streaming when the app is closed (Android foreground service). On Mac, NOOP

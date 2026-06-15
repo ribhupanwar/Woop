@@ -52,6 +52,7 @@ Usage:
 import argparse
 import asyncio
 import datetime
+import json
 import os
 import signal
 import sqlite3
@@ -312,6 +313,7 @@ class Sync:
     def __init__(self, db, did, fam):
         self.db, self.device_id, self.fam = db, did, fam
         self.latest_hr = None
+        self.emit = None            # optional live frame stream-out (set in run() for --emit-frames)
         self.reassemblers = {}
         self.chunk = []
         self.commit_q = asyncio.Queue()
@@ -504,6 +506,17 @@ async def _session(client, s, db, fam, args, stop_all):
             except Exception as e:
                 print(f"  commit failed (NOT acking): {e}", flush=True)
                 continue
+            # persist-before-emit: only stream frames AFTER they are durably committed (mirrors
+            # persist-before-ack). Consumers (e.g. a cloud-upload tool) receive the live frame feed
+            # without this module taking on any upload/network dependency.
+            if s.emit is not None:
+                try:
+                    for f in frames:                 # (recv_ms, char, inner_type, unix, hr, hex)
+                        s.emit.write(json.dumps({"recv_ms": f[0], "char": f[1], "inner_type": f[2],
+                                                 "unix": f[3], "hr": f[4], "hex": f[5]}) + "\n")
+                    s.emit.flush()
+                except Exception as e:
+                    print(f"  emit-frames write failed (data persisted): {e}", flush=True)
             if end_data is not None:
                 try:
                     await client.write_gatt_char(fam.cmd_write, fam.build_ack(end_data, seq), response=True)
@@ -760,6 +773,21 @@ async def run(args):
 
     s = Sync(db, did, fam)
     s.sync_start_unix = cov[1] or cov[0]   # newest stored record = where this run resumes from
+    # Optional live frame stream-out. `-` = stdout (human logs then move to stderr so the stream is
+    # clean for `whoop_sync … --emit-frames - | consumer`); a path = that file or FIFO (logs stay on
+    # stdout). The consumer that uploads to the cloud lives in a separate project; this stays generic.
+    emit_target = getattr(args, "emit_frames", None)
+    if emit_target == "-":
+        s.emit = sys.stdout
+        sys.stdout = sys.stderr               # subsequent print() diagnostics → stderr
+    elif emit_target:
+        s.emit = open(emit_target, "w")
+    if s.emit is not None:
+        s.emit.write(json.dumps({"_header": {"device_id": did, "address": info[0],
+                                             "name": info[1], "model": args.model}}) + "\n")
+        s.emit.flush()
+        print(f"  emit-frames: streaming persisted frames as JSONL → "
+              f"{'stdout' if emit_target == '-' else emit_target}", flush=True)
     stop_all = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -895,6 +923,10 @@ def main():
     sp.add_argument("--stall", type=float, default=15.0)
     sp.add_argument("--max", type=float, default=3000.0)
     sp.add_argument("--tries", type=int, default=6)
+    sp.add_argument("--emit-frames", default=None, metavar="PATH",
+                    help="stream each PERSISTED frame as JSONL to PATH (a file or FIFO), or '-' for "
+                         "stdout (diagnostics then go to stderr). Lets a separate consumer receive "
+                         "the live frame feed; this tool stays upload-agnostic.")
     sp.add_argument("--clock-threshold", type=int, default=30, metavar="SECONDS",
                     help="set the strap clock first if it has drifted more than this (default 30)")
     sp.add_argument("--no-clock-check", action="store_true",

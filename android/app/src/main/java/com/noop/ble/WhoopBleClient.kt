@@ -102,6 +102,12 @@ data class LiveState(
      *  "Worn: Off" forever when no WRIST_ON event arrived — issue #18.) */
     val worn: Boolean = true,
     val lastEvent: String? = null,
+    /** The strap's current BLE advertising name (the WHOOP 4.0 device name from the OS), captured on
+     *  connect. Drives the "Rename strap" card in Settings → Strap. Null until connected. */
+    val advertisingName: String? = null,
+    /** Status of the last strap-rename attempt (sent / validation reason), surfaced in Settings → Strap.
+     *  Replaced by the next attempt. Twin of macOS LiveState.renameStatus. */
+    val renameStatus: String? = null,
     /** True while actively scanning for the strap (so the UI can show "Searching…"). */
     val scanning: Boolean = false,
     /** Human-readable reason for the current state (why it can't connect, what to try). */
@@ -1329,6 +1335,41 @@ class WhoopBleClient(
     }
 
     /**
+     * Rename the WHOOP 4.0's BLE advertising name (the name the OS shows in Bluetooth) via
+     * SET_ADVERTISING_NAME (cmd 77). Payload `[0x00,0x00] + UTF-8 name + [0x00]`, clamped to 24 UTF-8
+     * bytes so it can't overflow the advertising packet; the strap reboots to apply, so the new name
+     * appears on the next connect (the OS re-reads it). WHOOP 4.0 only — a 5/MG uses puffin framing and
+     * a different device-config path. Requires a bonded link. Result via [LiveState.renameStatus].
+     * Port of macOS BLEManager.renameStrap. Reversible: rename again any time.
+     */
+    fun renameStrap(rawName: String) {
+        val name = rawName.trim()
+        if (connectedFamily != DeviceFamily.WHOOP4) {
+            _state.value = _state.value.copy(renameStatus = "Renaming is WHOOP 4.0 only.")
+            log("Strap rename: WHOOP 4.0 only — ignored.")
+            return
+        }
+        if (!_state.value.connected || !_state.value.bonded) {
+            _state.value = _state.value.copy(renameStatus = "Connect and pair your strap first.")
+            return
+        }
+        if (name.isEmpty()) {
+            _state.value = _state.value.copy(renameStatus = "Enter a name first.")
+            return
+        }
+        // Clamp to 24 UTF-8 bytes on a whole-character boundary (never split a multibyte char), leaving
+        // room for the rest of the BLE advertising structure. Mirrors WhoopCommand.advertisingNamePayload.
+        var clamped = name
+        while (clamped.toByteArray(Charsets.UTF_8).size > 24) clamped = clamped.dropLast(1)
+        val payload = byteArrayOf(0, 0) + clamped.toByteArray(Charsets.UTF_8) + byteArrayOf(0)
+        send(CommandNumber.SET_ADVERTISING_NAME, payload, withResponse = true)
+        log("Strap rename: wrote advertising name=$clamped")
+        _state.value = _state.value.copy(
+            renameStatus = "Sent — your strap will reboot to apply, then reconnect with the new name.",
+        )
+    }
+
+    /**
      * Refresh the battery reading on demand ("Refresh battery", screen entry).
      *
      * Source is FAMILY-SPECIFIC (#77): on a WHOOP 4.0 the standard 0x2A19 characteristic is a STUB that
@@ -1575,7 +1616,7 @@ class WhoopBleClient(
                 BluetoothProfile.STATE_CONNECTED -> {
                     // Port of didConnect: mark connected, negotiate a larger ATT MTU, THEN discover.
                     handler.removeCallbacks(scanTimeoutRunnable)
-                    _state.value = _state.value.copy(connected = true, scanning = false, statusNote = null, encryptedBond = false, reconnectGuide = null)
+                    _state.value = _state.value.copy(connected = true, advertisingName = g.device.name, scanning = false, statusNote = null, encryptedBond = false, reconnectGuide = null)
                     serviceDiscoveryKicked.set(false)
                     // Capture link signal strength (logged via onReadRemoteRssi) — the scan
                     // "Discovered … (rssi …)" line never fires on a direct/auto-reconnect, so a weak-link

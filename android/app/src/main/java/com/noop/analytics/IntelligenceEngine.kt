@@ -219,9 +219,9 @@ object IntelligenceEngine {
             val dayStart = nowLocalMidnight - offset * SECONDS_PER_DAY
             val day = AnalyticsEngine.dayString(dayStart, tzOffsetSeconds)
             // Read a generous window around the night that ends on `day`; the stager finds
-            // the span. (30 h before, 12 h after — matches the Swift window.)
+            // the span. (30 h before, 18 h after (6 PM) — matches the Swift window.)
             val from = dayStart - 30 * 3_600L
-            val to = dayStart + 12 * 3_600L
+            val to = dayStart + 18 * 3_600L
 
             // I2: pick the single device that OWNS this day, and read ITS streams below. With one device
             // this resolves to [importedDeviceId] (active strap, has data → priority 0), so nothing
@@ -252,6 +252,12 @@ object IntelligenceEngine {
             // device that owns the day, never a mix.
             val dayHr = repo.hrSamples(owner, dayMidnight, dayEnd, STREAM_LIMIT)
             val daySteps = repo.stepSamples(owner, dayMidnight, dayEnd, STREAM_LIMIT)
+            // Full calendar-day gravity for WORKOUT detection. The night window above ends at
+            // dayStart+12h (≈ noon), so an afternoon/evening workout sits outside it and was only
+            // detected once a later pass re-read it through the next night window — a ~day lag. This
+            // [localMidnight, +24h) read (today: clamped to now by the DAO) lets the detector see the
+            // whole day, so a 5 pm run shows up the same day.
+            val dayGrav = repo.gravitySamples(owner, dayMidnight, dayEnd, STREAM_LIMIT)
 
             val res = AnalyticsEngine.analyzeDay(
                 day = day,
@@ -262,6 +268,7 @@ object IntelligenceEngine {
                 steps = steps,
                 dayHr = dayHr,
                 daySteps = daySteps,
+                dayGravity = dayGrav,
                 skinTemp = skin,
                 profile = profile,
                 baselines = baselines1,

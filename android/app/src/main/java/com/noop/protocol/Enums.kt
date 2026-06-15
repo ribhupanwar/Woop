@@ -90,6 +90,11 @@ enum class CommandNumber(val rawValue: Int) {
     GET_ALARM_TIME(67),
     RUN_ALARM(68),
     DISABLE_ALARM(69),
+    // SET_ADVERTISING_NAME_HARVARD (77) — rename the WHOOP 4.0's BLE advertising name on the strap
+    // firmware (the name the OS shows in Bluetooth). Payload: [0x00,0x00] + UTF-8 name + [0x00]; the
+    // strap reboots to apply. WHOOP 4.0 only (a 5/MG uses puffin framing + a different config path).
+    // Port of Swift WhoopCommand.setAdvertisingNameHarvard.
+    SET_ADVERTISING_NAME(77),
     RUN_HAPTICS_PATTERN(79),
     GET_ALL_HAPTICS_PATTERN(80),
     // SET_CONFIG / SET_FF_VALUE (0x78) — write one persistent feature flag. The 5/MG "enable R22
