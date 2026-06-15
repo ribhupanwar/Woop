@@ -205,10 +205,10 @@ shared cross-platform code.
 | **Intervals** | **Silent haptic HIIT timer.** The strap buzzes every transition (triple-buzz into WORK, single into REST, 3-2-1 tick at phase ends, long buzz on finish) so you train hands-free. Falls back to a glanceable visual timer with no strap. |
 | **Explore** (Metric Explorer) | Interrogate any single metric over time, built from the metric catalog (`Strand/Data/MetricCatalog.swift`). |
 | **Compare** | Plot two metrics together / against each other over a shared timeline. |
-| **Insights** | Behavioral and correlational insights derived from your own series. |
+| **Insights** | Behavioral and correlational insights derived from your own series — including **Activity Cost**, which learns what each activity type typically costs your next-morning recovery (and how long you take to bounce back) from your own history. |
 | **Sleep** | Sleep sessions with a hypnogram, stage breakdown, efficiency, resting HR, and HRV — computed by the on-device sleep stager. Browse back through **past nights**, not just last night. |
-| **Trends** | Long-range trends across recovery, strain, sleep, and biometrics. |
-| **Workouts** | Detected exercise sessions with strain and heart-rate detail. |
+| **Trends** | Long-range trends across recovery, strain, sleep, and biometrics — and a **shareable one-page PDF report** (recovery / sleep / HRV / resting HR / strain over a range you choose), rendered entirely on-device for a doctor, coach, or your own records. |
+| **Workouts** | Detected and manual exercise sessions with strain and heart-rate detail. Tap any session for a full **detail view** — its HR curve over the workout, time in each HR zone, duration, avg/max HR, and the Effort it added. |
 | **Health** | Biometric overview (HR, HRV, SpO₂, skin temperature, respiratory rate, etc.). |
 | **Stress** | Day-level stress / autonomic load visualization. |
 | **Mind** | A quick **daily mood check-in** that correlates how you feel against your own recovery, sleep and HRV over time — so you can see what actually moves your mood. On-device and **non-clinical**: a self-reflection log, not a mental-health assessment. |
@@ -237,6 +237,9 @@ and an in-app **"What's new"** changelog shown after each update.
   auto-**unlock** for Apple Watch — NOOP can lock, not unlock.)*
 - **Haptic coaching.** HR-zone coaching and an experimental resting-stress nudge —
   the strap buzzes so you don't have to watch a screen.
+- **Inactivity reminder.** An optional gentle wrist buzz after you've been sitting
+  still too long — your idle threshold, your active hours, a re-nudge cooldown,
+  respects quiet hours, **off by default**.
 - **Smart alarm.** Arms the strap's own **firmware** alarm to buzz at your wake
   time (still fires if the Mac is asleep or NOOP is closed), with an optional
   light-sleep wake window when the Mac stays awake and connected.
