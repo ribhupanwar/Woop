@@ -18,6 +18,15 @@
       "screenshotURLs": [],
       "versions": [
         {
+          "version": "4.2.5",
+          "buildVersion": "103",
+          "date": "2026-06-16",
+          "localizedDescription": "Trends report now explains which numbers are measured vs. NOOP-computed (#457).",
+          "downloadURL": "https://github.com/NoopApp/noop/releases/download/v4.2.5/NOOP-v4.2.5-ios.ipa",
+          "size": 8046587,
+          "minOSVersion": "17.0"
+        },
+        {
           "version": "4.2.4",
           "buildVersion": "102",
           "date": "2026-06-16",
@@ -559,12 +568,12 @@
           "NSHealthUpdateUsageDescription": "NOOP writes the metrics it computes from your strap back into Apple Health, on-device and only when you allow it."
         }
       },
-      "version": "4.2.4",
-      "buildVersion": "102",
+      "version": "4.2.5",
+      "buildVersion": "103",
       "versionDate": "2026-06-16",
-      "versionDescription": "iOS: Trends report PDF export now opens the share sheet (#455).",
-      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v4.2.4/NOOP-v4.2.4-ios.ipa",
-      "size": 8044852,
+      "versionDescription": "Trends report now explains which numbers are measured vs. NOOP-computed (#457).",
+      "downloadURL": "https://github.com/NoopApp/noop/releases/download/v4.2.5/NOOP-v4.2.5-ios.ipa",
+      "size": 8046587,
       "minOSVersion": "17.0"
     }
   ],
