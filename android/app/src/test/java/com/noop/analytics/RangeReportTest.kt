@@ -328,6 +328,85 @@ class RangeReportTest {
         assertFalse(line.contains("worth a look"))
     }
 
+    // Workouts + Stress rows (#457)
+
+    /**
+     * Both new rows appear, and they LEAD the report in the requested order: Workouts
+     * first, then Stress, ahead of every physiological metric.
+     */
+    @Test
+    fun workoutsAndStressRowsLeadInOrder() {
+        val workouts = mapOf(
+            "2026-06-01" to 0.0, "2026-06-02" to 1.0, "2026-06-03" to 1.0, "2026-06-04" to 2.0,
+        )
+        val stress = mapOf(
+            "2026-06-01" to 1.0, "2026-06-02" to 1.2, "2026-06-03" to 1.4, "2026-06-04" to 1.6,
+        )
+        val recovery = mapOf(
+            "2026-06-01" to 40.0, "2026-06-02" to 50.0, "2026-06-03" to 60.0, "2026-06-04" to 70.0,
+        )
+        val report = RangeReportEngine.build(
+            metrics = mapOf(
+                ReportMetric.WORKOUTS to workouts,
+                ReportMetric.STRESS to stress,
+                ReportMetric.RECOVERY to recovery,
+            ),
+            start = "2026-06-01", end = "2026-06-04",
+        )
+        assertNotNull(report.stat(ReportMetric.WORKOUTS))
+        assertNotNull(report.stat(ReportMetric.STRESS))
+        // metrics is emitted in allCases order → Workouts, then Stress, then Recovery.
+        assertEquals(
+            listOf(ReportMetric.WORKOUTS, ReportMetric.STRESS, ReportMetric.RECOVERY),
+            report.metrics.map { it.metric },
+        )
+    }
+
+    /** Workouts is valence-free: a clear trend states the move WITHOUT a good/bad verdict. */
+    @Test
+    fun workoutsRowHasNoGoodBadFrame() {
+        // +1 workout/day vs the 0.03 threshold → rising, but logging more sessions carries no
+        // inherent good/bad valence, so the headline omits a verdict.
+        val workouts = mapOf(
+            "2026-06-01" to 0.0, "2026-06-02" to 1.0, "2026-06-03" to 2.0, "2026-06-04" to 3.0,
+        )
+        val report = RangeReportEngine.build(
+            metrics = mapOf(ReportMetric.WORKOUTS to workouts),
+            start = "2026-06-01", end = "2026-06-04",
+        )
+        val s = report.stat(ReportMetric.WORKOUTS)!!
+        assertEquals(ReportTrend.RISING, s.trend)
+        assertEquals(1.5, s.mean, 1e-9)
+        assertEquals("/day", ReportMetric.WORKOUTS.unit)
+        assertFalse(ReportMetric.WORKOUTS.framesGoodBad)
+        val line = report.headlines[0]
+        assertTrue(line.contains("Workouts"))
+        assertTrue(line.contains("trending up"))
+        assertFalse(line.contains("good sign"))
+        assertFalse(line.contains("worth a look"))
+    }
+
+    /** Stress: lower is better, so a rising daily stress score reads as "worth a look". */
+    @Test
+    fun stressRisingIsWorthALook() {
+        // +0.2/day vs the 0.02 threshold → rising. Higher stress is worse.
+        val stress = mapOf(
+            "2026-06-01" to 1.0, "2026-06-02" to 1.2, "2026-06-03" to 1.4, "2026-06-04" to 1.6,
+        )
+        val report = RangeReportEngine.build(
+            metrics = mapOf(ReportMetric.STRESS to stress),
+            start = "2026-06-01", end = "2026-06-04",
+        )
+        val s = report.stat(ReportMetric.STRESS)!!
+        assertEquals(ReportTrend.RISING, s.trend)
+        assertEquals(1.3, s.mean, 1e-9)
+        assertEquals("", ReportMetric.STRESS.unit)
+        assertTrue(ReportMetric.STRESS.usesOneDecimal)       // 0–3 score shown to one decimal
+        assertFalse(ReportMetric.STRESS.higherIsBetter)      // calmer is better
+        assertTrue(report.headlines[0].contains("Stress"))
+        assertTrue(report.headlines[0].contains("worth a look")) // rose + lower-is-better
+    }
+
     // Determinism
 
     @Test

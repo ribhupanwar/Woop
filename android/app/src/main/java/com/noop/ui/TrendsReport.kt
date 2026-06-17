@@ -71,8 +71,18 @@ enum class ReportRange(val days: Int?, val label: String, val longName: String) 
 
 object TrendsReportData {
 
-    /** The seven day→value maps the engine consumes, keyed by ReportMetric. */
-    fun metricMaps(days: List<DailyMetric>): Map<ReportMetric, Map<String, Double>> {
+    /**
+     * The nine day→value maps the engine consumes, keyed by ReportMetric.
+     *
+     * [stressByDay] is the persisted daily stress series ("yyyy-MM-dd" → 0–3), the same
+     * stored series the Stress screen prioritises (#457). It isn't carried on DailyMetric, so
+     * the caller loads it (via metricSeries) and passes it in; absent days stay out.
+     */
+    fun metricMaps(
+        days: List<DailyMetric>,
+        stressByDay: Map<String, Double> = emptyMap(),
+    ): Map<ReportMetric, Map<String, Double>> {
+        val workouts = HashMap<String, Double>()
         val recovery = HashMap<String, Double>()
         val sleepHours = HashMap<String, Double>()
         val hrv = HashMap<String, Double>()
@@ -81,6 +91,9 @@ object TrendsReportData {
         val respRate = HashMap<String, Double>()
         val skinTempDev = HashMap<String, Double>()
         for (d in days) {
+            // Workouts logged that day (#457). Present on a recorded day (0 on a rest day), so
+            // the row reflects the full window's activity cadence.
+            d.exerciseCount?.let { workouts[d.day] = it.toDouble() }
             d.recovery?.let { recovery[d.day] = it }
             // Sleep reported in HOURS (the metric's unit); totalSleepMin is minutes asleep.
             // Days with no in-bed sleep stay absent.
@@ -92,7 +105,12 @@ object TrendsReportData {
             d.respRateBpm?.let { respRate[d.day] = it }
             d.skinTempDevC?.let { skinTempDev[d.day] = it }
         }
+        // Daily stress score (#457), clamped to its 0–3 scale. Stored-only — the report never
+        // re-derives a stress value (unlike the live Stress screen).
+        val stress = stressByDay.mapValues { it.value.coerceIn(0.0, 3.0) }
         return mapOf(
+            ReportMetric.WORKOUTS to workouts,
+            ReportMetric.STRESS to stress,
             ReportMetric.RECOVERY to recovery,
             ReportMetric.SLEEP_HOURS to sleepHours,
             ReportMetric.HRV to hrv,
@@ -115,15 +133,26 @@ object TrendsReportData {
         return Pair(start, today)
     }
 
-    /** Build the full report for a range from a DailyMetric history. */
-    fun report(range: ReportRange, days: List<DailyMetric>, today: String): RangeReport {
+    /** Build the full report for a range from a DailyMetric history (+ stored stress — #457). */
+    fun report(
+        range: ReportRange,
+        days: List<DailyMetric>,
+        today: String,
+        stressByDay: Map<String, Double> = emptyMap(),
+    ): RangeReport {
         val (start, end) = window(range, days, today)
-        return RangeReportEngine.build(metricMaps(days), start, end)
+        return RangeReportEngine.build(metricMaps(days, stressByDay), start, end)
     }
 
     /** The in-range sparkline series (chronological values) for one metric. */
-    fun series(metric: ReportMetric, days: List<DailyMetric>, start: String, end: String): List<Double> {
-        val map = metricMaps(days)[metric] ?: emptyMap()
+    fun series(
+        metric: ReportMetric,
+        days: List<DailyMetric>,
+        start: String,
+        end: String,
+        stressByDay: Map<String, Double> = emptyMap(),
+    ): List<Double> {
+        val map = metricMaps(days, stressByDay)[metric] ?: emptyMap()
         return map.filter { it.key in start..end }.toList().sortedBy { it.first }.map { it.second }
     }
 }
@@ -131,6 +160,8 @@ object TrendsReportData {
 // MARK: - Metric → colour (mirror Swift's per-metric hue; raw ARGB for the native Canvas)
 
 private fun ReportMetric.accentArgb(): Int = when (this) {
+    ReportMetric.WORKOUTS -> 0xFFD98A3D.toInt()       // activity → the Effort (amber) world
+    ReportMetric.STRESS -> 0xFFE8B84B.toInt()         // the Stress world hue (matches stressColor)
     ReportMetric.RECOVERY -> 0xFFE8B84B.toInt()      // charge gold
     ReportMetric.STRAIN -> 0xFFD98A3D.toInt()         // effort amber
     ReportMetric.SLEEP_HOURS -> 0xFF4A90E2.toInt()    // rest blue
@@ -299,11 +330,10 @@ object TrendsReportRenderer {
         line(canvas, left, top + 66f, right, top + 66f, HAIRLINE)
 
         // Footer stats: Avg / Min(day) / Max(day) / Days, evenly spaced.
-        val unit = stat.metric.unit
         val cols = listOf(
-            "AVG" to valueText(stat.mean, unit),
-            "MIN" to "${valueText(stat.min.value, unit)} · ${prettyDate(stat.min.day)}",
-            "MAX" to "${valueText(stat.max.value, unit)} · ${prettyDate(stat.max.day)}",
+            "AVG" to valueText(stat.mean, stat.metric),
+            "MIN" to "${valueText(stat.min.value, stat.metric)} · ${prettyDate(stat.min.day)}",
+            "MAX" to "${valueText(stat.max.value, stat.metric)} · ${prettyDate(stat.max.day)}",
             "DAYS" to "${stat.n}",
         )
         val colW = (right - left) / cols.size
@@ -358,9 +388,9 @@ object TrendsReportRenderer {
         drawCard(canvas, MARGIN, top, PAGE_W - MARGIN, top + cardH, null)
         val left = MARGIN + 16f
         text(canvas, "Not enough data in this range yet", left, top + 30f, 16f, sansBold, TEXT_PRIMARY)
-        val body = "No recovery, sleep, HRV, resting-HR, strain, respiratory-rate or skin-temp readings " +
-            "fell inside ${range.longName.lowercase()}. Wear your strap a few more days, or pick a wider " +
-            "range, then export again."
+        val body = "No workout, stress, recovery, sleep, HRV, resting-HR, strain, respiratory-rate or " +
+            "skin-temp readings fell inside ${range.longName.lowercase()}. Wear your strap a few more days, " +
+            "or pick a wider range, then export again."
         drawWrapped(canvas, body, left, top + 52f, PAGE_W - MARGIN - left - 16f, 16f, 12f, sans, TEXT_SECONDARY)
     }
 
@@ -373,9 +403,10 @@ object TrendsReportRenderer {
         // Sits above the hairline; wraps to the page width (~4 lines at this size).
         val legend = "How to read this: HRV, Resting HR, Sleep duration, Respiratory rate and Skin " +
             "temperature are measured from the strap (skin temp is shown as the deviation from your own " +
-            "baseline). Recovery and Strain are NOOP's own on-device scores, not clinical measures — " +
-            "Recovery is a daily readiness composite (HRV, resting HR, sleep and skin-temp trend), and " +
-            "Strain is cardiovascular load derived from heart rate."
+            "baseline). Workouts is the count of activities you logged or that were detected. Recovery, " +
+            "Strain and Stress are NOOP's own on-device scores, not clinical measures — Recovery is a daily " +
+            "readiness composite (HRV, resting HR, sleep and skin-temp trend), Strain is cardiovascular load " +
+            "derived from heart rate, and Stress is a 0–3 autonomic-load index from resting HR and HRV."
         drawWrapped(canvas, legend, MARGIN, y - 52f, PAGE_W - 2 * MARGIN, 11f, 9f, sans, TEXT_TERTIARY)
         line(canvas, MARGIN, y - 14f, PAGE_W - MARGIN, y - 14f, HAIRLINE)
         text(
@@ -503,17 +534,18 @@ object TrendsReportRenderer {
 
     // --- Formatting (mirror the Swift page) ---
 
-    private fun valueText(v: Double, unit: String): String {
-        // One decimal for sleep hours, respiratory rate and skin-temp Δ; whole numbers for
-        // the scores + bpm + ms. Skin-temp is a signed deviation, so a positive reading gets
-        // an explicit "+" to keep it from reading as an absolute temperature.
-        val oneDecimal = unit == "h" || unit == "br/min" || unit == "°C"
-        var num = if (oneDecimal) round1(v) else "${v.roundToInt()}"
-        if (unit == "°C" && v > 0) num = "+$num"
+    private fun valueText(v: Double, metric: ReportMetric): String {
+        // One decimal for sleep hours, respiratory rate, skin-temp Δ and the 0–3 stress score
+        // (metric.usesOneDecimal); whole numbers for the scores + bpm + ms + workout count.
+        // Skin-temp is a signed deviation, so a positive reading gets an explicit "+" to keep
+        // it from reading as an absolute temperature.
+        val unit = metric.unit
+        var num = if (metric.usesOneDecimal) round1(v) else "${v.roundToInt()}"
+        if (metric == ReportMetric.SKIN_TEMP_DEV && v > 0) num = "+$num"
         return if (unit.isEmpty()) num else "$num $unit"
     }
 
-    private fun meanText(stat: MetricRangeStat): String = valueText(stat.mean, stat.metric.unit)
+    private fun meanText(stat: MetricRangeStat): String = valueText(stat.mean, stat.metric)
 
     private fun round1(x: Double): String = String.format(Locale.US, "%.1f", (x * 10).roundToInt() / 10.0)
 
@@ -535,12 +567,17 @@ object TrendsReportShare {
      * the existing FileProvider. An empty range still produces a valid PDF — the renderer draws
      * an honest "not enough data in this range yet" page rather than a blank or fabricated sheet.
      */
-    fun export(context: Context, days: List<DailyMetric>, range: ReportRange) {
+    fun export(
+        context: Context,
+        days: List<DailyMetric>,
+        range: ReportRange,
+        stressByDay: Map<String, Double> = emptyMap(),
+    ) {
         runCatching {
             val today = LocalDate.now().toString()
-            val report = TrendsReportData.report(range, days, today)
+            val report = TrendsReportData.report(range, days, today, stressByDay)
             val series = ReportMetric.allCases.associateWith {
-                TrendsReportData.series(it, days, report.start, report.end)
+                TrendsReportData.series(it, days, report.start, report.end, stressByDay)
             }
             val generatedOn = LocalDate.now().format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.US))
             val file = TrendsReportRenderer.renderPdf(context, report, range, series, generatedOn)
@@ -575,6 +612,16 @@ fun TrendsReportExportSection(vm: AppViewModel, modifier: Modifier = Modifier) {
     val days by vm.recentDays.collectAsStateWithLifecycle()
     var range by remember { mutableStateOf(ReportRange.Days90) }
 
+    // Stored daily stress series ("yyyy-MM-dd" → 0–3) for the Stress row (#457). Loaded once
+    // from the same "my-whoop" series the Stress screen reads; empty until it arrives.
+    var stressByDay by remember { mutableStateOf<Map<String, Double>>(emptyMap()) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val rows = runCatching {
+            vm.repo.metricSeries("my-whoop", "stress", "0000-01-01", "9999-12-31")
+        }.getOrDefault(emptyList())
+        stressByDay = rows.associate { it.day to it.value }
+    }
+
     NoopCard(modifier = modifier, tint = Palette.accent) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Overline("Export")
@@ -596,7 +643,7 @@ fun TrendsReportExportSection(vm: AppViewModel, modifier: Modifier = Modifier) {
             Text(range.longName, style = NoopType.footnote, color = Palette.textTertiary)
 
             Button(
-                onClick = { TrendsReportShare.export(context, days, range) },
+                onClick = { TrendsReportShare.export(context, days, range, stressByDay) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(13.dp),
                 colors = ButtonDefaults.buttonColors(

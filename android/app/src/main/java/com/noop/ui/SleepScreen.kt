@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
@@ -307,6 +308,26 @@ fun SleepScreen(
                     sleeps = sleeps.filterNot { it.deviceId == s.deviceId && it.startTs == s.startTs }
                     scope.launch { vm.deleteSleepSession(s) }
                 },
+                onAddNap = { startTs, endTs ->
+                    // Persist the new nap as its OWN session (#508); reload `sleeps` afterwards so the
+                    // new block shows in the ◀/▶ browse without waiting for a sync. We don't optimistically
+                    // insert here because the stages are staged from raw off the UI thread.
+                    scope.launch {
+                        vm.addManualNap(startTs, endTs)
+                        sleeps = runCatching {
+                            val now = System.currentTimeMillis() / 1000L
+                            val imported = vm.repo.sleepSessions("my-whoop", 0L, now)
+                            val computed = vm.repo.sleepSessions(vm.repo.computedDeviceId("my-whoop"), 0L, now)
+                            fun localEndDay(ts: Long): String {
+                                val offsetSec = (java.util.TimeZone.getDefault().getOffset(ts * 1000) / 1000).toLong()
+                                return AnalyticsEngine.dayString(ts, offsetSec)
+                            }
+                            val importedDays = imported.map { localEndDay(it.endTs) }.toHashSet()
+                            val computedOnly = computed.filter { localEndDay(it.endTs) !in importedDays }
+                            (imported + computedOnly).sortedBy { it.effectiveStartTs }
+                        }.getOrDefault(sleeps)
+                    }
+                },
                 onPickNightDate = onPickNightDate,
             )
             if (model != null) {
@@ -413,10 +434,11 @@ private fun Hero(
     session: SleepSession? = null,
     onUpdateTimes: (SleepSession, Long, Long) -> Unit = { _, _, _ -> },
     onDeleteSession: (SleepSession) -> Unit = {},
+    onAddNap: (Long, Long) -> Unit = { _, _ -> },
     onPickNightDate: ((LocalDate) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
-        NightNavHeader(nightOffset, lastIndex, clock, onNavigate, session, onUpdateTimes, onDeleteSession, onPickNightDate)
+        NightNavHeader(nightOffset, lastIndex, clock, onNavigate, session, onUpdateTimes, onDeleteSession, onAddNap, onPickNightDate)
         // The night's clock window — when you fell asleep and when you woke — as its own clearly
         // labelled row. These were only ever in the nav-header's trailing caption, which truncates
         // between the two chevrons on a phone, so in practice the two times people look for first
@@ -676,6 +698,7 @@ private fun NightNavHeader(
     session: SleepSession? = null,
     onUpdateTimes: (SleepSession, Long, Long) -> Unit = { _, _, _ -> },
     onDeleteSession: (SleepSession) -> Unit = {},
+    onAddNap: (Long, Long) -> Unit = { _, _ -> },
     onPickNightDate: ((LocalDate) -> Unit)? = null,
 ) {
     val canGoOlder = offset < lastIndex
@@ -686,6 +709,11 @@ private fun NightNavHeader(
     var editingBed by remember { mutableStateOf(false) }
     var editingWake by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    // Manual nap add (#508): pick a start time, then an end time; both anchored to THIS night's wake day
+    // so the new nap lands on the right day. napStartTs holds the chosen start between the two pickers.
+    var addingNapStart by remember { mutableStateOf(false) }
+    var addingNapEnd by remember { mutableStateOf(false) }
+    var napStartTs by remember { mutableStateOf(0L) }
 
     // Step 1 of the time edit: pick which end of the night to adjust (bedtime or wake-up).
     if (showTimeChoice && session != null) {
@@ -826,6 +854,64 @@ private fun NightNavHeader(
         }
     }
 
+    // Manual nap (#508) step 1: pick the nap's START time, anchored to the night's wake DAY (a natural
+    // place to look for a missed daytime nap). Defaults to ~1h after the night's wake.
+    if (addingNapStart && session != null) {
+        val anchorTs = session.endTs + 3_600L
+        val startCal = Calendar.getInstance().apply { timeInMillis = anchorTs * 1000L }
+        DisposableEffect(Unit) {
+            val dialog = TimePickerDialog(
+                context,
+                { _, h, m ->
+                    val cal = Calendar.getInstance().apply {
+                        timeInMillis = anchorTs * 1000L
+                        set(Calendar.HOUR_OF_DAY, h); set(Calendar.MINUTE, m)
+                        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                    }
+                    napStartTs = cal.timeInMillis / 1000L
+                    addingNapStart = false
+                    addingNapEnd = true
+                },
+                startCal.get(Calendar.HOUR_OF_DAY),
+                startCal.get(Calendar.MINUTE),
+                true,
+            ).apply { setTitle("Nap started") }
+            dialog.setOnDismissListener { addingNapStart = false }
+            dialog.show()
+            onDispose { runCatching { dialog.dismiss() } }
+        }
+    }
+
+    // Manual nap (#508) step 2: pick the nap's END time — TIME-ONLY, its day DERIVED from the chosen start
+    // (first instant strictly after start, within 24h), mirroring the wake-edit cross-day constraint so a
+    // nap can't be re-bucketed onto the wrong day. Then hand (start, end) to onAddNap.
+    if (addingNapEnd && napStartTs > 0L) {
+        val endCal = Calendar.getInstance().apply { timeInMillis = (napStartTs + 30 * 60L) * 1000L }
+        DisposableEffect(Unit) {
+            val dialog = TimePickerDialog(
+                context,
+                { _, h, m ->
+                    val startTs = napStartTs
+                    val cal = Calendar.getInstance().apply {
+                        timeInMillis = startTs * 1000L
+                        set(Calendar.HOUR_OF_DAY, h); set(Calendar.MINUTE, m)
+                        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                        if (timeInMillis / 1000L <= startTs) add(Calendar.DAY_OF_MONTH, 1)
+                    }
+                    onAddNap(startTs, cal.timeInMillis / 1000L)
+                    addingNapEnd = false
+                    napStartTs = 0L
+                },
+                endCal.get(Calendar.HOUR_OF_DAY),
+                endCal.get(Calendar.MINUTE),
+                true,
+            ).apply { setTitle("Nap ended") }
+            dialog.setOnDismissListener { addingNapEnd = false }
+            dialog.show()
+            onDispose { runCatching { dialog.dismiss() } }
+        }
+    }
+
     val nightLabel = when (offset) {
         0 -> "Last night"
         1 -> "1 night ago"
@@ -892,6 +978,15 @@ private fun NightNavHeader(
                     contentDescription = "Delete this sleep session",
                     tint = Palette.textTertiary,
                     modifier = Modifier.size(14.dp).clickable { showDeleteConfirm = true },
+                )
+                // Add a missed nap as its OWN session (#508) — staged from raw, never folded into this
+                // night's main sleep. Two pickers (start → end), the end day derived from the start.
+                Spacer(Modifier.width(Metrics.space12))
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Add a nap",
+                    tint = Palette.textTertiary,
+                    modifier = Modifier.size(14.dp).clickable { addingNapStart = true },
                 )
             }
         }

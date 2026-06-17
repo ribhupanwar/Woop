@@ -944,7 +944,8 @@ struct LiveView: View {
     }
 
     private func saveStrapLog() {
-        FileExport.exportText(live.exportableLogText(), suggestedName: "noop-strap-log.txt")
+        FileExport.exportText(live.exportableLogText(),
+                              suggestedName: FileExport.timestampedName("noop-strap-log", ext: "txt"))
     }
 }
 

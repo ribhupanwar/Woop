@@ -131,6 +131,33 @@ extension WhoopStore {
         }
     }
 
+    /// Manually ADD a sleep session the detector missed — typically a daytime NAP (#508). Inserts a NEW
+    /// row keyed by the chosen `startTs`, flagged `userEdited = 1` so the post-sync recompute's overlap
+    /// guard preserves it (drops any later re-detected session overlapping its window) exactly as it
+    /// protects a hand-corrected night — the manual nap can never be overwritten or folded away. `startTs`
+    /// is the immutable detected-style key; `startTsAdjusted` stays nil because a manually-added session's
+    /// onset IS the chosen onset (there is no "detected" onset to diverge from). `stagesJSON` is staged from
+    /// the raw streams over `[startTs, endTs]` by the caller (falling back to a single "awake" block when
+    /// the strap has no dense data there yet — the self-heal swaps in real stages once raw lands).
+    ///
+    /// Uses `ON CONFLICT(deviceId, startTs) DO NOTHING` so it is purely ADDITIVE: it can never clobber an
+    /// existing detected/edited session that happens to share the exact onset second. Returns rows inserted
+    /// (0 when a session already exists at that onset). Mirrors Android `insertManualSleepSession`.
+    @discardableResult
+    public func insertManualSleepSession(deviceId: String, startTs: Int, endTs: Int,
+                                         efficiency: Double?, stagesJSON: String?) async throws -> Int {
+        try syncWrite { db in
+            try db.execute(sql: """
+                INSERT INTO sleepSession
+                    (deviceId, startTs, endTs, efficiency, restingHr, avgHrv, stagesJSON,
+                     userEdited, startTsAdjusted)
+                VALUES (?, ?, ?, ?, NULL, NULL, ?, 1, NULL)
+                ON CONFLICT(deviceId, startTs) DO NOTHING
+                """, arguments: [deviceId, startTs, endTs, efficiency, stagesJSON])
+            return db.changesCount
+        }
+    }
+
     /// Replace ONLY the stage breakdown of an already user-edited night, leaving the corrected bed/wake
     /// bounds (`startTsAdjusted`/`endTs`) and the `userEdited` flag untouched. The post-sync self-heal
     /// calls this when a strap sync finally delivers the raw streams for a night that was edited BEFORE

@@ -15,6 +15,23 @@ import UniformTypeIdentifiers
 ///   to Files, AirDrop it, or send it on — the idiomatic iOS way to get a file out of the sandbox.
 enum FileExport {
 
+    /// A short `yyMMdd-HHmm` wall-clock stamp for export filenames (#510 — maddognik's protocol RE),
+    /// so a reporter who saves several strap logs / raw captures in a row gets sortable, non-colliding
+    /// files (e.g. `noop-strap-log-260617-1042.txt`) instead of repeatedly overwriting one name.
+    /// Locale-independent (POSIX) so the stamp is stable on every machine.
+    static func timestamp(_ date: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyMMdd-HHmm"
+        return f.string(from: date)
+    }
+
+    /// Compose a timestamped suggested filename — `<prefix>-<yyMMdd-HHmm>.<ext>`
+    /// (e.g. `timestampedName("noop-strap-log", ext: "txt")` → `noop-strap-log-260617-1042.txt`).
+    static func timestampedName(_ prefix: String, ext: String) -> String {
+        "\(prefix)-\(timestamp()).\(ext)"
+    }
+
     /// Write `text` to a file and let the user choose where it goes.
     @MainActor
     static func exportText(_ text: String, suggestedName: String) {
@@ -58,6 +75,38 @@ enum FileExport {
         #else
         guard FileManager.default.fileExists(atPath: src.path) else { return }
         present(activityItems: [src], cleanup: [])
+        #endif
+    }
+
+    /// Export an existing file AND a block of text together as a matched pair (#510 — raw capture + the
+    /// strap log that produced it). On iOS both are offered in ONE share sheet so the reporter saves /
+    /// AirDrops them in a single gesture; on macOS the system has no multi-file save panel, so each is
+    /// saved through its own panel in sequence (capture first, then the log). Reuses `exportFile` /
+    /// `exportText` semantics — no new file plumbing.
+    @MainActor
+    static func exportPair(file src: URL, fileSuggestedName: String,
+                           text: String, textSuggestedName: String) {
+        #if os(macOS)
+        // Capture first, then the log — two panels back-to-back. Cancelling either just skips that file.
+        exportFile(at: src, suggestedName: fileSuggestedName)
+        exportText(text, suggestedName: textSuggestedName)
+        #else
+        guard FileManager.default.fileExists(atPath: src.path) else {
+            // No capture file — fall back to sharing just the log so the tap isn't a dead end.
+            exportText(text, suggestedName: textSuggestedName)
+            return
+        }
+        // Stage the log to a temp file so the share sheet carries both as real documents; clean up the
+        // staged log (only) once the sheet closes — the capture file is owned by the app container.
+        let logURL = FileManager.default.temporaryDirectory.appendingPathComponent(textSuggestedName)
+        do {
+            try text.write(to: logURL, atomically: true, encoding: .utf8)
+        } catch {
+            // Couldn't stage the log — still share the capture so the action isn't lost.
+            present(activityItems: [src], cleanup: [])
+            return
+        }
+        present(activityItems: [src, logURL], cleanup: [logURL])
         #endif
     }
 

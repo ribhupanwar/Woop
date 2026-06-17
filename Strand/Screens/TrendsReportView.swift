@@ -65,8 +65,14 @@ enum ReportRange: Int, CaseIterable, Identifiable {
 /// `days` array and today's local day key.
 enum TrendsReportData {
 
-    /// The seven day→value maps the engine consumes, keyed by ReportMetric.
-    static func metricMaps(from days: [DailyMetric]) -> [ReportMetric: [String: Double]] {
+    /// The nine day→value maps the engine consumes, keyed by ReportMetric.
+    ///
+    /// `stressByDay` is the persisted daily stress series ("yyyy-MM-dd" → 0–3), the same
+    /// stored series the Stress screen prioritises (#457). It isn't carried on `DailyMetric`,
+    /// so the caller loads it and passes it in; absent days simply stay out of the report.
+    static func metricMaps(from days: [DailyMetric],
+                           stressByDay: [String: Double] = [:]) -> [ReportMetric: [String: Double]] {
+        var workouts: [String: Double] = [:]
         var recovery: [String: Double] = [:]
         var sleepHours: [String: Double] = [:]
         var hrv: [String: Double] = [:]
@@ -75,6 +81,9 @@ enum TrendsReportData {
         var respRate: [String: Double] = [:]
         var skinTempDev: [String: Double] = [:]
         for d in days {
+            // Workouts logged that day (#457). The count is always present on a recorded day
+            // (0 on a rest day), so the row reflects the full window's activity cadence.
+            if let c = d.exerciseCount { workouts[d.day] = Double(c) }
             if let v = d.recovery { recovery[d.day] = v }
             // Sleep is reported in HOURS to match the metric's unit; totalSleepMin is the
             // persisted minutes asleep. Days with no in-bed sleep stay absent.
@@ -86,7 +95,12 @@ enum TrendsReportData {
             if let v = d.respRateBpm { respRate[d.day] = v }
             if let v = d.skinTempDevC { skinTempDev[d.day] = v }
         }
+        // Daily stress score (#457), clamped to its 0–3 scale. Stored-only — the report never
+        // re-derives a stress value (unlike the live Stress screen), so a day with no banked
+        // stress simply has no Stress row contribution.
+        let stress = stressByDay.mapValues { Swift.min(Swift.max($0, 0), 3) }
         return [
+            .workouts: workouts, .stress: stress,
             .recovery: recovery, .sleepHours: sleepHours, .hrv: hrv,
             .restingHr: restingHr, .strain: strain,
             .respRate: respRate, .skinTempDev: skinTempDev,
@@ -117,18 +131,20 @@ enum TrendsReportData {
         return (start, end)
     }
 
-    /// Build the full report for a range from a DailyMetric history.
+    /// Build the full report for a range from a DailyMetric history (+ the stored daily
+    /// stress series, for the Stress row — #457).
     static func report(for range: ReportRange, days: [DailyMetric],
-                       today: String) -> RangeReport {
+                       today: String, stressByDay: [String: Double] = [:]) -> RangeReport {
         let (start, end) = window(for: range, days: days, today: today)
-        return RangeReportEngine.build(metrics: metricMaps(from: days), start: start, end: end)
+        return RangeReportEngine.build(metrics: metricMaps(from: days, stressByDay: stressByDay),
+                                       start: start, end: end)
     }
 
     /// The in-range sparkline series (chronological values) for one metric — the same
     /// window the engine summarised, so the line and the stats agree.
     static func series(_ metric: ReportMetric, from days: [DailyMetric],
-                       start: String, end: String) -> [Double] {
-        let map = metricMaps(from: days)[metric] ?? [:]
+                       start: String, end: String, stressByDay: [String: Double] = [:]) -> [Double] {
+        let map = metricMaps(from: days, stressByDay: stressByDay)[metric] ?? [:]
         return map.filter { $0.key >= start && $0.key <= end }
             .sorted { $0.key < $1.key }
             .map(\.value)
@@ -144,6 +160,8 @@ private extension ReportMetric {
     /// The line/accent colour for the metric, keeping each its long-standing hue.
     var accent: Color {
         switch self {
+        case .workouts:    return StrandPalette.effortColor  // activity → the Effort world
+        case .stress:      return StrandPalette.stressColor  // the Stress world hue
         case .recovery:    return StrandPalette.chargeColor
         case .strain:      return StrandPalette.effortColor
         case .sleepHours:  return StrandPalette.restColor
@@ -259,7 +277,6 @@ struct TrendsReportPage: View {
     private func metricCard(_ stat: MetricRangeStat) -> some View {
         let metric = stat.metric
         let spark = series[metric] ?? []
-        let unit = metric.unit
         return NoopCard(tint: metric.accent) {
             VStack(alignment: .leading, spacing: 10) {
                 // Title + mean read-out + trend chip.
@@ -287,9 +304,9 @@ struct TrendsReportPage: View {
 
                 // The numbers: min / max (with the day each fell on) + readings count.
                 ChartFooter([
-                    ("Avg", valueText(stat.mean, unit)),
-                    ("Min", "\(valueText(stat.min.value, unit)) · \(prettyDate(stat.min.day))"),
-                    ("Max", "\(valueText(stat.max.value, unit)) · \(prettyDate(stat.max.day))"),
+                    ("Avg", valueText(stat.mean, metric)),
+                    ("Min", "\(valueText(stat.min.value, metric)) · \(prettyDate(stat.min.day))"),
+                    ("Max", "\(valueText(stat.max.value, metric)) · \(prettyDate(stat.max.day))"),
                     ("Days", "\(stat.n)"),
                 ])
             }
@@ -325,7 +342,7 @@ struct TrendsReportPage: View {
                     Text("Not enough data in this range yet")
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
-                    Text("No recovery, sleep, HRV, resting-HR, strain, respiratory-rate or skin-temp readings fell inside \(range.longName.lowercased()). Wear your strap a few more days, or pick a wider range, then export again.")
+                    Text("No workout, stress, recovery, sleep, HRV, resting-HR, strain, respiratory-rate or skin-temp readings fell inside \(range.longName.lowercased()). Wear your strap a few more days, or pick a wider range, then export again.")
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -344,9 +361,10 @@ struct TrendsReportPage: View {
             // Recovery and Strain are computed on-device and are NOT clinical measures.
             Text("How to read this: HRV, Resting HR, Sleep duration, Respiratory rate and Skin temperature "
                 + "are measured from the strap (skin temp is shown as the deviation from your own baseline). "
-                + "Recovery and Strain are NOOP's own on-device scores, not clinical measures — Recovery "
-                + "is a daily readiness composite (HRV, resting HR, sleep and skin-temp trend), and Strain "
-                + "is cardiovascular load derived from heart rate.")
+                + "Workouts is the count of activities you logged or that were detected. Recovery, Strain and "
+                + "Stress are NOOP's own on-device scores, not clinical measures — Recovery is a daily readiness "
+                + "composite (HRV, resting HR, sleep and skin-temp trend), Strain is cardiovascular load derived "
+                + "from heart rate, and Stress is a 0–3 autonomic-load index from resting HR and HRV.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -361,18 +379,21 @@ struct TrendsReportPage: View {
 
     // MARK: Formatting
 
-    /// Whole-number for the 0–100 scores + bpm + ms; one decimal for sleep hours,
-    /// respiratory rate and skin-temp Δ. Skin-temp is a signed deviation from baseline, so
-    /// a positive reading gets an explicit "+" to keep it from reading as an absolute temp.
-    private func valueText(_ v: Double, _ unit: String) -> String {
-        let oneDecimal = (unit == "h" || unit == "br/min" || unit == "°C")
-        var num = oneDecimal ? round1Text(v) : "\(Int(v.rounded()))"
-        if unit == "°C" && v > 0 { num = "+\(num)" }
+    /// Whole-number for the 0–100 scores + bpm + ms + workout count; one decimal for sleep
+    /// hours, respiratory rate, skin-temp Δ and the 0–3 stress score (`metric.usesOneDecimal`).
+    /// Skin-temp is a signed deviation from baseline, so a positive reading gets an explicit
+    /// "+" to keep it from reading as an absolute temp.
+    private func valueText(_ v: Double, _ metric: ReportMetric) -> String {
+        let unit = metric.unit
+        // Workouts is a fractional rate in the AVG read-out but a whole count at min/max; one
+        // decimal keeps the averaged cadence honest (e.g. "0.4 /day") without faking precision.
+        var num = metric.usesOneDecimal ? round1Text(v) : "\(Int(v.rounded()))"
+        if metric == .skinTempDev && v > 0 { num = "+\(num)" }
         return unit.isEmpty ? num : "\(num) \(unit)"
     }
 
     private func meanText(_ stat: MetricRangeStat) -> String {
-        valueText(stat.mean, stat.metric.unit)
+        valueText(stat.mean, stat.metric)
     }
 
     private func round1Text(_ x: Double) -> String {
@@ -396,20 +417,25 @@ struct TrendsReportPage: View {
 /// Trends screen's "Export trends report" button.
 struct TrendsReportSheet: View {
     let days: [DailyMetric]
+    @EnvironmentObject private var repo: Repository
     @Environment(\.dismiss) private var dismiss
     @State private var range: ReportRange = .days90
     @State private var exporting = false
+    /// Stored daily stress series ("yyyy-MM-dd" → 0–3), for the Stress row (#457). Loaded
+    /// once from the same "my-whoop" series the Stress screen reads; empty until it arrives.
+    @State private var stressByDay: [String: Double] = [:]
 
     private var today: String { Repository.localDayKey(Date()) }
 
     private var report: RangeReport {
-        TrendsReportData.report(for: range, days: days, today: today)
+        TrendsReportData.report(for: range, days: days, today: today, stressByDay: stressByDay)
     }
 
     private func seriesMap(start: String, end: String) -> [ReportMetric: [Double]] {
         var out: [ReportMetric: [Double]] = [:]
         for metric in ReportMetric.allCases {
-            out[metric] = TrendsReportData.series(metric, from: days, start: start, end: end)
+            out[metric] = TrendsReportData.series(metric, from: days, start: start, end: end,
+                                                  stressByDay: stressByDay)
         }
         return out
     }
@@ -484,6 +510,12 @@ struct TrendsReportSheet: View {
         #if os(iOS)
         .noopSheetPresentation(largeFirst: true)
         #endif
+        // Load the stored daily stress series for the Stress row (#457). The same
+        // "my-whoop" series the Stress screen prioritises; the report never re-derives it.
+        .task {
+            let pts = await repo.series(key: "stress", source: "my-whoop")
+            stressByDay = Dictionary(pts.map { ($0.day, $0.value) }, uniquingKeysWith: { _, b in b })
+        }
     }
 
     @MainActor
@@ -553,6 +585,7 @@ private func previewDays() -> [DailyMetric] {
 
 #Preview("Trends report — sheet") {
     TrendsReportSheet(days: previewDays())
+        .environmentObject(Repository(deviceId: "preview"))
         .frame(width: 480, height: 640)
         .preferredColorScheme(.dark)
 }

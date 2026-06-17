@@ -671,6 +671,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { repository.deleteSleepSession(session) }
     }
 
+    /** Manually add a missed nap as its OWN session (#508) — staged from raw, written under the computed
+     *  source with userEdited=true so the recompute guard keeps it and it's never folded into main sleep.
+     *  Swallows failures; the Sleep screen recomputes from the persisted rows on its next reload. */
+    suspend fun addManualNap(startTs: Long, endTs: Long) {
+        runCatching { repository.addManualNap(deviceId, startTs, endTs) }
+    }
+
     /** Re-read every source + the dismissed markers and republish [workouts]. */
     fun loadWorkouts() {
         viewModelScope.launch {

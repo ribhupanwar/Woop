@@ -437,6 +437,45 @@ final class Repository: ObservableObject {
         await refresh()
     }
 
+    /// Manually ADD a missed sleep session — typically a daytime NAP the detector didn't pick up (#508).
+    /// Stages it from the raw streams over `[startTs, endTs]` (exactly the editing path's `restageFromRaw`),
+    /// falling back to a single "awake" block when the strap has no dense data there yet — the post-sync
+    /// self-heal then swaps in real stages once the raw lands. Written under the COMPUTED source as its OWN
+    /// separate session row with `userEdited = 1`, so the recompute overlap guard preserves it and it is
+    /// NEVER folded into the night's main sleep (which would mislabel awake daytime as light sleep). Purely
+    /// additive — `insertManualSleepSession` no-ops if a session already exists at that exact onset.
+    func addManualNap(startTs: Int, endTs: Int) async {
+        guard let store = await ensureStore(), endTs > startTs else { return }
+        // Stage from raw over the chosen window; fall back to a single awake block when the strap has no
+        // dense data there yet (the self-heal re-stages once raw arrives). A nap's efficiency is the asleep
+        // fraction of the staged window; nil for the fallback (no real stages yet).
+        let stagesJSON = await restageFromRaw(start: startTs, end: endTs)
+            ?? AnalyticsEngine.encodeStages([StageSegment(start: startTs, end: endTs, stage: "wake")])
+        let efficiency = sleepEfficiency(fromStagesJSON: stagesJSON)
+        _ = try? await store.insertManualSleepSession(
+            deviceId: computedDeviceId, startTs: startTs, endTs: endTs,
+            efficiency: efficiency, stagesJSON: stagesJSON)
+        await refresh()
+    }
+
+    /// Asleep fraction (light+deep+rem ÷ total in-bed) of a segment-array `stagesJSON`, or nil when the
+    /// JSON is the fallback awake-only block / unparseable. Used to seed a manually-added nap's efficiency
+    /// so its hypnogram footer reads sensibly before the next recompute re-derives it. (#508)
+    private func sleepEfficiency(fromStagesJSON json: String?) -> Double? {
+        guard let json, let data = json.data(using: .utf8),
+              let arr = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] else { return nil }
+        var asleep = 0.0, total = 0.0
+        for seg in arr {
+            guard let s = (seg["start"] as? NSNumber)?.intValue,
+                  let e = (seg["end"] as? NSNumber)?.intValue,
+                  let stage = seg["stage"] as? String, e > s else { continue }
+            let dur = Double(e - s)
+            total += dur
+            if stage != "wake" && stage != "awake" { asleep += dur }
+        }
+        return total > 0 && asleep > 0 ? asleep / total : nil
+    }
+
     /// Re-derive stages from the raw streams for `[start, end]` (read under the strap `deviceId`),
     /// returning the encoded `stagesJSON`, or `nil` when the strap does NOT densely cover the window —
     /// i.e. there isn't enough worn-night data to stage (a couple of stray samples must not trigger a

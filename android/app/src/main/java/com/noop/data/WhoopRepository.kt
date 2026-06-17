@@ -206,6 +206,57 @@ class WhoopRepository(private val dao: WhoopDao) {
     suspend fun deleteSleepSession(session: SleepSession) =
         dao.deleteSleepSession(session.deviceId, session.startTs)
 
+    /** Manually ADD a missed sleep session — typically a daytime NAP the detector didn't pick up (#508).
+     *  Port of iOS Repository.addManualNap + MetricsCache.insertManualSleepSession.
+     *
+     *  Stages the chosen window from the raw streams via [SleepStageHealer.restageFromRaw] (the SAME
+     *  density gate + stager the bed/wake edit's self-heal uses), falling back to a single "wake" block
+     *  when the strap has no dense data there yet — the post-sync self-heal then swaps in real stages
+     *  once the raw lands. Written under the COMPUTED source as its OWN separate session
+     *  (userEdited = true, startTsAdjusted = null), so the recompute overlap guard preserves it and it is
+     *  NEVER folded into the night's main sleep (which would mislabel the awake daytime gap as light
+     *  sleep). Purely additive — the DAO's IGNORE-on-conflict makes a same-onset add a no-op. */
+    suspend fun addManualNap(strapDeviceId: String, startTs: Long, endTs: Long) {
+        if (endTs <= startTs) return
+        val computedId = computedDeviceId(strapDeviceId)
+        val stagesJSON = com.noop.analytics.SleepStageHealer.restageFromRaw(this, strapDeviceId, startTs, endTs)
+            ?: com.noop.analytics.AnalyticsEngine.encodeStages(
+                listOf(com.noop.analytics.StageSegment(start = startTs, end = endTs, stage = "wake")),
+            )
+        dao.insertSleepSession(
+            SleepSession(
+                deviceId = computedId,
+                startTs = startTs,
+                endTs = endTs,
+                efficiency = sleepEfficiency(stagesJSON),
+                stagesJSON = stagesJSON,
+                userEdited = true,
+                startTsAdjusted = null,
+            ),
+        )
+    }
+
+    /** Asleep fraction (light+deep+rem ÷ total in-bed) of a segment-array [stagesJSON], or null when the
+     *  JSON is the fallback wake-only block / unparseable. Seeds a manual nap's efficiency so its footer
+     *  reads sensibly before the next recompute re-derives it. Mirrors iOS `sleepEfficiency`. (#508) */
+    private fun sleepEfficiency(stagesJSON: String?): Double? {
+        stagesJSON ?: return null
+        val arr = runCatching { org.json.JSONArray(stagesJSON) }.getOrNull() ?: return null
+        var asleep = 0.0
+        var total = 0.0
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val s = o.optLong("start", -1L)
+            val e = o.optLong("end", -1L)
+            val stage = o.optString("stage")
+            if (s < 0 || e <= s) continue
+            val dur = (e - s).toDouble()
+            total += dur
+            if (stage != "wake" && stage != "awake") asleep += dur
+        }
+        return if (total > 0 && asleep > 0) asleep / total else null
+    }
+
     /** Narrow stages-ONLY write for the post-sync self-heal (port of iOS PR #449
      *  MetricsCache.updateSleepStages, driven by [com.noop.analytics.SleepStageHealer]). Replaces a
      *  user-edited night's stage breakdown with stages re-derived from the now-available raw, leaving

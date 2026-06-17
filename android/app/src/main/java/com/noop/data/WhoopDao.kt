@@ -83,6 +83,15 @@ interface WhoopDao : DeviceRegistryDao {
     @Query("DELETE FROM sleepSession WHERE deviceId = :deviceId AND startTs = :startTs")
     suspend fun deleteSleepSession(deviceId: String, startTs: Long)
 
+    /** Manually ADD a sleep session the detector missed — typically a daytime NAP (#508). Port of iOS
+     *  MetricsCache.insertManualSleepSession. `onConflict = IGNORE` makes it purely ADDITIVE: it can
+     *  never clobber an existing detected/edited session that shares the exact onset second (it returns
+     *  -1 then). The caller builds the row with userEdited = true (so the recompute overlap guard in
+     *  [com.noop.analytics.IntelligenceEngine] preserves it) and startTsAdjusted = null (a manual nap's
+     *  onset IS the chosen onset). Returns the inserted rowid, or -1 on a conflicting onset. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSleepSession(row: SleepSession): Long
+
     /**
      * Replace ONLY the stage breakdown of an already user-edited night, leaving the corrected
      * bed/wake bounds (startTsAdjusted/endTs) and the userEdited flag untouched. Port of iOS

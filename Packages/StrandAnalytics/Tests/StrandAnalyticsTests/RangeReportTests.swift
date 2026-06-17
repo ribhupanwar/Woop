@@ -273,6 +273,67 @@ final class RangeReportTests: XCTestCase {
         XCTAssertFalse(line.contains("worth a look"))
     }
 
+    // MARK: - Workouts + Stress rows (#457)
+
+    /// Both new rows appear, and they LEAD the report in the requested order: Workouts
+    /// first, then Stress, ahead of every physiological metric.
+    func testWorkoutsAndStressRowsLeadInOrder() {
+        let workouts: [String: Double] = [
+            "2026-06-01": 0, "2026-06-02": 1, "2026-06-03": 1, "2026-06-04": 2,
+        ]
+        let stress: [String: Double] = [   // 0–3 score, drifting up
+            "2026-06-01": 1.0, "2026-06-02": 1.2, "2026-06-03": 1.4, "2026-06-04": 1.6,
+        ]
+        let recovery: [String: Double] = [
+            "2026-06-01": 40, "2026-06-02": 50, "2026-06-03": 60, "2026-06-04": 70,
+        ]
+        let report = RangeReportEngine.build(
+            metrics: [.workouts: workouts, .stress: stress, .recovery: recovery],
+            start: "2026-06-01", end: "2026-06-04")
+        XCTAssertNotNil(report.stat(.workouts))
+        XCTAssertNotNil(report.stat(.stress))
+        // metrics is emitted in allCases order → Workouts, then Stress, then Recovery.
+        XCTAssertEqual(report.metrics.map(\.metric), [.workouts, .stress, .recovery])
+    }
+
+    /// Workouts is valence-free: a clear trend states the move WITHOUT a good/bad verdict.
+    func testWorkoutsRowHasNoGoodBadFrame() {
+        // +1 workout/day vs the 0.03 threshold → rising, but logging more sessions carries no
+        // inherent good/bad valence, so the headline omits a verdict.
+        let workouts: [String: Double] = [
+            "2026-06-01": 0, "2026-06-02": 1, "2026-06-03": 2, "2026-06-04": 3,
+        ]
+        let s = RangeReportEngine.build(metrics: [.workouts: workouts],
+                                        start: "2026-06-01", end: "2026-06-04").stat(.workouts)!
+        XCTAssertEqual(s.trend, .rising)
+        XCTAssertEqual(s.mean, 1.5, accuracy: 1e-9)
+        XCTAssertEqual(ReportMetric.workouts.unit, "/day")
+        XCTAssertFalse(ReportMetric.workouts.framesGoodBad)
+        let line = RangeReportEngine.headline(s)
+        XCTAssertTrue(line.contains("Workouts"))
+        XCTAssertTrue(line.contains("trending up"))
+        XCTAssertFalse(line.contains("good sign"))
+        XCTAssertFalse(line.contains("worth a look"))
+    }
+
+    /// Stress: lower is better, so a rising daily stress score reads as "worth a look".
+    func testStressRisingIsWorthALook() {
+        // +0.2/day vs the 0.02 threshold → rising. Higher stress is worse.
+        let stress: [String: Double] = [
+            "2026-06-01": 1.0, "2026-06-02": 1.2, "2026-06-03": 1.4, "2026-06-04": 1.6,
+        ]
+        let s = RangeReportEngine.build(metrics: [.stress: stress],
+                                        start: "2026-06-01", end: "2026-06-04").stat(.stress)!
+        XCTAssertEqual(s.trend, .rising)
+        XCTAssertEqual(s.mean, 1.3, accuracy: 1e-9)
+        XCTAssertEqual(ReportMetric.stress.unit, "")
+        XCTAssertTrue(ReportMetric.stress.usesOneDecimal)      // 0–3 score shown to one decimal
+        XCTAssertFalse(ReportMetric.stress.higherIsBetter)     // calmer is better
+        let line = RangeReportEngine.headline(s)
+        XCTAssertTrue(line.contains("Stress"))
+        XCTAssertTrue(line.contains("worth a look"))           // rose + lower-is-better
+    }
+
     // MARK: - Determinism
 
     func testDeterministic() {

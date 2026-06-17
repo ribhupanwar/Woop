@@ -17,30 +17,74 @@ import java.io.File
  */
 object LogExport {
 
+    /**
+     * A short `yyMMdd-HHmm` wall-clock stamp for export filenames (#510 — maddognik's protocol RE), so
+     * a reporter who shares several strap logs / raw captures in a row gets sortable, non-colliding
+     * files (e.g. `noop-strap-log-260617-1042.txt`). Locale-independent (US/POSIX) so the stamp is
+     * stable on every device. Matches the Swift `FileExport.timestamp()`.
+     */
+    fun timestamp(): String =
+        java.text.SimpleDateFormat("yyMMdd-HHmm", java.util.Locale.US)
+            .format(System.currentTimeMillis())
+
+    /**
+     * Build the shareable strap-log file (header + body + last crash) under cache/logs and return it,
+     * so both the single-share and the "raw + log" matched-pair export write the SAME content.
+     */
+    private fun writeStrapLogFile(context: Context, logText: String): File {
+        val header = buildString {
+            appendLine("NOOP strap log")
+            appendLine("App:     ${BuildConfig.VERSION_NAME} (${BuildConfig.TIER})")
+            appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            appendLine("Device:  ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("─".repeat(40))
+        }
+        val body = logText.ifBlank { "(strap log is empty — connect to your strap, reproduce the issue, then share again)" }
+
+        // Append the last captured crash (if any) so a device-specific crash like the Insights
+        // tab (#224/#267) arrives with its real stack trace instead of being unreachable.
+        val crash = com.noop.CrashCapture.lastCrash(context)
+        val crashSection = if (crash != null) "\n\n${"─".repeat(40)}\nLast crash:\n$crash" else ""
+
+        val dir = File(context.cacheDir, "logs").apply { mkdirs() }
+        val file = File(dir, "noop-strap-log-${timestamp()}.txt")
+        file.writeText(header + "\n" + body + crashSection)
+        return file
+    }
+
+    /**
+     * Build the shareable 5/MG raw-capture file (header + the rotated + live JSONL captures) under
+     * cache/logs and return it, or null if no capture has been recorded yet. Shared by the single
+     * share and the "raw + log" matched-pair export so both emit the SAME content.
+     */
+    private fun writeCaptureFile(context: Context): File? {
+        val main = File(context.filesDir, com.noop.ble.WhoopBleClient.WHOOP5_CAPTURE_FILE)
+        val prev = File(context.filesDir, "${com.noop.ble.WhoopBleClient.WHOOP5_CAPTURE_FILE}.1")
+        if (!main.exists() && !prev.exists()) return null
+        val header = buildString {
+            appendLine("# NOOP 5/MG raw backfill capture (JSONL; one frame per line)")
+            appendLine("# App: ${BuildConfig.VERSION_NAME} (${BuildConfig.TIER}) · Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("# NOTE: contains raw biometric frames (heart rate, R-R, skin temp, motion) and the strap's console text — share only if you're comfortable with that.")
+        }
+        val dir = File(context.cacheDir, "logs").apply { mkdirs() }
+        val out = File(dir, "noop-raw-capture-${timestamp()}.jsonl")
+        out.outputStream().bufferedWriter().use { w ->
+            w.write(header)
+            // Oldest first: previous generation (if rotated), then the live file.
+            for (f in listOf(prev, main)) if (f.exists()) f.bufferedReader().use { r -> r.copyTo(w) }
+        }
+        return out
+    }
+
+    private fun fileUri(context: Context, file: File) =
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+
     fun shareStrapLog(context: Context, logText: String) {
         runCatching {
-            val header = buildString {
-                appendLine("NOOP strap log")
-                appendLine("App:     ${BuildConfig.VERSION_NAME} (${BuildConfig.TIER})")
-                appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
-                appendLine("Device:  ${Build.MANUFACTURER} ${Build.MODEL}")
-                appendLine("─".repeat(40))
-            }
-            val body = logText.ifBlank { "(strap log is empty — connect to your strap, reproduce the issue, then share again)" }
-
-            // Append the last captured crash (if any) so a device-specific crash like the Insights
-            // tab (#224/#267) arrives with its real stack trace instead of being unreachable.
-            val crash = com.noop.CrashCapture.lastCrash(context)
-            val crashSection = if (crash != null) "\n\n${"─".repeat(40)}\nLast crash:\n$crash" else ""
-
-            val dir = File(context.cacheDir, "logs").apply { mkdirs() }
-            val file = File(dir, "noop-strap-log.txt")
-            file.writeText(header + "\n" + body + crashSection)
-
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val file = writeStrapLogFile(context, logText)
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_STREAM, fileUri(context, file))
                 putExtra(Intent.EXTRA_SUBJECT, "NOOP strap log")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
@@ -58,9 +102,8 @@ object LogExport {
      */
     fun shareWhoop5Capture(context: Context) {
         runCatching {
-            val main = File(context.filesDir, com.noop.ble.WhoopBleClient.WHOOP5_CAPTURE_FILE)
-            val prev = File(context.filesDir, "${com.noop.ble.WhoopBleClient.WHOOP5_CAPTURE_FILE}.1")
-            if (!main.exists() && !prev.exists()) {
+            val out = writeCaptureFile(context)
+            if (out == null) {
                 Toast.makeText(
                     context,
                     "No capture yet — turn on \"Record 5/MG raw capture\", let a history sync run, then share again.",
@@ -68,28 +111,54 @@ object LogExport {
                 ).show()
                 return
             }
-            val header = buildString {
-                appendLine("# NOOP 5/MG raw backfill capture (JSONL; one frame per line)")
-                appendLine("# App: ${BuildConfig.VERSION_NAME} (${BuildConfig.TIER}) · Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}")
-                appendLine("# NOTE: contains raw biometric frames (heart rate, R-R, skin temp, motion) and the strap's console text — share only if you're comfortable with that.")
-            }
-            val dir = File(context.cacheDir, "logs").apply { mkdirs() }
-            val out = File(dir, "noop-whoop5-capture.jsonl")
-            out.outputStream().bufferedWriter().use { w ->
-                w.write(header)
-                // Oldest first: previous generation (if rotated), then the live file.
-                for (f in listOf(prev, main)) if (f.exists()) f.bufferedReader().use { r -> r.copyTo(w) }
-            }
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", out)
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_STREAM, fileUri(context, out))
                 putExtra(Intent.EXTRA_SUBJECT, "NOOP 5/MG protocol capture")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(send, "Share 5/MG capture"))
         }.onFailure {
             Toast.makeText(context, "Couldn't share the capture: ${it.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /**
+     * One-tap matched-pair export (#510): share BOTH the raw 5/MG capture AND the strap log together in
+     * a single chooser (ACTION_SEND_MULTIPLE), each stamped with the same `yyMMdd-HHmm` minute, so a
+     * reporter/contributor hands over the frames and the context that produced them as one bundle. If
+     * there's no capture yet, falls back to sharing just the log so the tap isn't a dead end. Reuses the
+     * same file-builders the single-share paths use.
+     */
+    fun shareRawAndLog(context: Context, logText: String) {
+        runCatching {
+            val logFile = writeStrapLogFile(context, logText)
+            val capture = writeCaptureFile(context)
+            if (capture == null) {
+                Toast.makeText(
+                    context,
+                    "No raw capture yet — turn on \"Record 5/MG raw capture\", let a history sync run, then export again. Sharing just the strap log.",
+                    Toast.LENGTH_LONG,
+                ).show()
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_STREAM, fileUri(context, logFile))
+                    putExtra(Intent.EXTRA_SUBJECT, "NOOP strap log")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(send, "Share strap log"))
+                return
+            }
+            val uris = arrayListOf(fileUri(context, capture), fileUri(context, logFile))
+            val send = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                type = "text/plain"
+                putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                putExtra(Intent.EXTRA_SUBJECT, "NOOP raw capture + strap log")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(send, "Share raw capture + log"))
+        }.onFailure {
+            Toast.makeText(context, "Couldn't export the pair: ${it.message}", Toast.LENGTH_LONG).show()
         }
     }
 }

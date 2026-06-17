@@ -29,8 +29,11 @@ import Foundation
 
 // MARK: - Metric identity
 
-/// The seven metrics a range report can summarise.
+/// The metrics a range report can summarise. `workouts` and `stress` (#457) lead the
+/// list so they rank first in the report; the rest keep their established order.
 public enum ReportMetric: String, CaseIterable, Sendable {
+    case workouts     // logged workouts per day, count
+    case stress       // daily stress score, 0–3 (lower is calmer)
     case recovery     // Charge / recovery, 0–100
     case sleepHours   // time asleep, hours
     case hrv          // heart-rate variability, ms
@@ -42,6 +45,8 @@ public enum ReportMetric: String, CaseIterable, Sendable {
     /// Human label for the metric (matches the rest of the app's naming).
     public var label: String {
         switch self {
+        case .workouts:    return "Workouts"
+        case .stress:      return "Stress"
         case .recovery:    return "Recovery"
         case .sleepHours:  return "Sleep"
         case .hrv:         return "HRV"
@@ -52,10 +57,11 @@ public enum ReportMetric: String, CaseIterable, Sendable {
         }
     }
 
-    /// Display unit suffix (empty for the unitless 0–100 scores).
+    /// Display unit suffix (empty for the unitless 0–100 scores and the 0–3 stress index).
     public var unit: String {
         switch self {
-        case .recovery, .strain: return ""
+        case .recovery, .strain, .stress: return ""
+        case .workouts:          return "/day"
         case .sleepHours:        return "h"
         case .hrv:               return "ms"
         case .restingHr:         return "bpm"
@@ -64,24 +70,35 @@ public enum ReportMetric: String, CaseIterable, Sendable {
         }
     }
 
-    /// True when a HIGHER value is the better outcome. Resting HR and respiratory rate
-    /// are the metrics where lower is better. (Ignored for valence-free metrics — see
-    /// `framesGoodBad`.)
+    /// Whether the metric's values are shown to one decimal place (fractional scores /
+    /// rates) rather than as whole numbers. Workouts is a whole count; stress is a 0–3
+    /// index shown to one decimal so small moves read.
+    public var usesOneDecimal: Bool {
+        switch self {
+        case .sleepHours, .respRate, .skinTempDev, .stress, .workouts: return true
+        default:                                                       return false
+        }
+    }
+
+    /// True when a HIGHER value is the better outcome. Resting HR, respiratory rate and
+    /// stress are the metrics where lower is better. (Ignored for valence-free metrics —
+    /// see `framesGoodBad`.)
     public var higherIsBetter: Bool {
         switch self {
-        case .restingHr, .respRate: return false
-        default:                    return true
+        case .restingHr, .respRate, .stress: return false
+        default:                             return true
         }
     }
 
     /// Whether a rising/falling move carries a clear good/bad valence. False for a signed
-    /// deviation metric (skin-temp Δ), where neither direction is unambiguously better —
-    /// the report then shows the trend direction without a "good sign / worth a look"
-    /// verdict, and colours the change chip neutrally.
+    /// deviation metric (skin-temp Δ) and for workout count (more or fewer sessions is a
+    /// lifestyle choice, not inherently good/bad) — the report then shows the trend
+    /// direction without a "good sign / worth a look" verdict, and colours the change chip
+    /// neutrally.
     public var framesGoodBad: Bool {
         switch self {
-        case .skinTempDev: return false
-        default:           return true
+        case .skinTempDev, .workouts: return false
+        default:                      return true
         }
     }
 
@@ -90,6 +107,8 @@ public enum ReportMetric: String, CaseIterable, Sendable {
     /// constants (not personal baselines) so the read is stable and explainable.
     public var trendSlopeThreshold: Double {
         switch self {
+        case .workouts:    return 0.03  // workouts / day (~0.2/week — a clear shift in habit)
+        case .stress:      return 0.02  // stress points / day (~0.14/week on the 0–3 scale)
         case .recovery:    return 0.5   // recovery points / day
         case .strain:      return 0.5   // Effort points / day
         case .sleepHours:  return 0.05  // hours / day (~3 min/day)

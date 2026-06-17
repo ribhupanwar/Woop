@@ -66,6 +66,11 @@ struct SleepView: View {
     /// which marks the session `userEdited` so a later strap sync can't revert the correction. (#318)
     @State private var wakeEdit: WakeEdit?
 
+    /// Non-nil while the "Add nap" picker sheet is open (#508). Carries a seed bed/wake for the picker;
+    /// saving routes through `repo.addManualNap`, which stages the chosen window from raw and writes it as
+    /// its OWN separate session row (`userEdited = 1`) — never folded into the night's main sleep.
+    @State private var addNap: AddNapSeed?
+
     var body: some View {
         // Resolve the memoized model for THIS render. `dataKey` is O(1)-ish (counts + last-row
         // identity), so comparing it every render is cheap. When it matches the cached key we
@@ -141,6 +146,20 @@ struct SleepView: View {
                                               newStartTs: newBedTs, newEndTs: newWakeTs)
                     // Re-score the day so the dashboard aggregates (Rest / recovery) honor the corrected
                     // sleep window, not just the Sleep tab's session view; then refresh the read cache.
+                    await intelligence.analyzeRecent()
+                    await repo.refresh()
+                }
+            }
+            // Manually add a missed nap (#508): same picker, but the chosen window is staged from raw and
+            // stored as its OWN separate session — never folded into main sleep (which would mislabel the
+            // awake daytime gap as light sleep).
+            .sheet(item: $addNap) { seed in
+                SleepTimeEditor(bedTs: seed.bedTs, wakeTs: seed.wakeTs,
+                                title: "Add a nap",
+                                blurb: "Pick when the nap started and ended. NOOP stages it from your data as its own session, separate from the night's sleep.",
+                                bedLabel: "Nap started", wakeLabel: "Nap ended") { startTs, endTs in
+                    await repo.addManualNap(startTs: startTs, endTs: endTs)
+                    // Re-score so the day's aggregates pick up the new session, exactly like an edit.
                     await intelligence.analyzeRecent()
                     await repo.refresh()
                 }
@@ -242,10 +261,12 @@ struct SleepView: View {
                 nightNavHeader(trailing: model.night.spanLabel)
                 sleepWindowRow(model.night)
                 stageCard(model.night, intervals: model.intervals)
+                napSection(model.night)
             } else if let night = navNight {
                 nightNavHeader(trailing: night.spanLabel)
                 sleepWindowRow(night)
                 stageCard(night, intervals: night.intervals)
+                napSection(night)
             } else if let session = sessionRow(at: nightOffset) {
                 // Stage-less stub purely to reuse Night's date/time formatting.
                 let stub = Night(session: session, stages: Stages(awake: 0, light: 0, deep: 0, rem: 0),
@@ -259,8 +280,91 @@ struct SleepView: View {
                     tint: StrandPalette.restColor,
                     chart: { noStagePlaceholder }
                 )
+                napSection(stub)
             }
         }
+    }
+
+    /// Naps card (#508): each of the day's sleep blocks OTHER than the night's main block, individually
+    /// editable + deletable with the SAME durable mechanism main sleep uses, plus an "Add nap" affordance.
+    /// A nap is always its own session row (never folded into main sleep), so editing or adding one here
+    /// never touches the night's main hypnogram and the awake daytime is never mislabelled as light sleep.
+    @ViewBuilder
+    private func napSection(_ night: Night) -> some View {
+        // The main block is the night's longest (the `editTarget`); everything else on the day is a nap.
+        let main = night.editTarget
+        let naps = night.sourceBlocks
+            .filter { $0.startTs != main?.startTs }
+            .sorted { $0.effectiveStartTs < $1.effectiveStartTs }
+        NoopCard(padding: 14, tint: StrandPalette.restColor) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    SectionHeader("Naps", overline: "Daytime sleep", trailing: nil)
+                    Spacer(minLength: 8)
+                    Button { addNap = AddNapSeed(forNight: night) } label: {
+                        Label("Add nap", systemImage: "plus.circle.fill")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.restColor)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add a nap")
+                }
+                if naps.isEmpty {
+                    Text("No naps recorded for this day.")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                } else {
+                    ForEach(naps, id: \.startTs) { nap in
+                        napRow(nap)
+                        if nap.startTs != naps.last?.startTs {
+                            Divider().overlay(StrandPalette.hairline)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// One nap row: its clock window + an edit affordance opening the SAME `SleepTimeEditor` main sleep
+    /// uses. Editing a nap re-stages it from raw over the corrected window and sticks (`userEdited`), and
+    /// can never spawn a duplicate (the detected `startTs` PK is immutable) — exactly the #318/#395 path,
+    /// here keyed on the nap's own row. (#508)
+    @ViewBuilder
+    private func napRow(_ nap: CachedSleepSession) -> some View {
+        let isEdited = nap.userEdited
+        HStack(spacing: 10) {
+            Image(systemName: "powersleep")
+                .font(StrandFont.headline)
+                .foregroundStyle(StrandPalette.restColor)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(napWindowText(nap)).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
+                Text(durationText(Double(nap.endTs - nap.effectiveStartTs) / 60.0))
+                    .strandOverline()
+            }
+            Spacer(minLength: 8)
+            Button {
+                wakeEdit = WakeEdit(detectedStartTs: nap.startTs,
+                                    bedTs: nap.effectiveStartTs,
+                                    wakeTs: nap.endTs,
+                                    stagesJSON: nap.stagesJSON)
+            } label: {
+                Image(systemName: isEdited ? "pencil.circle.fill" : "pencil.circle")
+                    .font(StrandFont.headline)
+                    .foregroundStyle(StrandPalette.restColor)
+            }
+            .buttonStyle(.plain)
+            .help("Edit nap times")
+            .accessibilityLabel(isEdited ? "Edit nap times (edited)" : "Edit nap times")
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "HH:mm–HH:mm" clock window for a nap row (device 12-/24-h setting via the shared Night formatter).
+    private func napWindowText(_ nap: CachedSleepSession) -> String {
+        let start = Night.clockString(nap.effectiveStartTs)
+        let end = Night.clockString(nap.endTs)
+        return "\(start)–\(end)"
     }
 
     /// The stage-breakdown ChartCard for a decoded night: hypnogram when intervals
@@ -1341,6 +1445,12 @@ private struct Night {
         return "\(Night.spanFmt.string(from: onsetDay)) → \(Night.dateFmt.string(from: wakeDay))"
     }
 
+    /// A unix-second timestamp as a device-locale clock string ("11:42 PM" / "23:42"). Shared so the nap
+    /// rows format their windows identically to the Asleep/Woke row. (#508)
+    static func clockString(_ ts: Int) -> String {
+        timeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
+    }
+
     // Clock for the Asleep/Woke row — the times people read at a glance. The "jmm" skeleton
     // follows the device's 12-/24-hour setting ("11:42 PM" or "23:42") instead of forcing one
     // on everyone, matching the HR-tooltip / workout times (#337).
@@ -1371,19 +1481,48 @@ private struct WakeEdit: Identifiable {
     var id: Int { detectedStartTs }
 }
 
+/// Seeds the "Add nap" picker (#508). A nap is short, so seed a 30-minute window anchored to the night's
+/// wake (a natural place to look for a missed afternoon nap), clamped to never start before the night's
+/// onset. The identity is the seed start so `.sheet(item:)` presents once per request.
+private struct AddNapSeed: Identifiable {
+    let bedTs: Int
+    let wakeTs: Int
+    var id: Int { bedTs }
+    init(forNight night: Night) {
+        // Anchor an hour after the night's wake; a 30-min default window the user adjusts.
+        let anchor = night.session.endTs + 3_600
+        self.bedTs = anchor
+        self.wakeTs = anchor + 30 * 60
+    }
+}
+
 /// A small sheet to hand-correct a night's bed (onset) and wake (end) times. Seeds both pickers with the
 /// current values; the wake picker is bounded to after the chosen bedtime. Hands the chosen unix-second
 /// (bed, wake) back via `onSave`. Pure presentation + a single async save — persistence lives in the repo.
 private struct SleepTimeEditor: View {
     let onSave: (Int, Int) async -> Void
+    private let title: LocalizedStringKey
+    private let blurb: LocalizedStringKey
+    private let bedLabel: LocalizedStringKey
+    private let wakeLabel: LocalizedStringKey
 
     @Environment(\.dismiss) private var dismiss
     @State private var bed: Date
     @State private var wake: Date
     @State private var saving = false
 
-    init(bedTs: Int, wakeTs: Int, onSave: @escaping (Int, Int) async -> Void) {
+    /// `title`/`blurb`/`bedLabel`/`wakeLabel` default to the edit-an-existing-night wording; the
+    /// "Add a nap" caller (#508) overrides them. The save logic + day-derived wake are identical either
+    /// way — adding a nap is just an edit whose "existing" window is a seed.
+    init(bedTs: Int, wakeTs: Int,
+         title: LocalizedStringKey = "Edit sleep times",
+         blurb: LocalizedStringKey = "Correct when you went to bed and woke. Stages are re-derived from your data; the edit is kept through the next strap sync.",
+         bedLabel: LocalizedStringKey = "Asleep",
+         wakeLabel: LocalizedStringKey = "Woke",
+         onSave: @escaping (Int, Int) async -> Void) {
         self.onSave = onSave
+        self.title = title; self.blurb = blurb
+        self.bedLabel = bedLabel; self.wakeLabel = wakeLabel
         _bed = State(initialValue: Date(timeIntervalSince1970: TimeInterval(bedTs)))
         _wake = State(initialValue: Date(timeIntervalSince1970: TimeInterval(wakeTs)))
     }
@@ -1405,14 +1544,14 @@ private struct SleepTimeEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            Text("Edit sleep times").font(StrandFont.title2).foregroundStyle(StrandPalette.textPrimary)
-            Text("Correct when you went to bed and woke. Stages are re-derived from your data; the edit is kept through the next strap sync.")
+            Text(title).font(StrandFont.title2).foregroundStyle(StrandPalette.textPrimary)
+            Text(blurb)
                 .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             NoopCard(padding: NoopMetrics.cardPadding, tint: StrandPalette.restColor) {
                 VStack(alignment: .leading, spacing: 10) {
-                    DatePicker("Asleep", selection: $bed,
+                    DatePicker(bedLabel, selection: $bed,
                                displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.compact)
                         .font(StrandFont.body)
@@ -1420,7 +1559,7 @@ private struct SleepTimeEditor: View {
                     Divider().overlay(StrandPalette.hairline)
                     // Time-only on purpose — the wake's calendar day is derived from bed (see resolvedWake),
                     // so an edit can't move the night to a different day and scramble its stages/totals (#406).
-                    DatePicker("Woke", selection: $wake,
+                    DatePicker(wakeLabel, selection: $wake,
                                displayedComponents: [.hourAndMinute])
                         .datePickerStyle(.compact)
                         .font(StrandFont.body)

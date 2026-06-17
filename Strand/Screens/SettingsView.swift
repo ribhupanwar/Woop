@@ -601,7 +601,8 @@ struct SettingsView: View {
                     Button("Copy") { PlatformPasteboard.copy(live.exportableLogText()) }
                         .buttonStyle(.plain).font(StrandFont.mono).foregroundStyle(StrandPalette.accent)
                     Button("Save…") {
-                        FileExport.exportText(live.exportableLogText(), suggestedName: "noop-strap-log.txt")
+                        FileExport.exportText(live.exportableLogText(),
+                                              suggestedName: FileExport.timestampedName("noop-strap-log", ext: "txt"))
                     }
                     .buttonStyle(.plain).font(StrandFont.mono).foregroundStyle(StrandPalette.accent)
                 }
@@ -846,6 +847,21 @@ struct SettingsView: View {
                         #endif
                         Spacer(minLength: 0)
                     }
+                    // One-tap "matched pair" export (#510): hands a reporter BOTH the raw capture file
+                    // and the strap log together (timestamped, same minute) so a protocol-mapping issue
+                    // arrives with the frames AND the context that produced them.
+                    Button {
+                        exportRawAndLog()
+                    } label: {
+                        Label("Export raw + log", systemImage: "square.and.arrow.up.on.square")
+                            .padding(.horizontal, 6)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(StrandPalette.accent)
+                    Text("Saves the raw capture and the strap log together as a matched pair — attach both to a protocol-mapping issue.")
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Divider().overlay(StrandPalette.hairline)
@@ -947,10 +963,13 @@ struct SettingsView: View {
     private func exportPuffinCaptures() {
         model.ble.flushPuffinCaptures()
         guard let src = live.puffinCaptureURL else { return }
+        // Suggest a friendly, timestamped name so a reporter saving several captures gets sortable,
+        // non-colliding files (#510) — e.g. noop-raw-capture-260617-1042.json.
+        let suggested = FileExport.timestampedName("noop-raw-capture", ext: "json")
         #if os(macOS)
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = src.lastPathComponent
+        panel.nameFieldStringValue = suggested
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let dest = panel.url else { return }
         let fm = FileManager.default
@@ -963,8 +982,26 @@ struct SettingsView: View {
             showBackupAlert = true
         }
         #else
-        FileExport.exportFile(at: src)
+        FileExport.exportFile(at: src, suggestedName: suggested)
         #endif
+    }
+
+    /// One-tap matched-pair export (#510): export the raw puffin capture AND the strap log together,
+    /// both stamped with the same `yyMMdd-HHmm` minute so they're obviously a pair. Reuses the existing
+    /// export utilities — `FileExport.exportPair` shares both files in one iOS share sheet, and saves
+    /// each via its own NSSavePanel on macOS (no new file plumbing).
+    private func exportRawAndLog() {
+        model.ble.flushPuffinCaptures()
+        guard let capture = live.puffinCaptureURL else {
+            backupAlertTitle = "Nothing to export"
+            backupAlertMessage = "No raw capture has been recorded yet this session."
+            showBackupAlert = true
+            return
+        }
+        let stamp = FileExport.timestamp()
+        FileExport.exportPair(
+            file: capture, fileSuggestedName: "noop-raw-capture-\(stamp).json",
+            text: live.exportableLogText(), textSuggestedName: "noop-strap-log-\(stamp).txt")
     }
 
     #if os(macOS)

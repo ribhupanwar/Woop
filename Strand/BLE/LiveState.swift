@@ -190,9 +190,16 @@ public final class LiveState: ObservableObject {
         rrRecent.removeAll()
     }
 
+    /// Cap on the in-app strap-log ring buffer. Raised from the old ~1h (200 lines) to retain a rolling
+    /// ~24h of activity (#510 — maddognik's protocol RE wants a full day to correlate against): a busy
+    /// live session emits a few lines a minute, so 5,000 lines comfortably spans a day. Each line is a
+    /// short redacted string (~100 bytes), so the worst-case buffer is well under ~1 MB — bounded, never
+    /// unbounded. Drives the Live log card AND the shareable `exportableLogText()`.
+    static let maxLogLines = 5_000
+
     public func append(log line: String) {
         log.append(Self.redactPii(line))
-        if log.count > 200 { log.removeFirst(log.count - 200) }
+        if log.count > Self.maxLogLines { log.removeFirst(log.count - Self.maxLogLines) }
     }
 
     /// Scrub personal identifiers from a strap-log line so it's safe to share publicly (#445): BLE MAC

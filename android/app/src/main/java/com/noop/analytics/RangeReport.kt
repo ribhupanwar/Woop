@@ -27,8 +27,13 @@ import kotlin.math.roundToLong
  * does NOT depend on WeeklyDigest.
  */
 
-/** The five metrics a range report can summarise. */
+/**
+ * The metrics a range report can summarise. WORKOUTS and STRESS (#457) lead the list so
+ * they rank first in the report; the rest keep their established order.
+ */
 enum class ReportMetric {
+    WORKOUTS,      // logged workouts per day, count
+    STRESS,        // daily stress score, 0–3 (lower is calmer)
     RECOVERY,      // Charge / recovery, 0–100
     SLEEP_HOURS,   // time asleep, hours
     HRV,           // heart-rate variability, ms
@@ -40,6 +45,8 @@ enum class ReportMetric {
     /** Human label for the metric (matches the rest of the app's naming). */
     val label: String
         get() = when (this) {
+            WORKOUTS -> "Workouts"
+            STRESS -> "Stress"
             RECOVERY -> "Recovery"
             SLEEP_HOURS -> "Sleep"
             HRV -> "HRV"
@@ -49,10 +56,11 @@ enum class ReportMetric {
             SKIN_TEMP_DEV -> "Skin temp"
         }
 
-    /** Display unit suffix (empty for the unitless 0–100 scores). */
+    /** Display unit suffix (empty for the unitless 0–100 scores and the 0–3 stress index). */
     val unit: String
         get() = when (this) {
-            RECOVERY, STRAIN -> ""
+            RECOVERY, STRAIN, STRESS -> ""
+            WORKOUTS -> "/day"
             SLEEP_HOURS -> "h"
             HRV -> "ms"
             RESTING_HR -> "bpm"
@@ -61,25 +69,37 @@ enum class ReportMetric {
         }
 
     /**
-     * True when a HIGHER value is the better outcome. Resting HR and respiratory rate are
-     * the metrics where lower is better. (Ignored for valence-free metrics — see
-     * [framesGoodBad].)
+     * Whether the metric's values are shown to one decimal place (fractional scores /
+     * rates) rather than as whole numbers. Workouts is a whole count; stress is a 0–3
+     * index shown to one decimal so small moves read.
+     */
+    val usesOneDecimal: Boolean
+        get() = when (this) {
+            SLEEP_HOURS, RESP_RATE, SKIN_TEMP_DEV, STRESS, WORKOUTS -> true
+            else -> false
+        }
+
+    /**
+     * True when a HIGHER value is the better outcome. Resting HR, respiratory rate and
+     * stress are the metrics where lower is better. (Ignored for valence-free metrics —
+     * see [framesGoodBad].)
      */
     val higherIsBetter: Boolean
         get() = when (this) {
-            RESTING_HR, RESP_RATE -> false
+            RESTING_HR, RESP_RATE, STRESS -> false
             else -> true
         }
 
     /**
      * Whether a rising/falling move carries a clear good/bad valence. False for a signed
-     * deviation metric (skin-temp Δ), where neither direction is unambiguously better — the
-     * report then shows the trend direction without a "good sign / worth a look" verdict and
-     * colours the change chip neutrally.
+     * deviation metric (skin-temp Δ) and for workout count (more or fewer sessions is a
+     * lifestyle choice, not inherently good/bad) — the report then shows the trend
+     * direction without a "good sign / worth a look" verdict and colours the change chip
+     * neutrally.
      */
     val framesGoodBad: Boolean
         get() = when (this) {
-            SKIN_TEMP_DEV -> false
+            SKIN_TEMP_DEV, WORKOUTS -> false
             else -> true
         }
 
@@ -90,6 +110,8 @@ enum class ReportMetric {
      */
     val trendSlopeThreshold: Double
         get() = when (this) {
+            WORKOUTS -> 0.03      // workouts / day (~0.2/week — a clear shift in habit)
+            STRESS -> 0.02        // stress points / day (~0.14/week on the 0–3 scale)
             RECOVERY -> 0.5       // recovery points / day
             STRAIN -> 0.5         // Effort points / day
             SLEEP_HOURS -> 0.05   // hours / day (~3 min/day)
@@ -102,7 +124,10 @@ enum class ReportMetric {
     companion object {
         /** Stable iteration order, mirroring Swift's ReportMetric.allCases. */
         val allCases: List<ReportMetric> =
-            listOf(RECOVERY, SLEEP_HOURS, HRV, RESTING_HR, STRAIN, RESP_RATE, SKIN_TEMP_DEV)
+            listOf(
+                WORKOUTS, STRESS, RECOVERY, SLEEP_HOURS, HRV, RESTING_HR, STRAIN,
+                RESP_RATE, SKIN_TEMP_DEV,
+            )
     }
 }
 

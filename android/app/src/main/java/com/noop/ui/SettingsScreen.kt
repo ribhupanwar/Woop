@@ -1133,6 +1133,15 @@ fun SettingsScreen(vm: AppViewModel) {
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.textSecondary),
                 ) { Text("Share 5/MG capture (for the decode effort)", style = NoopType.captionNumber) }
 
+                // One-tap "matched pair" export (#510): hands a reporter BOTH the raw capture file and
+                // the strap log together (timestamped, same minute) so a protocol-mapping issue arrives
+                // with the frames AND the context that produced them.
+                OutlinedButton(
+                    onClick = { LogExport.shareRawAndLog(context, vm.ble.exportLogText()) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.textSecondary),
+                ) { Text("Export raw + log (matched pair)", style = NoopType.captionNumber) }
+
                 // Diagnostics: dump the decoded per-sample sensor streams (last 24h) to one long-format
                 // CSV so power users / external devs can prototype sleep/activity/VBT algorithms on real
                 // data without a BLE stream (#308/#276/#322). On-device only; plain text, no BLE hex.

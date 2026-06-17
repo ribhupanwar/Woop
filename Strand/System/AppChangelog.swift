@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "4.5.5"
+    static let currentVersion = "4.6.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,15 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "4.6.0",
+            title: "Editable naps, a richer Trends report, and better debug export",
+            date: "June 2026",
+            items: [
+                "**Naps are now editable — and stay their own thing.** You can edit a detected nap's start and end times (NOOP re-stages it from your raw data and the correction sticks through future syncs), and manually add a nap the strap missed, right from the Sleep screen. Naps are always tracked as separate sessions from your main sleep, so the awake time between them is never mislabelled as light sleep. (#508)",
+                "**Trends report adds Workouts and Stress.** The exportable Trends report now leads with a **Workouts** row (your activity count over the range) and a **Stress** row (NOOP's 0–3 daily autonomic-load trend), each with its own averages and a measured-vs-computed note, alongside recovery, sleep, HRV and the rest. (#457)",
+                "**Better on-device debug export** (for the tinkerers): the in-app strap log now keeps a rolling **24 hours** (up from ~1h), exported logs and raw captures get a **date-stamped filename** so shares don't overwrite each other, and a new one-tap **\"Export raw + log\"** hands over both as a matched pair. (#510, thanks j0b-dev & maddognik for pushing the protocol work.)",
+            ]),
         Release(
             version: "4.5.5",
             title: "Today's Effort no longer drops to zero",

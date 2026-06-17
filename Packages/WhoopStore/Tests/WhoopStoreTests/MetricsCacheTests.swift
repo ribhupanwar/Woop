@@ -242,6 +242,95 @@ final class MetricsCacheTests: XCTestCase {
         XCTAssertFalse(rows[0].userEdited)
     }
 
+    // MARK: - #508 manually-added naps (own session, never folded into main sleep)
+
+    /// A manually-added nap lands as its OWN row, flagged user-edited so the recompute guard protects it,
+    /// with a nil `startTsAdjusted` (its onset IS the chosen onset).
+    func testInsertManualNapCreatesOwnEditedSession() async throws {
+        let store = try await WhoopStore.inMemory()
+        let n = try await store.insertManualSleepSession(
+            deviceId: "devA", startTs: 50_000, endTs: 51_800, efficiency: 0.8,
+            stagesJSON: "[{\"start\":50000,\"end\":51800,\"stage\":\"light\"}]")
+        XCTAssertEqual(n, 1, "the nap is inserted")
+        let rows = try await store.sleepSessions(deviceId: "devA", from: 0, to: 100_000, limit: 100)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].startTs, 50_000)
+        XCTAssertEqual(rows[0].endTs, 51_800)
+        XCTAssertTrue(rows[0].userEdited, "a manual nap is flagged user-edited so the recompute guard keeps it")
+        XCTAssertNil(rows[0].startTsAdjusted, "a manual nap's onset is the chosen onset (no detected twin)")
+        XCTAssertEqual(rows[0].efficiency, 0.8)
+    }
+
+    /// Adding a nap leaves the night's main sleep untouched — they are two distinct rows (the nap is
+    /// NEVER folded into main sleep, which is the #508 bug).
+    func testInsertManualNapDoesNotAlterMainSleep() async throws {
+        let store = try await WhoopStore.inMemory()
+        // The night's main sleep, 23:00→07:00-ish.
+        try await store.upsertSleepSessions(
+            [CachedSleepSession(startTs: 1000, endTs: 30_000, efficiency: 0.91,
+                                restingHr: 51, avgHrv: 62,
+                                stagesJSON: "[{\"start\":1000,\"end\":30000,\"stage\":\"deep\"}]")],
+            deviceId: "devA")
+        // A daytime nap hours later.
+        _ = try await store.insertManualSleepSession(
+            deviceId: "devA", startTs: 80_000, endTs: 82_400, efficiency: 0.7,
+            stagesJSON: "[{\"start\":80000,\"end\":82400,\"stage\":\"light\"}]")
+
+        let rows = try await store.sleepSessions(deviceId: "devA", from: 0, to: 200_000, limit: 100)
+        XCTAssertEqual(rows.count, 2, "the nap is a SEPARATE session, not folded into main sleep")
+        let main = try XCTUnwrap(rows.first { $0.startTs == 1000 })
+        XCTAssertEqual(main.endTs, 30_000, "main sleep's wake is unchanged")
+        XCTAssertEqual(main.efficiency, 0.91, "main sleep's efficiency is unchanged")
+        XCTAssertFalse(main.userEdited, "main sleep was not edited by adding a nap")
+        XCTAssertEqual(main.stagesJSON, "[{\"start\":1000,\"end\":30000,\"stage\":\"deep\"}]",
+                       "main sleep's stages are unchanged — awake daytime is never backfilled as light sleep")
+    }
+
+    /// `insertManualSleepSession` is purely additive: a conflicting onset is a no-op, so it can never
+    /// clobber an existing detected/edited session that happens to share that exact onset second.
+    func testInsertManualNapIsNoopOnConflictingOnset() async throws {
+        let store = try await WhoopStore.inMemory()
+        try await store.upsertSleepSessions(
+            [CachedSleepSession(startTs: 9000, endTs: 12_000, efficiency: 0.9,
+                                restingHr: 50, avgHrv: 60, stagesJSON: "[\"detected\"]")],
+            deviceId: "devA")
+        let n = try await store.insertManualSleepSession(
+            deviceId: "devA", startTs: 9000, endTs: 99_999, efficiency: 0.1, stagesJSON: "[\"nap\"]")
+        XCTAssertEqual(n, 0, "a same-onset insert is a no-op")
+        let rows = try await store.sleepSessions(deviceId: "devA", from: 0, to: 200_000, limit: 100)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].endTs, 12_000, "the existing session is untouched")
+        XCTAssertEqual(rows[0].stagesJSON, "[\"detected\"]")
+    }
+
+    /// An edited nap re-stages + STICKS across a recompute with NO duplicate — the exact #318/#395
+    /// durability the main-sleep edit has, here on a nap-shaped (daytime) session. Proves item (1) of #508.
+    func testEditedNapStagesAndSurvivesRecomputeNoDuplicate() async throws {
+        let store = try await WhoopStore.inMemory()
+        // A detected daytime nap 13:30→14:00-ish.
+        try await store.upsertSleepSessions(
+            [CachedSleepSession(startTs: 48_600, endTs: 50_400, efficiency: 0.6,
+                                restingHr: 58, avgHrv: 40, stagesJSON: "[\"napOrig\"]")],
+            deviceId: "devA")
+        // User corrects the nap window (started earlier, ended later) — re-staged JSON supplied by caller.
+        try await store.applySleepEdit(deviceId: "devA", detectedStartTs: 48_600,
+                                       newStartTs: 48_000, newEndTs: 51_000, stagesJSON: "[\"napEdited\"]")
+        // A later recompute re-detects the nap at a slightly drifted onset (49_000) — the overlap guard in
+        // IntelligenceEngine keeps that detected twin OUT; simulate that the only thing re-upserted under
+        // the SAME key is the edited row's natural key, with userEdited defaulting false from the stager.
+        try await store.upsertSleepSessions(
+            [CachedSleepSession(startTs: 48_600, endTs: 50_400, efficiency: 0.65,
+                                restingHr: 57, avgHrv: 42, stagesJSON: "[\"napResync\"]")],
+            deviceId: "devA")
+
+        let rows = try await store.sleepSessions(deviceId: "devA", from: 0, to: 200_000, limit: 100)
+        XCTAssertEqual(rows.count, 1, "no duplicate nap row — the immutable startTs key absorbs the re-detection")
+        XCTAssertEqual(rows[0].startTsAdjusted, 48_000, "corrected nap onset survives the recompute")
+        XCTAssertEqual(rows[0].endTs, 51_000, "corrected nap wake survives the recompute")
+        XCTAssertEqual(rows[0].stagesJSON, "[\"napEdited\"]", "the edited nap stages stick")
+        XCTAssertTrue(rows[0].userEdited)
+    }
+
     // MARK: - daily metrics
 
     func testDailyMetricUpsertReadAndIdempotency() async throws {

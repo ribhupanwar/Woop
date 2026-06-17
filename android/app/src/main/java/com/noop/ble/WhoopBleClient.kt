@@ -320,8 +320,14 @@ class WhoopBleClient(
 
     companion object {
         private const val TAG = "WhoopBleClient"
-        /** Cap on the in-app strap-log ring buffer (for the "Share strap log" diagnostics export). */
-        private const val LOG_BUFFER_MAX = 2000
+        /**
+         * Cap on the in-app strap-log ring buffer (for the "Share strap log" diagnostics export).
+         * Raised from the old ~1h (2,000 lines) to retain a rolling ~24h of activity (#510 —
+         * maddognik's protocol RE wants a full day to correlate against): a busy live session emits a
+         * few lines a minute, so 5,000 short lines comfortably spans a day while staying well under
+         * ~1 MB — bounded, never unbounded. Matches the Swift `LiveState.maxLogLines`.
+         */
+        private const val LOG_BUFFER_MAX = 5000
 
         /**
          * Fallback device id when the registry has no active device yet (fresh install before the v8
