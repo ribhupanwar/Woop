@@ -1713,6 +1713,44 @@ public final class BLEManager: NSObject, ObservableObject {
         log("Alarm: test buzz fired (patternId=2, runAlarm)")
     }
 
+    /// Haptic Clock (#460): buzz the current wall-clock time out on the strap so the user can read it
+    /// off their wrist without a screen. The pure, unit-tested `HapticClock` encoder turns now into an
+    /// ordered pulse list (long = a "ten", short = a "unit", in HH-tens / HH-units / MM-tens / MM-units
+    /// order); we then schedule each pulse with `DispatchQueue.main.asyncAfter`, firing the EXISTING
+    /// maverick notification buzz (`runHapticsPattern`, remapped to the cmd-0x13 notify body in `send`)
+    /// at each pulse's start. Only the SCHEDULE is new — the buzz itself is the hardware-confirmed one.
+    ///
+    /// `is24h` controls 12- vs 24-hour reading; a Settings toggle should supply it (default 12h — see
+    /// `concerns`). Public so a Settings button can trigger it. Long-press / double-tap strap input is
+    /// hardware-dependent and not wired (no tap event is parsed yet — see `hardwareUnverifiable`).
+    ///
+    /// Each WHOOP notification buzz is a fixed-length motor pulse, so we can't vary the on-time per
+    /// pulse from the app; instead we map a LONG pulse to two stacked buzzes and a SHORT pulse to one,
+    /// which the wrist feels as "longer vs shorter". Pulse-feel timing can only be confirmed on a real
+    /// strap motor — best-effort here (see `hardwareUnverifiable`).
+    public func buzzTimeNow(is24h: Bool = false, at date: Date = Date()) {
+        let cal = Calendar.current
+        let comps = cal.dateComponents([.hour, .minute], from: date)
+        let pulses = HapticClock.pulses(hour: comps.hour ?? 0, minute: comps.minute ?? 0, is24h: is24h)
+        guard !pulses.isEmpty else {
+            log("Haptic Clock: nothing to buzz (00:00 in 24h form).")
+            return
+        }
+        log("Haptic Clock: buzzing \(pulses.count) pulses for the current time (\(is24h ? "24h" : "12h")).")
+        // Walk the encoder's pulse list, converting each (durationMs,gapMs) into a scheduled buzz.
+        // A long pulse is felt as a heavier buzz (2 stacked loops); a short pulse as a light one (1).
+        var offsetMs = 0
+        for pulse in pulses {
+            let loops = pulse.isLong ? 2 : 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(offsetMs)) { [weak self] in
+                // patternId/loops payload — send() remaps this to the 5/MG maverick notify buzz; on a
+                // WHOOP 4.0 it's the native runHapticsPattern. Same call the inactivity nudge uses.
+                self?.send(.runHapticsPattern, payload: [2, UInt8(clamping: loops), 0, 0, 0])
+            }
+            offsetMs += pulse.durationMs + pulse.gapMs
+        }
+    }
+
     /// Inactivity reminder (#419): on each natural offload completion, run the shipped, unit-tested
     /// `SedentaryDetector` over the freshly-arrived gravity window and buzz the wrist if the user has
     /// been seated too long. NO offload-timer change — a read-only hook on an event that already

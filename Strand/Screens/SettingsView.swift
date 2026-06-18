@@ -1683,6 +1683,7 @@ private struct StepsCalibrationSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
                     explainerCard
+                    if didLoad && sampleMotion == nil { noMotionNote }
                     currentFitCard
                     comparisonCard
                     manualAdjustCard
@@ -1754,6 +1755,27 @@ private struct StepsCalibrationSheet: View {
                     .foregroundStyle(StrandPalette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("On the days your phone also counted steps, NOOP learns how much your motion maps to steps, then applies that to the strap-only days. The more matching days it has, the more it trusts the estimate.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// Shown when the strap has banked NO motion yet (sampleMotion is nil) — the real reason a fresh
+    /// WHOOP 4.0 shows zero steps (#37 bringiton321). Steps are built from the strap's synced motion
+    /// history, so without a backfill there is nothing to estimate from — calibration can't help yet.
+    private var noMotionNote: some View {
+        NoopCard(tint: StrandPalette.metricAmber) {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("No motion synced yet", systemImage: "antenna.radiowaves.left.and.right.slash")
+                    .font(StrandFont.headline)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                Text("We're not seeing any motion from your strap yet. Steps are estimated from your WHOOP's banked motion history — so your strap needs to sync that history before NOOP has anything to count.")
+                    .font(StrandFont.subhead)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Open NOOP near your strap and let it catch up (a full history sync can take a while on first run). Once a day or two of motion lands, your step estimate and the calibration below will start to fill in.")
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)

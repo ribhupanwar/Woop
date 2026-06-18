@@ -542,8 +542,17 @@ final class AppModel: ObservableObject {
         case .buzzBack: buzz(loops: 1)
         case .markMoment: markMoment()
         case .sleepMark: markSleep()
+        case .hapticClock: ble.buzzTimeNow(is24h: Self.localeUses24HourClock)
         case .runShortcut: MacActions.runShortcut(shortcut)
         }
+    }
+
+    /// Whether the user's locale formats time on a 24-hour clock — drives the Haptic Clock's hour
+    /// encoding (#460) so a double-tap buzzes the time the way the user reads it. Derived from the
+    /// locale's "j" (hour) template: a 12-hour locale includes the AM/PM ("a") symbol.
+    static var localeUses24HourClock: Bool {
+        let fmt = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current) ?? "h"
+        return !fmt.contains("a")
     }
 
     /// Record a "moment" (double-tap marker) with a confirming buzz.

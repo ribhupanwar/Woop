@@ -69,6 +69,11 @@ class MainActivity : ComponentActivity() {
             requestBlePermissions()
         }
 
+        // Re-arm the daily debug export (#510) so its schedule self-heals after a reboot or app update
+        // (WorkManager is KEEP, so this is a no-op when already scheduled, and cancels itself when the
+        // feature is off). Wrapped because a WorkManager hiccup must never block launch.
+        runCatching { DebugExportScheduler.reschedule(applicationContext) }
+
         // Load the Light/Dark/System + chart-colour preferences before first composition so the theme
         // and chart ramps are correct from the very first frame (no flash).
         AppearancePrefs.load(this)

@@ -35,6 +35,7 @@ import com.noop.protocol.BackfillCaptureSummary
 import com.noop.protocol.CommandNumber
 import com.noop.protocol.DeviceFamily
 import com.noop.protocol.Framing
+import com.noop.protocol.HapticClock
 import com.noop.protocol.Reassembler
 import com.noop.protocol.Streams
 import com.noop.protocol.Whoop5Config
@@ -1462,6 +1463,42 @@ class WhoopBleClient(
         val n = loops.coerceIn(0, 255)
         send(CommandNumber.RUN_HAPTICS_PATTERN, byteArrayOf(2, n.toByte(), 0, 0, 0))
         log("Buzz: patternId=2 loops=$n")
+    }
+
+    /**
+     * Haptic Clock (#460): buzz the current wall-clock time out on the strap so the user can read it
+     * off their wrist without a screen. The pure, unit-tested [HapticClock] encoder turns now into an
+     * ordered pulse list (long = a "ten", short = a "unit", in HH-tens / HH-units / MM-tens / MM-units
+     * order); we then schedule each pulse with [handler].postDelayed, firing the EXISTING maverick
+     * notification buzz ([buzz] → RUN_HAPTICS_PATTERN, remapped to cmd-0x13 on a 5/MG) at each pulse's
+     * start. Only the SCHEDULE is new — the buzz itself is the hardware-confirmed one.
+     *
+     * [is24h] controls 12- vs 24-hour reading; a Settings toggle should supply it (default 12h). Public
+     * so a Settings button can trigger it. Long-press / double-tap strap input is hardware-dependent and
+     * not wired (no tap event is parsed yet — see the macOS hardwareUnverifiable note).
+     *
+     * Each WHOOP notification buzz is a fixed-length motor pulse, so we can't vary the on-time per pulse
+     * from the app; instead a LONG pulse fires two stacked loops and a SHORT pulse one, which the wrist
+     * feels as "longer vs shorter". Pulse-feel timing can only be confirmed on a real strap motor.
+     */
+    fun buzzTimeNow(is24h: Boolean = false, nowMs: Long = System.currentTimeMillis()) {
+        val cal = java.util.Calendar.getInstance().apply { timeInMillis = nowMs }
+        val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val minute = cal.get(java.util.Calendar.MINUTE)
+        val pulses = HapticClock.pulses(hour, minute, is24h)
+        if (pulses.isEmpty()) {
+            log("Haptic Clock: nothing to buzz (00:00 in 24h form).")
+            return
+        }
+        log("Haptic Clock: buzzing ${pulses.size} pulses for the current time (${if (is24h) "24h" else "12h"}).")
+        // Walk the encoder's pulse list, converting each (durationMs,gapMs) into a scheduled buzz.
+        // A long pulse is felt as a heavier buzz (2 stacked loops); a short pulse as a light one (1).
+        var offsetMs = 0L
+        for (pulse in pulses) {
+            val loops = if (pulse.isLong) 2 else 1
+            handler.postDelayed({ buzz(loops) }, offsetMs)
+            offsetMs += (pulse.durationMs + pulse.gapMs).toLong()
+        }
     }
 
     /**

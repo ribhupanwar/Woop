@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "4.7.0"
+    static let currentVersion = "4.8.0"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,17 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "4.8.0",
+            title: "On-demand HRV, a haptic clock, sleep marks & more",
+            date: "June 2026",
+            items: [
+                "**New: take an HRV reading on demand.** An \"HRV reading\" button on the Live screen captures about 60 seconds of your heart's beat-to-beat timing and gives you a single RMSSD reading right there — sit still, breathe normally, and watch it settle. Saved alongside the rest of your data. (#127.)",
+                "**New: feel the time — Haptic Clock.** Your strap can now buzz out the current time: long buzzes for tens, short for units, hours then minutes. Set a strap double-tap to \"Buzz the time\" under Automations (on Android there's a \"Buzz the time\" button in Settings → Diagnostics). (#460.)",
+                "**New: tap to mark sleep.** Two buttons on the Sleep screen — \"Going to sleep\" and \"I'm awake\" — log a timestamped mark so you keep your own record of when you turned in and woke up. (#461.)",
+                "**New: scheduled debug export (Android).** Turn on a daily auto-export of your strap log at a time you choose, written with timestamped filenames — handy for attaching to a bug report without remembering to grab it. (Thanks @maddognik — #510.)",
+                "**Clearer steps screen on a WHOOP 4.0.** If your strap hasn't synced any motion yet, the Steps calibration screen now explains why it's empty — it needs your strap's banked motion history to sync first. (Thanks @bringiton321 — #37.)",
+            ]),
         Release(
             version: "4.7.0",
             title: "Mi Band import + a big WHOOP 4.0 sleep fix",

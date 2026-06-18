@@ -321,6 +321,13 @@ fun SettingsScreen(vm: AppViewModel) {
     // "Debug logging" — mirror the strap log to logcat (adb). Default OFF so normal users don't.
     var debugLogging by remember { mutableStateOf(NoopPrefs.debugLogging(context)) }
 
+    // Scheduled debug export (#510) — the daily auto-export toggle + time-of-day. The settings object is
+    // its own SharedPreferences store; SharedPreferences isn't reactive, so the Switch + TimeChip mirror
+    // into local state and write straight through, then (re)schedule via DebugExportScheduler.
+    val debugExportSettings = remember { DebugExportSettings.from(context) }
+    var debugExportEnabled by remember { mutableStateOf(debugExportSettings.enabled) }
+    var debugExportMinutes by remember { mutableStateOf(debugExportSettings.timeMinutes) }
+
     // Imperial/Metric display preference (D#103). Display-only — stored data stays SI. The system drives
     // the profile fields below (imperial entry) too, so it's local state the whole screen reads.
     // `temperatureRaw` is "" (match the system) or a TemperatureUnit raw value. SharedPreferences isn't
@@ -1182,6 +1189,120 @@ fun SettingsScreen(vm: AppViewModel) {
                     style = NoopType.caption,
                     color = Palette.textTertiary,
                 )
+
+                // Haptic clock (#460): buzz the current time on the strap as a sequence of buzzes. No-ops
+                // safely when disconnected, so it stays enabled regardless of connection (matches the
+                // "Share strap log" row above, which also doesn't gate on a live strap). 12/24h follows the
+                // phone's own clock setting.
+                OutlinedButton(
+                    onClick = {
+                        vm.ble.buzzTimeNow(is24h = android.text.format.DateFormat.is24HourFormat(context))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.textSecondary),
+                ) { Text("Buzz the time on your strap", style = NoopType.captionNumber) }
+                Text(
+                    "Feel the current time as a sequence of buzzes (#460). Does nothing unless your strap is connected.",
+                    style = NoopType.caption,
+                    color = Palette.textTertiary,
+                )
+            }
+        }
+
+        // --- Scheduled debug export (#510, maddognik) --- a daily, no-UI drop of the timestamped strap
+        // log (+ raw .bin when a 5/MG capture exists) into the app's export folder at a time you choose, so
+        // an intermittent overnight fault leaves a dated log waiting instead of needing a manual share. The
+        // feature core lives in DebugExportScheduler/DebugExportSettings; this is just the controls. OFF by
+        // default. SharedPreferences isn't reactive, so the Switch + time mirror into local state.
+        SettingsSection(
+            icon = Icons.Filled.Storage,
+            title = "Scheduled debug export (#510)",
+            blurb = "Once a day at a time you choose, NOOP writes a timestamped strap log (plus the raw 5/MG capture, if you have one) to its export folder — no sharing, nothing leaves the phone. Useful for chasing an intermittent overnight fault. Off by default.",
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Daily auto-export",
+                            style = NoopType.subhead,
+                            color = Palette.textPrimary,
+                        )
+                        Text(
+                            "Writes a timestamped strap log (and the raw .bin if a 5/MG capture exists) to the app's export folder once a day at the time below.",
+                            style = NoopType.footnote,
+                            color = Palette.textTertiary,
+                        )
+                    }
+                    Switch(
+                        checked = debugExportEnabled,
+                        onCheckedChange = {
+                            debugExportEnabled = it
+                            debugExportSettings.enabled = it
+                            DebugExportScheduler.reschedule(context)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Palette.surfaceBase,
+                            checkedTrackColor = Palette.accent,
+                            uncheckedThumbColor = Palette.textSecondary,
+                            uncheckedTrackColor = Palette.surfaceInset,
+                            uncheckedBorderColor = Palette.hairline,
+                        ),
+                        modifier = Modifier.semantics {
+                            contentDescription = "Daily auto-export"
+                        },
+                    )
+                }
+
+                if (debugExportEnabled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Export time", style = NoopType.subhead, color = Palette.textPrimary)
+                            Text(
+                                "The daily export runs at this time.",
+                                style = NoopType.footnote,
+                                color = Palette.textTertiary,
+                            )
+                        }
+                        TimeChip(
+                            minutes = debugExportMinutes,
+                            accessibilityLabel = "Daily export time",
+                            onPicked = {
+                                debugExportMinutes = it
+                                debugExportSettings.timeMinutes = it
+                                DebugExportScheduler.applyTimeChange(context)
+                            },
+                        )
+                    }
+                }
+
+                // "Export now" writes the dated file immediately (off the main thread, like the CSV export
+                // above) and confirms with a Toast naming the folder, so the user sees the feature work
+                // without waiting for the scheduled run.
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            val files = withContext(Dispatchers.IO) {
+                                LogExport.writeScheduledExport(context, vm.ble.exportLogText())
+                            }
+                            Toast.makeText(
+                                context,
+                                if (files.isNotEmpty()) "Wrote a dated debug export (${files.size} file${if (files.size == 1) "" else "s"}) to the app's export folder."
+                                else "Couldn't write the debug export.",
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.textSecondary),
+                ) { Text("Export now", style = NoopType.captionNumber) }
             }
         }
 
