@@ -18,8 +18,6 @@ struct RootTabView: View {
     /// A routed v5 pillar screen (Insights hub / Lab Book / fused record / Rhythm) presented as a sheet
     /// when a hub row deep-links to it via NavRouter. nil = closed.
     @State private var routedPillar: NavRouter.Destination?
-    /// Drives the FAB press-state (gentle scale, dimmed gold shadow) — design-system feedback.
-    @State private var fabPressed = false
     /// Selected tab — bound so tab switches can crossfade (README §Motion: ~240ms opacity swap
     /// between tab roots, calm easing). Defaults to Today.
     @State private var selectedTab: Int = 0
@@ -43,22 +41,24 @@ struct RootTabView: View {
         // raised gold FAB is overlaid on top, bottom-centre, floating ~20pt above the bar (a
         // native TabView can't host a centre item that overflows the bar, so we float it).
         ZStack(alignment: .bottom) {
-            // Four everyday tabs flanking the raised centre FAB. The FAB sits in the gap between
-            // Trends and Sleep (no tab is buried under it). Live (real-time HR) is a "watch it now"
-            // action, so it lives in the FAB's quick-action sheet and the More list — not a tab.
+            // A custom floating bar — two frosted "glass" islands with the gold action button nested
+            // cleanly in the gap between them — replaces the native tab bar: no overlap, no glow. The
+            // native TabView still drives content + per-tab nav state; only its bar is hidden.
             TabView(selection: $selectedTab) {
-                tab(TodayView(), "Today", "circle.hexagongrid.fill").tag(0)
-                tab(TrendsView(), "Trends", "chart.xyaxis.line").tag(1)
-                tab(SleepView(), "Sleep", "bed.double.fill").tag(2)
+                tab(TodayView(), "Today", "square.grid.2x2").tag(0)
+                tab(TrendsView(), "Trends", "chart.line.uptrend.xyaxis").tag(1)
+                tab(SleepView(), "Sleep", "bed.double").tag(2)
                 moreTab.tag(3)
             }
             .tint(StrandPalette.accent)
+            .toolbar(.hidden, for: .tabBar)
             // Tab crossfade — README §Motion: ~240ms opacity swap between tab roots, global calm
-            // easing cubic-bezier(0.22,1,0.36,1). The native bar/gestures are untouched; the
-            // animation only governs how the selected root settles in.
+            // easing cubic-bezier(0.22,1,0.36,1).
             .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24), value: selectedTab)
 
-            centreFAB
+            FloatingTabBar(selection: $selectedTab) {
+                withAnimation(Self.sheetEase) { quickAction = .menu }
+            }
         }
         .task { await repo.refresh() }
         // Quick-action sheet presents with the calm easing (~0.42s) per the README sheet spec —
@@ -120,39 +120,6 @@ struct RootTabView: View {
 
     /// Calm-easing curve (cubic-bezier(0.22,1,0.36,1)) at the README sheet-present duration.
     private static let sheetEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
-
-    // MARK: - Centre FAB
-
-    /// The README "Tab bar" signature: a 46pt gold-gradient circle raised ~20pt above the bar,
-    /// goldDeepText "+" glyph, FAB shadow `0 8 18 -6 gold@.7`. Tapping opens the quick-action sheet.
-    private var centreFAB: some View {
-        Button {
-            withAnimation(Self.sheetEase) { quickAction = .menu }
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(StrandPalette.goldDeepText)
-                .frame(width: 46, height: 46)
-                .background(
-                    Circle()
-                        .fill(LinearGradient(gradient: StrandPalette.goldGradient,
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                )
-                // Spec FAB shadow: 0 8 18 -6 gold@.7 (the -6 spread ≈ a tight radius on a 46pt disc).
-                .shadow(color: StrandPalette.gold.opacity(fabPressed ? 0.3 : 0.7), radius: 9, x: 0, y: 8)
-                .scaleEffect(fabPressed ? 0.94 : 1)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Quick actions")
-        .accessibilityHint("Start a workout, log your journal, or breathe")
-        // Raised ~20pt above the bar; the bottom inset keeps it clear of the home indicator.
-        .offset(y: -20)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in if !fabPressed { withAnimation(StrandMotion.interactive) { fabPressed = true } } }
-                .onEnded { _ in withAnimation(StrandMotion.interactive) { fabPressed = false } }
-        )
-    }
 
     // MARK: - Quick-action sheet
 
@@ -219,6 +186,7 @@ struct RootTabView: View {
     private func tab<V: View>(_ view: V, _ title: LocalizedStringKey, _ icon: String) -> some View {
         view
             .background(StrandPalette.surfaceBase.ignoresSafeArea())
+            .toolbar(.hidden, for: .tabBar)   // we draw our own FloatingTabBar
             .tabItem { Label(title, systemImage: icon) }
     }
 
@@ -264,6 +232,7 @@ struct RootTabView: View {
             .scrollContentBackground(.hidden)
             .background(StrandPalette.surfaceBase.ignoresSafeArea())
             .navigationTitle("More")
+            .toolbar(.hidden, for: .tabBar)   // we draw our own FloatingTabBar
         }
         .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
     }
@@ -368,6 +337,102 @@ private struct QuickActionSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Floating tab bar
+
+/// The signature bottom bar: two frosted "glass" islands (Today·Trends / Sleep·More) with the gold
+/// action button nested cleanly in the gap between them — no overlap, no glow. Real iOS 26 Liquid
+/// Glass where available, a `.ultraThinMaterial` fallback below. Replaces the hidden native tab bar.
+private struct FloatingTabBar: View {
+    @Binding var selection: Int
+    let onAction: () -> Void
+    @State private var addPressed = false
+
+    private struct Item: Identifiable { let title: LocalizedStringKey; let icon: String; let tag: Int; var id: Int { tag } }
+    private let nav = [Item(title: "Today", icon: "square.grid.2x2", tag: 0),
+                       Item(title: "Trends", icon: "chart.line.uptrend.xyaxis", tag: 1),
+                       Item(title: "Sleep", icon: "bed.double", tag: 2),
+                       Item(title: "More", icon: "ellipsis", tag: 3)]
+
+    var body: some View {
+        // One frosted glass bar: Today · Trends · [add] · Sleep · More. The add button is a small,
+        // contained gold disc — same gold language, differentiated, but not hogging the bar.
+        HStack(spacing: 2) {
+            tabButton(nav[0])
+            tabButton(nav[1])
+            addButton
+            tabButton(nav[2])
+            tabButton(nav[3])
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 8)
+        .liquidGlass(in: Capsule())
+        .overlay(Capsule().strokeBorder(StrandPalette.hairline.opacity(0.6), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 5)
+        .padding(.horizontal, 22)
+        .padding(.bottom, 4)
+    }
+
+    private func tabButton(_ item: Item) -> some View {
+        let active = selection == item.tag
+        return Button {
+            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selection = item.tag }
+        } label: {
+            VStack(spacing: 3) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 18, weight: active ? .semibold : .regular))
+                Text(item.title)
+                    .font(.system(size: 10, weight: active ? .semibold : .medium))
+            }
+            .foregroundStyle(active ? StrandPalette.accent : StrandPalette.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.title)
+        .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// A small, contained gold disc for quick actions — sits inline in the bar (no floating FAB).
+    private var addButton: some View {
+        Button(action: onAction) {
+            Image(systemName: "plus")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(StrandPalette.goldDeepText)
+                .frame(width: 38, height: 38)
+                .background(
+                    Circle().fill(LinearGradient(gradient: StrandPalette.goldGradient,
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+                )
+                .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                .scaleEffect(addPressed ? 0.92 : 1)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Quick actions")
+        .accessibilityHint("Start a workout, log your journal, or breathe")
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in if !addPressed { withAnimation(StrandMotion.interactive) { addPressed = true } } }
+                .onEnded { _ in withAnimation(StrandMotion.interactive) { addPressed = false } }
+        )
+    }
+}
+
+// MARK: - Liquid Glass (iOS 26) with a Material fallback
+
+private extension View {
+    /// Real iOS 26 Liquid Glass where available; `.ultraThinMaterial` on iOS 17–25 — a clean
+    /// blended degrade so the bar stays modern on new OSes without breaking older ones.
+    @ViewBuilder func liquidGlass(in shape: some Shape) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
     }
 }
 #endif
