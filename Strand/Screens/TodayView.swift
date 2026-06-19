@@ -314,9 +314,9 @@ struct TodayView: View {
             // Sides — profile/settings (leading) + strap battery (trailing).
             HStack {
                 Button { showSettings = true } label: {
-                    Image(systemName: "person.crop.circle")
-                        .font(.system(size: 25))
-                        .foregroundStyle(StrandPalette.textSecondary)
+                    // Shows the user's chosen profile photo (Circle-cropped) if set, else the
+                    // default person.crop.circle icon. Still opens Settings on tap.
+                    ProfileAvatarView(imageData: profile.avatarImageData, size: 26)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

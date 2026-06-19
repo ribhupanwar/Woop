@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -433,6 +434,23 @@ fun SettingsScreen(vm: AppViewModel) {
         }
     }
 
+    // Modern Photo Picker for the optional profile photo (no READ_EXTERNAL_STORAGE permission needed).
+    // Returns a single image Uri (or null if cancelled); we decode + downscale + persist off the main
+    // thread via ProfileAvatarStore, which updates the live avatar everywhere. Stored only on this phone.
+    val avatarPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                ProfileAvatarStore.setAvatarFromUri(context, uri)
+            }
+            if (!ok) {
+                Toast.makeText(context, "Couldn't use that photo. Try another.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     ScreenScaffold(
         title = "Settings",
         subtitle = "Your numbers, your strap, and how NOOP works. All on this phone.",
@@ -448,6 +466,49 @@ fun SettingsScreen(vm: AppViewModel) {
             blurb = "These power your heart-rate zones, calorie estimates and recovery baselines. Keep them accurate.",
         ) {
             Column {
+                // Profile photo (optional) — a large avatar + a Choose/Change button and, once set, a
+                // Remove. Local-only and honest: the picked image is downscaled and kept on this phone,
+                // never uploaded. Reads ProfileAvatarStore.hasAvatar (snapshot state) so the row updates
+                // the instant a photo is set or cleared. Mirrors the iOS Settings profile-photo control.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    ProfileAvatar(size = 64.dp, contentDescription = "Profile photo")
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    avatarPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                    )
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.accent),
+                            ) {
+                                Text(
+                                    if (ProfileAvatarStore.hasAvatar) "Change photo" else "Choose photo",
+                                    style = NoopType.captionNumber,
+                                )
+                            }
+                            if (ProfileAvatarStore.hasAvatar) {
+                                OutlinedButton(
+                                    onClick = { ProfileAvatarStore.clearAvatar(context) },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.statusCritical),
+                                ) { Text("Remove photo", style = NoopType.captionNumber) }
+                            }
+                        }
+                        Text(
+                            "Optional. Stored only on this device — never uploaded.",
+                            style = NoopType.footnote,
+                            color = Palette.textTertiary,
+                        )
+                    }
+                }
+                RowDivider()
                 FormRow(label = "Age") {
                     StepperField(
                         value = profile.age.toString(),

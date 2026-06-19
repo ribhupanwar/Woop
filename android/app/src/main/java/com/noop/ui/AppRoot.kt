@@ -374,6 +374,9 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                         // and opens the inbox sheet AppRoot presents (it owns the nav for deep-links).
                         updateStore = updateStore,
                         onOpenUpdates = { showUpdatesInbox = true },
+                        // The leading profile avatar opens Settings (where the photo is set/changed),
+                        // mirroring iOS's avatar-leading Today header. The drawer hamburger is unchanged.
+                        onOpenSettings = { nav.navigateTopLevel(Destination.Settings.route) },
                     )
                 }
                 composable(Destination.Live.route) {

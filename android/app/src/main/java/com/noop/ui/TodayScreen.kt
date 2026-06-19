@@ -126,6 +126,7 @@ fun TodayScreen(
     onQuickActions: () -> Unit = {},
     updateStore: UpdateStore? = null,
     onOpenUpdates: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val today by viewModel.today.collectAsStateWithLifecycle()
     val alert by viewModel.healthAlert.collectAsStateWithLifecycle()
@@ -403,6 +404,26 @@ fun TodayScreen(
     ScreenScaffold(
         title = "Control Center",
         subtitle = "Your day, read in full",
+        leading = {
+            // Leading profile avatar — opens Settings, mirroring the iOS Today header (where the
+            // avatar leads and opens Settings). The optional on-device photo shows here when set, else
+            // the person fallback. Tappable, with a spoken label; the global drawer hamburger in the top
+            // app bar is unchanged. The trailing "+" balances it (see the bottom-bar/scaffold comments).
+            Box(
+                modifier = Modifier
+                    .size(Metrics.iconButton)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onOpenSettings,
+                    )
+                    .semantics { contentDescription = "Profile and settings" },
+                contentAlignment = Alignment.Center,
+            ) {
+                ProfileAvatar(size = 28.dp)
+            }
+        },
         trailing = {
             // Compact top bar, trailing edge: the Support heart + the gold quick-action "+".
             // The "+" moved here from the bottom bar (which is now four clean tabs) so it balances

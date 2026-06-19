@@ -998,6 +998,7 @@ fun ScreenScaffold(
     title: String,
     subtitle: String? = null,
     modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -1009,9 +1010,14 @@ fun ScreenScaffold(
             .padding(28.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        // Compact top bar: the screen title/subtitle with an optional trailing action (e.g. the Support
-        // heart on Today). Mirrors the iOS ScreenScaffold trailing slot from the WHOOP-style redesign (#23).
+        // Compact top bar: an optional LEADING action (e.g. the Today profile avatar, mirroring iOS's
+        // avatar-leading header), the screen title/subtitle, then an optional trailing action (e.g. the
+        // Support heart on Today). Mirrors the iOS ScreenScaffold slots from the WHOOP-style redesign (#23).
         Row(verticalAlignment = Alignment.Top) {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(12.dp))
+            }
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),

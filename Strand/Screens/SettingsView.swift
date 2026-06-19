@@ -6,6 +6,7 @@ import AppKit
 import UIKit
 #endif
 import UniformTypeIdentifiers
+import PhotosUI
 import StrandDesign
 import StrandAnalytics
 import WhoopStore
@@ -16,6 +17,9 @@ struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var live: LiveState
     @EnvironmentObject var profile: ProfileStore
+
+    /// Profile-photo picker selection (PhotosUI). Cleared back to nil once the bytes are loaded.
+    @State private var avatarPickerItem: PhotosPickerItem?
 
     /// Backup & restore UI state.
     @State private var backupBusy = false
@@ -111,6 +115,7 @@ struct SettingsView: View {
     var body: some View {
         ScreenScaffold(title: "Settings",
                        subtitle: "Your numbers, your strap, and how NOOP works. All on \(Platform.deviceNounPhrase).") {
+            profilePhotoCard
             profileCard
             unitsCard
             appearanceCard
@@ -139,6 +144,50 @@ struct SettingsView: View {
             DiagnosticsSheet(onClose: { showDiagnostics = false })
         }
         #endif
+    }
+
+    // MARK: - Profile photo (optional, on-device)
+
+    /// Set / change / remove an optional profile picture. PhotosUI's `PhotosPicker` works on both
+    /// iOS 16+ and macOS 13+ (NOOP's floor), so the same control serves both platforms — no
+    /// availability gating needed. The photo is stored only on this device (NOOP is fully offline).
+    private var profilePhotoCard: some View {
+        SettingsSection(
+            icon: "person.crop.circle",
+            title: "Profile photo",
+            blurb: "Optional. Add a photo for the avatar in the top-left. Stored only on \(Platform.deviceNounPhrase) — NOOP is offline, so it's never uploaded."
+        ) {
+            HStack(spacing: 16) {
+                ProfileAvatarView(imageData: profile.avatarImageData, size: 64)
+                    .accessibilityLabel(profile.hasAvatar ? "Your profile photo" : "No profile photo set")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+                        Text(profile.hasAvatar ? "Change photo" : "Choose photo")
+                    }
+                    .buttonStyle(.noopSecondary)
+
+                    if profile.hasAvatar {
+                        Button("Remove photo") { profile.clearAvatar() }
+                            .buttonStyle(.noopGhost)
+                            .accessibilityHint("Reverts to the default profile icon")
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        // Load the picked photo's bytes, then hand them to the store (which downscales + persists).
+        // Clearing the selection afterwards lets the user re-pick the same photo if they want.
+        .onChange(of: avatarPickerItem) { newItem in
+            guard let newItem else { return }
+            Task {
+                let data = try? await newItem.loadTransferable(type: Data.self)
+                await MainActor.run {
+                    if let data { profile.setAvatar(data) }
+                    avatarPickerItem = nil
+                }
+            }
+        }
     }
 
     // MARK: - Profile
