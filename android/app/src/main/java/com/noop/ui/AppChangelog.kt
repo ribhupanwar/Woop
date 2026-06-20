@@ -25,7 +25,7 @@ object AppChangelog {
      * Bump this when you add a release below. The "What's New" sheet shows automatically when the
      * stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
      */
-    const val CURRENT_VERSION = "6.0.0"
+    const val CURRENT_VERSION = "6.0.1"
 
     data class Release(
         val version: String,
@@ -36,6 +36,13 @@ object AppChangelog {
 
     /** Newest first. */
     val releases: List<Release> = listOf(
+        Release(
+            version = "6.0.1",
+            title = "Buzz WHOOP 4 in the Smart Alarm",
+            date = "June 2026",
+            items = listOf(
+                "**New: a \"Buzz WHOOP 4\" toggle in the Smart Alarm screen.** Turn it on and your WHOOP 4.0's own firmware alarm is armed at your earliest wake time, so the strap buzzes you first and the phone alarm stays as the guaranteed backup. Off by default. Thanks @ujix for the feature and for catching that it missed the 6.0.0 cut.",
+            )),
         Release(
             version = "6.0.0",
             title = "NOOP grows up: it's not just for WHOOP anymore",

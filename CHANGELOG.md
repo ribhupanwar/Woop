@@ -17,6 +17,13 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 6.0.1 — Buzz WHOOP 4 toggle (Android)
+
+- **New: a "Buzz WHOOP 4" toggle in the Smart Alarm screen (Android).** When on, your WHOOP 4.0's firmware alarm is armed at your earliest wake time, so the strap buzzes first and the phone alarm is the guaranteed backup. Off by default. This was credited in 6.0.0 but missed the cut, this is the real thing. Thanks @ujix for the feature and for catching it. (#536)
+
+**Install / update**
+- **Android:** the APK on the Releases page.
+
 ## 6.0.0 — NOOP grows up: not just for WHOOP anymore (all platforms)
 
 The biggest release yet. NOOP started as a way to read your own WHOOP over Bluetooth, fully offline, and it still does all of that, exactly as before. 6.0 opens it up to a lot more gear while keeping everything on your device.
