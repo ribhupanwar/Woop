@@ -159,7 +159,7 @@ private struct iOSRootView: View {
     private var shell: some View {
         ZStack {
             RootTabView()
-            if !onboarded {
+            if !onboarded && !demoBypass {
                 OnboardingWizard(onFinished: {
                     onboarded = true
                     // A brand-new user just saw the expectations in onboarding — don't also pop the
@@ -171,7 +171,7 @@ private struct iOSRootView: View {
             }
             // Terms acknowledgment gate — over EVERYTHING (before onboarding/pairing/Bluetooth) until
             // the current terms version is accepted; re-appears if the terms materially change.
-            if acceptedTerms != Terms.currentVersion {
+            if acceptedTerms != Terms.currentVersion && !demoBypass {
                 TermsGateView(onAccept: { acceptedTerms = Terms.currentVersion })
                     .transition(.opacity)
                     .zIndex(2)
@@ -197,7 +197,18 @@ private struct iOSRootView: View {
         .onChange(of: acceptedTerms) { _, _ in showWhatsNewIfDue() }
     }
 
+    /// DEBUG: launched with --demo-seed, skip the first-run gates (onboarding / terms / What's New) so the
+    /// FULL shell with the tab bar renders populated for verification + screenshots. No-op in Release.
+    private var demoBypass: Bool {
+        #if DEBUG
+        return CommandLine.arguments.contains("--demo-seed")
+        #else
+        return false
+        #endif
+    }
+
     private func showWhatsNewIfDue() {
+        if demoBypass { return }
         // Existing users who updated: their last-seen version is behind the current one.
         if onboarded && acceptedTerms == Terms.currentVersion
             && lastSeenChangelog != AppChangelog.currentVersion {

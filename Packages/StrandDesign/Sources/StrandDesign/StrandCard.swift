@@ -61,19 +61,9 @@ public struct FrostedCardSurface: View {
                     )
                 )
             )
-            .overlay(
-                // Single 1px hairline; tinted cards bias the lower edge toward the hue.
-                shape.strokeBorder(
-                    tint == nil
-                        ? AnyShapeStyle(StrandPalette.hairline)
-                        : AnyShapeStyle(LinearGradient(
-                            colors: [StrandPalette.hairline, (tint ?? .clear).opacity(0.22)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        )),
-                    lineWidth: 1
-                )
-            )
-            // Elevation idiom: DARK is flat — the hairline + hue carry the edge, no shadow. LIGHT raises
+            // Apple x WHOOP: NO card border on dark — the #16181D fill on the near-black canvas carries
+            // the edge by contrast alone (Apple-flat). Light mode keeps a soft shadow for paper separation.
+            // Elevation idiom: DARK is flat — fill contrast carries the edge, no shadow. LIGHT raises
             // white cards off the warm-paper canvas with a soft resting drop shadow (the hairline alone
             // is too faint to separate white-on-paper). Hover deepens this further in StrandCardHover.
             .shadow(

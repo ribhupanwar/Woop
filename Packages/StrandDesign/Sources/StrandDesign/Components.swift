@@ -7,9 +7,9 @@ import SwiftUI
 
 public enum NoopMetrics {
     public static let cardRadius: CGFloat = 20   // Apple x WHOOP: rounded cards
-    public static let cardPadding: CGFloat = 14
-    public static let gap: CGFloat = 10          // gap between cards
-    public static let sectionGap: CGFloat = 16   // Design Reset: dense rhythm (was 28 — the loose air)
+    public static let cardPadding: CGFloat = 16  // Apple x WHOOP: roomier card interior
+    public static let gap: CGFloat = 12          // gap between cards
+    public static let sectionGap: CGFloat = 22   // Apple x WHOOP: breathing room (not cramped)
     public static let screenPadding: CGFloat = 18
     public static let tileHeight: CGFloat = 96   // Design Reset: tighter metric tile
     public static let chartHeight: CGFloat = 220

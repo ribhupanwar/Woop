@@ -455,62 +455,107 @@ struct TodayView: View {
 
     /// Compact WHOOP-style top bar: a profile/settings button (left), the centred ‹ Today › day-nav
     /// (bold, tappable to jump to a date), and the strap-battery badge (right).
+    /// Apple-style large-title header: a tappable "Today ⌄" + full date on the left (taps to change day),
+    /// then updates / quick-add / and an OBVIOUS menu avatar (opens Settings) on the right.
     @ViewBuilder private var todayTopBar: some View {
-        ZStack {
-            // Centre — the day navigator.
-            HStack(spacing: 8) {
-                topNavChevron("chevron.left", enabled: true) { selectedDayOffset += 1 }
-                Button { showDayPicker = true } label: {
-                    Text(dayNavLabel)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .tracking(0.4)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                        .lineLimit(1)
-                        .contentShape(Rectangle())
+        HStack(alignment: .center, spacing: 10) {
+            Button { showDayPicker = true } label: {
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 5) {
+                        Text(dayNavLabel)
+                            .font(.system(size: 27, weight: .bold, design: .rounded))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                    }
+                    Text(selectedLogicalDay.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(StrandPalette.textSecondary)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("\(dayNavLabel). Pick a date")
-                .popover(isPresented: $showDayPicker) {
-                    DatePicker("", selection: dayPickerBinding, in: ...Date(), displayedComponents: [.date])
-                        .datePickerStyle(.graphical).labelsHidden().padding(12)
-                }
-                topNavChevron("chevron.right", enabled: selectedDayOffset > 0) {
-                    if selectedDayOffset > 0 { selectedDayOffset -= 1 }
-                }
+                .contentShape(Rectangle())
             }
-            // Sides — profile/settings (leading) + updates/quick-action (trailing). The strap-battery
-            // reading lives on the dashboard metrics row (#57 removed the duplicate header badge that
-            // overlapped the day-nav label).
-            HStack {
-                Button { showSettings = true } label: {
-                    // Shows the user's chosen profile photo (Circle-cropped) if set, else the
-                    // default person.crop.circle icon. Still opens Settings on tap.
-                    ProfileAvatarView(imageData: profile.avatarImageData, size: 26)
-                        .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(dayNavLabel). Change day")
+            .popover(isPresented: $showDayPicker) {
+                DatePicker("", selection: dayPickerBinding, in: ...Date(), displayedComponents: [.date])
+                    .datePickerStyle(.graphical).labelsHidden().padding(12)
+            }
+
+            Spacer(minLength: 8)
+
+            // Uniform 36pt circular icon set: recording-status light, updates bell, quick-add (+), menu.
+            HStack(spacing: 8) {
+                // Recording status — a colour-coded light (green recording / amber synced / red not
+                // recording), replacing the old full-width banner. Taps to Devices to connect.
+                if let state = recordingState {
+                    Button { StrandHaptic.selection.play(); router.openDevices() } label: {
+                        Circle().fill(StrandPalette.surfaceInset)
+                            .frame(width: 36, height: 36)
+                            .overlay(Circle().fill(recordingHue(state)).frame(width: 10, height: 10))
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(state.accessibilityText)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Profile and settings")
-                Spacer()
-                // Updates "ringer" — before the +. Bell with a gold unread badge.
-                updateBell
-                // Quick-action "+" — moved here from the tab bar to balance the avatar on the left and
-                // free the bottom bar to four clean tabs. Routes to the shell's quick-action sheet.
-                Button { router.requestQuickActions() } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(StrandPalette.goldDeepText)
-                        .frame(width: 34, height: 34)
-                        .background(Circle().fill(LinearGradient(gradient: StrandPalette.goldGradient,
-                                                                 startPoint: .topLeading, endPoint: .bottomTrailing)))
+                // Updates bell.
+                Button { showUpdatesInbox = true } label: {
+                    Image(systemName: updateStore.unreadCount > 0 ? "bell.badge" : "bell")
+                        .font(.system(size: 15, weight: .medium))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(StrandPalette.surfaceInset))
+                        .overlay(alignment: .topTrailing) {
+                            if updateStore.unreadCount > 0 {
+                                Text("\(min(updateStore.unreadCount, 99))")
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(StrandPalette.goldDeepText)
+                                    .padding(.horizontal, 3.5).padding(.vertical, 1)
+                                    .frame(minWidth: 14)
+                                    .background(Capsule().fill(StrandPalette.gold))
+                                    .offset(x: 2, y: -1)
+                            }
+                        }
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .padding(.leading, 8)
+                .accessibilityLabel("Updates")
+                // Quick-action + (the accented primary — gold, same 36 size as the rest).
+                Button { router.requestQuickActions() } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(StrandPalette.goldDeepText)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(StrandPalette.accent))
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
                 .accessibilityLabel("Quick actions")
                 .accessibilityHint("Start a workout, log your journal, or breathe")
+                // Menu (Settings) — the avatar, same 36 size.
+                Button { showSettings = true } label: {
+                    ProfileAvatarView(imageData: profile.avatarImageData, size: 36)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Menu and settings")
             }
         }
-        .frame(height: 36)
+        .frame(height: 46)
+    }
+
+    /// Colour for the compact recording-status light: green recording, amber last-synced, red not
+    /// recording, accent for experimental history. Mirrors the old chip's semantics in one dot.
+    private func recordingHue(_ state: RecordingState) -> Color {
+        switch state {
+        case .recording:           return StrandPalette.statusPositive
+        case .lastSynced:          return StrandPalette.statusWarning
+        case .notRecording:        return Color(red: 0.98, green: 0.27, blue: 0.23)
+        case .historyExperimental: return StrandPalette.accent
+        }
     }
 
     private func topNavChevron(_ name: String, enabled: Bool, _ action: @escaping () -> Void) -> some View {
@@ -990,14 +1035,8 @@ struct TodayView: View {
         let d = displayDay
         let score = d?.recovery
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            // Component 3 — the honest recording-status chip leads the hero on TODAY: "Recording" when
-            // the strap is connected and saving, "Last synced Xm ago" when it isn't but recently was, or
-            // "Not recording" otherwise, each with a one-line what-to-do. A navigated past day shows none.
-            recordingStatusChip
-
-            // The WHOOP-style three-ring hero leads the screen directly — the "AT A GLANCE / Today's
-            // Synthesis" header was redundant with the rings, so it's gone. Charge centred + enlarged,
-            // flanked by smaller Rest and Effort rings over the scenic backdrop.
+            // Recording status now lives as a colour-coded light in the header icon row, not a full-width
+            // banner sandwiched above the rings. The three clean rings lead the screen directly.
             scoreHeroRow(d: d, score: score)
 
             // Component 2 — when Charge has no real today value, an explained state with its detail +
