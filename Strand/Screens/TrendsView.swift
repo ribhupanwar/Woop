@@ -230,8 +230,8 @@ struct TrendsView: View {
 
     // MARK: Export trends report (#436)
 
-    /// A footer entry that opens the shareable-report sheet. Reuses the InsightCard look
-    /// (frosted, gold-washed) so it reads as part of the Charge world, with a clear CTA.
+    /// A footer entry that opens the shareable-report sheet. Flat WHOOP card with a blue accent
+    /// action — the icon, label and "Export" CTA all read in the accent (blue) world, no gold.
     private var exportReportRow: some View {
         NoopCard(tint: StrandPalette.accent) {
             HStack(spacing: 14) {
@@ -252,8 +252,15 @@ struct TrendsView: View {
                 } label: {
                     Label("Export", systemImage: "square.and.arrow.up")
                         .labelStyle(.titleAndIcon)
+                        // WHOOP action link/button — blue accent, no gold. Quiet capsule that reads
+                        // as the card's call-to-action.
+                        .font(StrandFont.body.weight(.semibold))
+                        .foregroundStyle(StrandPalette.accent)
+                        .padding(.vertical, 8).padding(.horizontal, 14)
+                        .background(StrandPalette.accent.opacity(0.14), in: Capsule(style: .continuous))
+                        .overlay(Capsule(style: .continuous).strokeBorder(StrandPalette.accent.opacity(0.32), lineWidth: 1))
                 }
-                .buttonStyle(.noopGhost)
+                .buttonStyle(.plain)
                 .fixedSize()
             }
         }
@@ -283,7 +290,8 @@ struct TrendsView: View {
     private func heroRecovery(recovery: ResolvedMetric) -> some View {
         let pts = recovery.points
         let avg = mean(pts)
-        // Charge world — green. The hero is a domain-tinted, glowing line with a bright "now" cap.
+        // Charge world — the WHOOP recovery value scale (red→yellow→green) drawn as a crisp flat line
+        // with a bright "now" cap. No glow.
         return ChartCard(
             title: "Charge",
             // The range bar above already prints the authoritative reading-count caption;
@@ -335,7 +343,7 @@ struct TrendsView: View {
             SectionHeader("Daily signals", overline: "Trends")
             LazyVGrid(columns: cols, alignment: .leading, spacing: NoopMetrics.gap) {
                 // HRV / Resting HR are Charge sub-signals → the Charge (green) card world, each line
-                // keeping its established metric hue for legibility. Effort sits in its amber world.
+                // keeping its established metric hue for legibility. Effort is the WHOOP blue strain world.
                 metricChart(
                     title: "Heart rate variability", unit: "ms",
                     accessibilityTitle: "Heart rate variability",
@@ -364,8 +372,9 @@ struct TrendsView: View {
                     title: "Effort", unit: "/ \(UnitFormatter.effortScaleMax(effortScale))",
                     accessibilityTitle: "Effort",
                     points: strainPts,
-                    gradient: StrandPalette.strainGradient,
-                    tip: StrandPalette.effortBright,
+                    // WHOOP: Effort/Strain is always BLUE — a deep→bright blue line, not the amber ramp.
+                    gradient: gradient(StrandPalette.effortColor),
+                    tip: StrandPalette.effortColor,
                     tint: StrandPalette.effortColor,
                     higherIsBetter: nil,
                     range: valueRange(strainPts, fallback: 0...100),
@@ -469,31 +478,21 @@ struct TrendsView: View {
         ])
     }
 
-    /// A domain-tinted `TrendChart` with a soft glow and a bright end-cap dot at the latest point —
-    /// the Bevel "now" idiom matching Today's OverviewHRChart. The glow is a blurred copy of the same
-    /// line under the crisp one; the end-cap is a small halo + white core pinned to the final sample.
+    /// A domain-tinted `TrendChart` with a crisp flat line and a bright end-cap dot at the latest
+    /// point. WHOOP-flat: no underglow blur layer — the single crisp line carries the data and the
+    /// fill contrast does the rest. The "now" end-cap is a small dot pinned to the final sample.
     /// Pure presentation: it forwards every value to the locked `TrendChart` unchanged.
     @ViewBuilder
     private func glowChart(points pts: [TrendPoint], gradient: Gradient, valueRange: ClosedRange<Double>,
                            tip: Color, valueFormat: @escaping (Double) -> String,
                            accessibilityLabel: String) -> some View {
-        ZStack(alignment: .topLeading) {
-            // Soft underglow — the same line, blurred and dimmed, so the curve reads as lit.
-            // No accessibilityLabel + showsHover:false ⇒ TrendChart auto-hides this decorative copy
-            // from VoiceOver so the series is announced once (by the crisp copy below), not twice.
-            TrendChart(points: pts, gradient: gradient, valueRange: valueRange,
-                       showsArea: false, height: NoopMetrics.chartHeight, showsHover: false)
-                .blur(radius: 6)
-                .opacity(0.5)
-                .allowsHitTesting(false)
-            // The crisp, interactive line + area — the one VoiceOver reads, named by series. The "now"
-            // end-cap is drawn INSIDE this chart (nowCapColor) so it's mapped by the chart's own scales
-            // and lands on the line — the previous sibling overlay guessed the plot insets and floated
-            // the dot left/below the curve (#458).
-            TrendChart(points: pts, gradient: gradient, valueRange: valueRange,
-                       showsArea: true, height: NoopMetrics.chartHeight, valueFormat: valueFormat,
-                       accessibilityLabel: accessibilityLabel, nowCapColor: tip)
-        }
+        // One crisp, interactive line + area — flat, no blurred glow copy underneath (WHOOP language).
+        // The "now" end-cap is drawn INSIDE this chart (nowCapColor) so it's mapped by the chart's own
+        // scales and lands on the line — the previous sibling overlay guessed the plot insets and
+        // floated the dot left/below the curve (#458).
+        TrendChart(points: pts, gradient: gradient, valueRange: valueRange,
+                   showsArea: true, height: NoopMetrics.chartHeight, valueFormat: valueFormat,
+                   accessibilityLabel: accessibilityLabel, nowCapColor: tip)
     }
 
     private var sparsePlaceholder: some View {

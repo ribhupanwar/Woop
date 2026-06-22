@@ -567,7 +567,7 @@ struct SettingsView: View {
         SettingsSection(
             icon: "circle.lefthalf.filled",
             title: "Appearance",
-            blurb: "Choose Light, Dark, or follow your system. Light keeps NOOP's gold on warm paper; Dark is the signature navy."
+            blurb: "Choose Light, Dark, or follow your system. Dark is the signature near-black; Light keeps the same clean look on a bright canvas."
         ) {
             VStack(spacing: 0) {
                 FormRow(label: "Theme") {
@@ -1831,7 +1831,7 @@ struct SettingsView: View {
 // MARK: - Section card
 
 /// A grouped settings card: a "Settings" overline + icon + title header, an explanatory blurb,
-/// then content. A faint brand-green wash anchors the card to NOOP's neutral chrome.
+/// then content. A faint accent-blue wash anchors the card to NOOP's neutral chrome (WHOOP skin).
 private struct SettingsSection<Content: View>: View {
     let icon: String
     let title: LocalizedStringKey

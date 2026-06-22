@@ -222,7 +222,7 @@ private struct DevicesContent: View {
 // MARK: - Device card
 
 /// One paired device as a card: name, brand/model, capabilities line, a state pill, last-seen, and a
-/// per-device actions menu. The active device is tinted (gold) and carries an "Active" pill.
+/// per-device actions menu. The active device is tinted with the accent (WHOOP blue) and carries an "Active" pill.
 private struct DeviceCard: View {
     let device: PairedDevice
     let isActive: Bool

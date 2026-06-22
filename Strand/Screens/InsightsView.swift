@@ -215,8 +215,12 @@ struct InsightsView: View {
                         .frame(width: 30, height: 30)
                         .background(StrandPalette.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                         .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("What moves you").font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        // WHOOP tappable-card title: UPPERCASE tracked white + trailing "›" chevron
+                        // glyph (mirrors "HEALTH MONITOR ›"). The descriptive line stays beneath.
+                        Text("WHAT MOVES YOU \u{203A}")
+                            .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
+                            .foregroundStyle(StrandPalette.textPrimary)
                         Text("Ranked, lag-aware: which of your habits actually move your Charge — plus your personal alcohol/caffeine dose-response.")
                             .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -224,7 +228,7 @@ struct InsightsView: View {
                     Spacer(minLength: 8)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(StrandPalette.textTertiary)
+                        .foregroundStyle(StrandPalette.accent)
                         .accessibilityHidden(true)
                 }
             }

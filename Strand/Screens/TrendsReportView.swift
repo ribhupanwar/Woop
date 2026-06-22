@@ -154,8 +154,8 @@ enum TrendsReportData {
 // MARK: - Metric → colour world
 
 /// The line/accent hue for each report metric — drives the card tint + sparkline gradient
-/// so each metric reads in its established colour world (Charge gold, Effort amber, Rest/HRV
-/// blue, Resting-HR burnt-orange).
+/// so each metric reads in its established colour world (Charge green, Effort blue, Rest/HRV
+/// blue, Resting-HR burnt-orange) — WHOOP score tokens, no gold.
 private extension ReportMetric {
     /// The line/accent colour for the metric, keeping each its long-standing hue.
     var accent: Color {
@@ -214,9 +214,11 @@ struct TrendsReportPage: View {
     // MARK: Header
 
     private var header: some View {
+        // WHOOP-flat header: a plain raised surface, no scenic hero gradient or starfield. Fill
+        // contrast carries the edge; the blue NOOP wordmark is the only accent.
         ZStack(alignment: .leading) {
-            ScenicHeroBackground(domain: .charge, starCount: 24)
-                .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
+                .fill(StrandPalette.surfaceRaised)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     BrandMark(size: 22)
@@ -495,8 +497,18 @@ struct TrendsReportSheet: View {
                     export(rpt)
                 } label: {
                     Label(exporting ? "Preparing…" : "Export PDF", systemImage: "square.and.arrow.up")
+                        // WHOOP primary action — solid blue accent fill, white ink, no gold.
+                        .font(StrandFont.body.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 11).padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(StrandPalette.accent)
+                        )
+                        .opacity(exporting ? 0.6 : 1)
                 }
-                .buttonStyle(.noopPrimary)
+                .buttonStyle(.plain)
                 .disabled(exporting)
 
                 Text("Tip: the share sheet can save the PDF to Files, AirDrop it, or send it on.")

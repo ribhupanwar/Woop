@@ -223,17 +223,17 @@ public enum StrandPalette {
 
     /// Charge (recovery) — gold world / Classic green.
     public static var chargeColor: Color  { isClassic ? Color(light: "#2E9E4F", dark: "#46B45A") : Color(light: "#0F9D62", dark: "#03E095") }
-    public static var chargeDeep: Color    { isClassic ? Color(light: "#207A3C", dark: "#2E9E4F") : Color(light: "#8F6212", dark: "#C8902F") }
-    public static var chargeBright: Color  { isClassic ? Color(light: "#5FBE6E", dark: "#86D98E") : Color(light: "#E0B44C", dark: "#FCEBA8") }
-    public static var chargeGlow: Color    { isClassic ? Color(light: "#2E9E4F", dark: "#46B45A") : Color(light: "#C8902F", dark: "#E8B84B") }
+    public static var chargeDeep: Color    { isClassic ? Color(light: "#207A3C", dark: "#2E9E4F") : Color(light: "#0B7A4A", dark: "#0B9D62") }
+    public static var chargeBright: Color  { isClassic ? Color(light: "#5FBE6E", dark: "#86D98E") : Color(light: "#5FD89A", dark: "#6BF0B4") }
+    public static var chargeGlow: Color    { isClassic ? Color(light: "#2E9E4F", dark: "#46B45A") : Color(light: "#0F9D62", dark: "#03E095") }
     /// Diagonal accent pair for the Charge card wash + gauge stroke (deep → bright).
     public static var chargeGradient: Gradient { Gradient(colors: [chargeDeep, chargeBright]) }
 
     /// Effort (strain) — amber world / Classic blue.
     public static var effortColor: Color   { isClassic ? Color(light: "#3A74C4", dark: "#4A90E2") : Color(light: "#2A78C8", dark: "#4090E0") }
-    public static var effortDeep: Color    { isClassic ? Color(light: "#284F9C", dark: "#2F6FCB") : Color(light: "#7E460E", dark: "#9C5A14") }
-    public static var effortBright: Color  { isClassic ? Color(light: "#5E92D6", dark: "#7FB2E8") : Color(light: "#D89240", dark: "#F0A85A") }
-    public static var effortGlow: Color    { isClassic ? Color(light: "#3A74C4", dark: "#4A90E2") : Color(light: "#B26A1C", dark: "#D98A3D") }
+    public static var effortDeep: Color    { isClassic ? Color(light: "#284F9C", dark: "#2F6FCB") : Color(light: "#1E5B96", dark: "#2A6FB0") }
+    public static var effortBright: Color  { isClassic ? Color(light: "#5E92D6", dark: "#7FB2E8") : Color(light: "#5AA0E0", dark: "#74B6F0") }
+    public static var effortGlow: Color    { isClassic ? Color(light: "#3A74C4", dark: "#4A90E2") : Color(light: "#2A78C8", dark: "#4090E0") }
     public static var effortGradient: Gradient { Gradient(colors: [effortDeep, effortBright]) }
 
     /// Rest (sleep) — blue world / Classic indigo.
@@ -244,17 +244,17 @@ public enum StrandPalette {
     public static var restGradient: Gradient { Gradient(colors: [restDeep, restBright]) }
 
     /// Stress — blue→gold→orange world / Classic green→amber→red.
-    public static var stressColor: Color   { isClassic ? Color(light: "#CFA528", dark: "#F2C53D") : Color(light: "#B88421", dark: "#E8B84B") }
+    public static var stressColor: Color   { isClassic ? Color(light: "#CFA528", dark: "#F2C53D") : Color(light: "#C7891A", dark: "#F0A020") }
     public static var stressDeep: Color    { isClassic ? Color(light: "#2E9E4F", dark: "#46B45A") : Color(light: "#3A80D6", dark: "#4A90E2") }
     public static var stressBright: Color  { isClassic ? Color(light: "#CB3A2F", dark: "#E5483B") : Color(light: "#C84E1E", dark: "#E0662F") }
-    public static var stressGlow: Color    { isClassic ? Color(light: "#CFA528", dark: "#F2C53D") : Color(light: "#B88421", dark: "#E8B84B") }
+    public static var stressGlow: Color    { isClassic ? Color(light: "#CFA528", dark: "#F2C53D") : Color(light: "#C7891A", dark: "#F0A020") }
     /// 3-stop gauge ramp: calm → balanced → high.
     public static var stressGradient: Gradient { Gradient(colors: [stressDeep, stressColor, stressBright]) }
 
     // MARK: Scenic background (NEW) — detail-screen hero gradient + starfield.
     /// Radial canvas: lit center → deep edge. Used by `ScenicHeroBackground` (warm-lit on light).
-    public static let scenicCenter     = Color(light: "#FBF6EA", dark: "#15243C")
-    public static let scenicEdge       = Color(light: "#EDE6D6", dark: "#0A1322")
+    public static let scenicCenter     = Color(light: "#FBF6EA", dark: "#1C2128")
+    public static let scenicEdge       = Color(light: "#EDE6D6", dark: "#121518")
     /// Star tint for the scenic starfield (very faint on light; the hero suppresses stars there).
     public static let scenicStar       = Color(light: "#D8CDB6", dark: "#C8CFD8")
 
@@ -270,11 +270,11 @@ public enum StrandPalette {
 
     /// Brand gold — primary accent. Gold FILLS stay bright (dark text on them is legible in both schemes);
     /// only a hair deeper on light so the fill doesn't wash out against white.
-    public static let gold          = Color(light: "#DBA52A", dark: "#E8B84B")
-    /// Bright champagne — gold highlight / hover.
-    public static let goldLight     = Color(light: "#ECC766", dark: "#FCEBA8")
-    /// Deep bronze — gold shadow / low stop.
-    public static let goldDeep      = Color(light: "#9A6B12", dark: "#C8902F")
+    public static let gold          = Color(light: "#3A78C8", dark: "#60A0E0") // repointed to WHOOP blue (gold killed 2026-06-22)
+    /// Bright blue — accent highlight / hover (was champagne).
+    public static let goldLight     = Color(light: "#6FA8E0", dark: "#9FC8F0")
+    /// Deep blue — accent low stop (was bronze).
+    public static let goldDeep      = Color(light: "#2A5C9E", dark: "#3A78C8")
     /// Near-black brown — text / icons placed ON gold surfaces (scheme-invariant; gold fills stay gold).
     public static let goldDeepText  = Color(hex: "#FFFFFF") // white text/icons on accent fills (WHOOP, gold killed)
     /// The bright core dot at a gauge arc tip / sparkline head. White reads as a highlight on the dark

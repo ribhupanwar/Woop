@@ -565,12 +565,9 @@ struct SleepView: View {
                     }
                 },
                 footer: {
-                    ChartFooter([
-                        ("REM",   "\(durationText(s.rem)) · \(pct(s.rem, s.total))%"),
-                        ("Deep",  "\(durationText(s.deep)) · \(pct(s.deep, s.total))%"),
-                        ("Light", "\(durationText(s.light)) · \(pct(s.light, s.total))%"),
-                        ("Awake", "\(durationText(s.awake)) · \(pct(s.awake, s.total))%"),
-                    ])
+                    // WHOOP sleep-detail stage rows: swatch + UPPERCASE stage + coloured % + bar +
+                    // right-aligned duration. Same minutes/percentages the old footer grid carried.
+                    stageBreakdownRows(s)
                 }
             )
             // #407 — subordinate movement/restlessness trace UNDER the hypnogram, on the SAME timeline, for
@@ -855,6 +852,61 @@ struct SleepView: View {
         }
     }
 
+    // MARK: - WHOOP stage rows (swatch + UPPERCASE stage + coloured % + bar + duration)
+
+    /// The four stage rows that replace the old footer "label · value" grid, read like WHOOP's sleep
+    /// detail: a colour swatch, the UPPERCASE stage name, the share-of-night % in the stage colour, a
+    /// proportional bar in the stage colour over a faint track, and the right-aligned duration. Same data
+    /// as the prior footer (`s.rem` / `s.deep` / `s.light` / `s.awake` over `s.total`) — no new numbers.
+    @ViewBuilder
+    private func stageBreakdownRows(_ s: Stages) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            stageBreakdownRow(.rem,   minutes: s.rem,   total: s.total)
+            stageBreakdownRow(.deep,  minutes: s.deep,  total: s.total)
+            stageBreakdownRow(.light, minutes: s.light, total: s.total)
+            stageBreakdownRow(.awake, minutes: s.awake, total: s.total)
+        }
+    }
+
+    /// One WHOOP-style stage row. `fraction = minutes / total` sets both the % and the bar fill.
+    @ViewBuilder
+    private func stageBreakdownRow(_ stage: SleepStage, minutes: Double, total: Double) -> some View {
+        let color = StrandPalette.sleepStageColor(stage)
+        let fraction = total > 0 ? min(1, max(0, minutes / total)) : 0
+        let percent = Int((fraction * 100).rounded())
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(color)
+                .frame(width: 12, height: 12)
+                .accessibilityHidden(true)
+            Text(stage.label.uppercased())
+                .font(StrandFont.overline)
+                .tracking(StrandFont.overlineTracking)
+                .foregroundStyle(StrandPalette.textPrimary)
+                .frame(width: 56, alignment: .leading)
+            Text("\(percent)%")
+                .font(StrandFont.captionNumber)
+                .foregroundStyle(color)
+                .frame(width: 38, alignment: .leading)
+            // Proportional fill over a faint track — the bar "context" for the share-of-night.
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous).fill(StrandPalette.surfaceInset)
+                    Capsule(style: .continuous)
+                        .fill(color)
+                        .frame(width: geo.size.width * CGFloat(fraction))
+                }
+            }
+            .frame(height: 6)
+            Text(durationText(minutes))
+                .font(StrandFont.captionNumber)
+                .foregroundStyle(StrandPalette.textPrimary)
+                .frame(width: 60, alignment: .trailing)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(stage.label): \(durationText(minutes)), \(percent) percent of the night")
+    }
+
     // MARK: - 2. Metric grid (UNIFORM fixed-height StatTiles, each with sparkline)
 
     @ViewBuilder
@@ -1028,25 +1080,33 @@ struct SleepView: View {
         // over repo.days) and read here.
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Stages vs typical", overline: "Last night",
-                          trailing: "marker = your mean")
+                          trailing: "hatch = typical")
             NoopCard(tint: StrandPalette.restColor) {
                 VStack(alignment: .leading, spacing: 14) {
-                    stageRow("Deep",  last: s.deep,  typical: model.typicalDeepMin,  color: StrandPalette.sleepDeep)
+                    stageRow(stage: "Deep",  last: s.deep,  typical: model.typicalDeepMin,  nightTotal: s.total, color: StrandPalette.sleepDeep)
                     Divider().overlay(StrandPalette.hairline)
-                    stageRow("REM",   last: s.rem,   typical: model.typicalRemMin,   color: StrandPalette.sleepREM)
+                    stageRow(stage: "REM",   last: s.rem,   typical: model.typicalRemMin,   nightTotal: s.total, color: StrandPalette.sleepREM)
                     Divider().overlay(StrandPalette.hairline)
-                    stageRow("Light", last: s.light, typical: model.typicalLightMin, color: StrandPalette.sleepLight)
+                    stageRow(stage: "Light", last: s.light, typical: model.typicalLightMin, nightTotal: s.total, color: StrandPalette.sleepLight)
                 }
             }
         }
     }
 
-    /// One stage bar: last-night minutes filled, with a vertical marker at the typical mean.
+    /// One stage row, WHOOP sleep-detail style: a colour swatch + UPPERCASE stage + the share-of-night %
+    /// (in the stage colour), then a bar that reads "solid = you, hatch = the context" — a diagonal-hatch
+    /// track spanning the TYPICAL (the personal mean for this stage) with the user's last-night value as a
+    /// solid coloured fill on top, plus a thin marker at the typical mean and the right-aligned duration.
+    /// Same data as before (`last` minutes, `typical` personal mean) — the hatch just renders the typical
+    /// context the prior vertical-only marker implied.
     @ViewBuilder
-    private func stageRow(_ label: String, last: Double, typical: Double?, color: Color) -> some View {
-        // Scale both values against a shared per-row max so the marker is meaningful.
+    private func stageRow(stage label: String, last: Double, typical: Double?, nightTotal: Double, color: Color) -> some View {
+        // Scale both values against a shared per-row max so the typical hatch + marker are meaningful.
         let scaleMax = max(last, typical ?? 0) * 1.18
         let max = scaleMax > 0 ? scaleMax : 1
+        // Share of the night this stage took (drives the WHOOP coloured %); over time-in-bed, matching the
+        // stage-breakdown rows above.
+        let sharePct = nightTotal > 0 ? Int((last / nightTotal * 100).rounded()) : 0
         let deltaText: String = {
             guard let typical, typical > 0 else { return "" }
             let diff = last - typical
@@ -1054,8 +1114,18 @@ struct SleepView: View {
             return "\(sign)\(durationText(abs(diff))) vs typ"
         }()
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(label.uppercased()).strandOverline()
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(color)
+                    .frame(width: 12, height: 12)
+                    .accessibilityHidden(true)
+                Text(label.uppercased())
+                    .font(StrandFont.overline)
+                    .tracking(StrandFont.overlineTracking)
+                    .foregroundStyle(StrandPalette.textPrimary)
+                Text("\(sharePct)%")
+                    .font(StrandFont.captionNumber)
+                    .foregroundStyle(color)
                 Spacer()
                 Text(durationText(last)).font(StrandFont.captionNumber).foregroundStyle(StrandPalette.textPrimary)
                 if !deltaText.isEmpty {
@@ -1067,14 +1137,22 @@ struct SleepView: View {
             GeometryReader { geo in
                 let w = geo.size.width
                 ZStack(alignment: .leading) {
-                    // track
+                    // Track.
                     Capsule(style: .continuous)
                         .fill(StrandPalette.surfaceInset)
-                    // last-night fill
+                    // Typical-range CONTEXT: a diagonal-hatch track spanning the personal mean for this
+                    // stage. "Hatch = the context" — the user's solid value sits over it.
+                    if let typical, typical > 0 {
+                        DiagonalHatch(spacing: 5, lineWidth: 1)
+                            .stroke(color.opacity(0.5), lineWidth: 1)
+                            .frame(width: w * CGFloat(min(1, typical / max)))
+                            .clipShape(Capsule(style: .continuous))
+                    }
+                    // Last-night SOLID value fill — "solid = you".
                     Capsule(style: .continuous)
                         .fill(color)
                         .frame(width: w * CGFloat(min(1, last / max)))
-                    // typical marker
+                    // Crisp typical-mean marker so the exact mean still reads at a glance.
                     if let typical, typical > 0 {
                         Rectangle()
                             .fill(StrandPalette.textPrimary)
@@ -1085,7 +1163,7 @@ struct SleepView: View {
             }
             .frame(height: 10)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(label): \(durationText(last)) last night\(typical.map { ", typical \(durationText($0))" } ?? "")")
+            .accessibilityLabel("\(label): \(durationText(last)) last night, \(sharePct) percent of the night\(typical.map { ", typical \(durationText($0))" } ?? "")")
         }
     }
 
@@ -1749,6 +1827,28 @@ struct SleepView: View {
         f.dateFormat = "yyyy-MM-dd"
         return f
     }()
+}
+
+// MARK: - Diagonal-hatch track (WHOOP "typical range" context)
+
+/// A repeating set of 45° diagonal lines for the "typical range" context track behind a stage bar
+/// ("solid = you, hatch = the context"). Pure geometry — stroke it in the stage colour and clip it to a
+/// capsule. `spacing` is the gap between lines; the lines run further than the bounds so the clip edges
+/// stay clean. Presentation-only; no data of its own.
+private struct DiagonalHatch: Shape {
+    var spacing: CGFloat = 5
+    var lineWidth: CGFloat = 1
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        // Start well before the left edge so the 45° lines fully cover the rect after the diagonal shear.
+        var x = -rect.height
+        while x < rect.width {
+            p.move(to: CGPoint(x: x, y: rect.height))
+            p.addLine(to: CGPoint(x: x + rect.height, y: 0))
+            x += spacing
+        }
+        return p
+    }
 }
 
 // MARK: - Local value types

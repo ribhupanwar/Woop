@@ -324,7 +324,7 @@ public struct SegmentedPillControl<T: Hashable>: View {
                         // Active segment is SELECTION CHROME, so it follows the accent: on dark a
                         // gold-gradient pill with gold-deep ink; on light a flat blue accent pill with
                         // white ink (so the light theme's selection matches its blue chrome, not gold).
-                        .foregroundStyle(sel ? (scheme == .light ? Color.white : StrandPalette.goldDeepText)
+                        .foregroundStyle(sel ? (scheme == .light ? Color.white : StrandPalette.textPrimary)
                                              : StrandPalette.textTertiary)
                         // Fill the segment height so the selected pill has EQUAL margins to the track
                         // on every side. (The old compact pill inside a taller 44pt touch frame left
@@ -332,10 +332,12 @@ public struct SegmentedPillControl<T: Hashable>: View {
                         .frame(minWidth: 32, maxHeight: .infinity)
                         .padding(.horizontal, 12)
                         .background(
+                            // WHOOP selection chrome: a flat LIGHTER-grey pill on dark (white ink), a flat
+                            // blue accent pill on light — no gold, no gradient.
                             Capsule(style: .continuous)
                                 .fill(sel ? (scheme == .light
                                              ? AnyShapeStyle(StrandPalette.accent)
-                                             : AnyShapeStyle(LinearGradient(gradient: StrandPalette.goldGradient, startPoint: .top, endPoint: .bottom)))
+                                             : AnyShapeStyle(Color(hex: "#363B41")))
                                           : AnyShapeStyle(Color.clear))
                         )
                         .contentShape(Capsule(style: .continuous))

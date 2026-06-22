@@ -251,8 +251,8 @@ private struct HeartRateSection: View {
         return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Heart Rate", overline: "Live", trailing: hrIsDerived ? "from R-R" : nil)
 
-            // The live HR hero floats over a Charge-world scenic backdrop (the Health screen's
-            // colour world), with the card itself tinted rose — heart-rate's metric accent.
+            // The live HR hero is a flat WHOOP card tinted rose — heart-rate's metric accent.
+            // No scenic starfield / bloom: fill contrast carries the edge (Apple-flat).
             ChartCard(
                 title: "Heart Rate",
                 subtitle: hrIsDerived ? "Estimated from R-R interval"
@@ -269,10 +269,6 @@ private struct HeartRateSection: View {
                     ("Max HR", "\(profile.hrMax)"),
                     ("State", hasLiveHR ? "STREAMING" : "IDLE"),
                 ])
-            }
-            .background {
-                ScenicHeroBackground(domain: .charge)
-                    .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
             }
         }
         .onChangeCompat(of: displayHR) { newHR in
@@ -483,7 +479,7 @@ private struct RecoveryContributorsSection: View {
                 strength: lowerIsBetter(latest?.restingHr.map(Double.init), base: rhrBase),
                 word: word(lowerIsBetter(latest?.restingHr.map(Double.init), base: rhrBase)),
                 detail: latest?.restingHr.map { "\($0) bpm" } ?? "—",
-                tint: StrandPalette.gold),             // recovery contributor = gold
+                tint: StrandPalette.chargeColor),       // recovery contributor = WHOOP green
             Contributor(
                 label: "Sleep",
                 strength: higherIsBetter(latest?.totalSleepMin, base: sleepBase),
@@ -711,7 +707,7 @@ private struct FitnessAgeSection: View {
                         Text("Fitness Age").strandOverline()
                         Text("\(shown)")
                             .font(StrandFont.display(64))
-                            .foregroundStyle(StrandPalette.gold)
+                            .foregroundStyle(StrandPalette.textPrimary)
                             .contentTransition(.numericText())
                         Text(years == 0
                              ? "About the same as your age"
@@ -772,14 +768,11 @@ private struct FitnessAgeSection: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Apple-flat WHOOP card: a plain frosted surface tinted to the Charge (green) world —
+        // no scenic starfield / bloom, no gold border. Fill contrast carries the edge.
         .background {
-            ScenicHeroBackground(domain: .charge)
-                .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            FrostedCardSurface(tint: StrandPalette.chargeColor, cornerRadius: NoopMetrics.cardRadius)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
-                .strokeBorder(StrandPalette.gold.opacity(0.18), lineWidth: 1)
-        )
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 
@@ -983,7 +976,7 @@ private struct VitalitySection: View {
                     Text("Vitality").strandOverline()
                     Text("\(Int(v.rounded()))")
                         .font(StrandFont.display(56))
-                        .foregroundStyle(StrandPalette.gold)
+                        .foregroundStyle(StrandPalette.textPrimary)
                         .contentTransition(.numericText())
                     Text("out of 100").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -1014,14 +1007,11 @@ private struct VitalitySection: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Apple-flat WHOOP card: a plain frosted surface tinted to the Charge (green) world —
+        // no scenic starfield / bloom, no gold border. Fill contrast carries the edge.
         .background {
-            ScenicHeroBackground(domain: .charge)
-                .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+            FrostedCardSurface(tint: StrandPalette.chargeColor, cornerRadius: NoopMetrics.cardRadius)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
-                .strokeBorder(StrandPalette.gold.opacity(0.18), lineWidth: 1)
-        )
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 

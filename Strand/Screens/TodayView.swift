@@ -43,6 +43,14 @@ struct TodayView: View {
     @State private var showingMetricsEditor = false
     private var enabledKeyMetrics: [KeyMetric] { KeyMetricPrefs.decodeEnabled(keyMetricsRaw) }
 
+    // "Your cards" customisable dashboard (WHOOP "My Dashboard") — a persisted, reorderable selection of
+    // metric cards. Empty/unset shows the sensible default set (Stress / Fitness age / Vitality + HRV +
+    // Resting HR). The "CUSTOMISE" link on the section header opens a local sheet (no new nav destination).
+    // Persistence is display-only — these cards read the SAME values the rest of Today already loads.
+    @AppStorage(DashboardCardPrefs.selectionKey) private var dashboardCardsRaw = ""
+    @State private var showingDashboardEditor = false
+    private var enabledDashboardCards: [DashboardCard] { DashboardCardPrefs.decodeEnabled(dashboardCardsRaw) }
+
     // 14-day sparkline series, keyed by metric key. Loaded once in .task.
     @State private var sparks: [String: [Double]] = [:]
     @State private var workouts: [WorkoutRow] = []
@@ -1100,35 +1108,140 @@ struct TodayView: View {
 
     // MARK: - Your cards (#582 / Design Reset)
 
-    /// Pinned feature cards on Today — surfaces the buried Explore features (Stress, Fitness age,
-    /// Vitality) on the home screen as flat rows, mirroring the clean mockup. Each opens its detail
-    /// screen. TODAY only; hidden until at least one value has loaded.
+    /// The user-customisable "Your cards" dashboard (WHOOP "My Dashboard"). Surfaces a persisted, reorderable
+    /// selection of metric cards on the home screen as flat WHOOP metric rows — each opens its detail screen,
+    /// the original three (Stress / Fitness age / Vitality) keep their destinations. A blue "CUSTOMISE" link on
+    /// the header opens a local toggle/reorder sheet. TODAY only. A card with no value yet renders "—" rather
+    /// than vanishing, so the section is stable; it's hidden only when the user has no cards selected at all.
     @ViewBuilder
     private var yourCardsSection: some View {
-        if selectedDayOffset == 0 && (stressToday != nil || fitnessAgeToday != nil || vitalityToday != nil) {
+        if selectedDayOffset == 0 && !enabledDashboardCards.isEmpty {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                Text("Your cards").strandOverline()
-                if let s = stressToday {
-                    pinnedCardRow(icon: "waveform.path.ecg", tint: StrandPalette.effortColor,
-                                  title: "Stress", subtitle: "Autonomic load",
-                                  value: "\(Int(s.rounded()))") { StressView() }
+                // Section header: the "Your cards" label + a right-aligned BLUE "CUSTOMISE" action link (the
+                // WHOOP "My Dashboard" ✎ affordance). Opens a local sheet — no new nav destination.
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Your cards").strandOverline()
+                    Spacer(minLength: 8)
+                    Button {
+                        showingDashboardEditor = true
+                    } label: {
+                        Label("CUSTOMISE", systemImage: "slider.horizontal.3")
+                            .font(StrandFont.overline)
+                            .tracking(StrandFont.overlineTracking)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(StrandPalette.accent)
+                    .accessibilityLabel("Customise your cards")
+                    .help("Choose which cards show and reorder them")
                 }
-                if let a = fitnessAgeToday {
-                    pinnedCardRow(icon: "figure.run", tint: StrandPalette.chargeColor,
-                                  title: "Fitness age", subtitle: "Updated weekly",
-                                  value: "\(Int(a.rounded()))") { HealthView() }
+                ForEach(enabledDashboardCards) { card in
+                    dashboardCardRow(card)
                 }
-                if let v = vitalityToday {
-                    pinnedCardRow(icon: "heart.fill", tint: StrandPalette.restColor,
-                                  title: "Vitality", subtitle: "Wellness score",
-                                  value: "\(Int(v.rounded()))") { HealthView() }
-                }
+            }
+            .sheet(isPresented: $showingDashboardEditor) {
+                DashboardCardsEditorSheet(selectionRaw: $dashboardCardsRaw)
             }
         }
     }
 
-    /// One flat pinned-feature row: a tinted icon tile, title + subtitle, the value, and a chevron —
-    /// the whole row navigates to `destination`. Mirrors the mockup's card style.
+    /// One "Your cards" dashboard row: resolves the card's CURRENT value from the values Today already loads
+    /// (a card with no value yet shows "—"), then renders it as a WHOOP metric row that navigates to the
+    /// card's detail screen. Branching keeps the destination type concrete (no AnyView) so navigation is
+    /// exact and the original three cards reach the SAME screens as before.
+    @ViewBuilder
+    private func dashboardCardRow(_ card: DashboardCard) -> some View {
+        let tint = dashboardTint(card)
+        switch card {
+        case .stress:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { StressView() }
+        case .fitnessAge:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HealthView() }
+        case .vitality:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HealthView() }
+        case .hrv, .restingHr, .respiratory, .bloodOxygen, .skinTemp:
+            // The overnight vitals share the Health detail screen (the vital-signs surface).
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HealthView() }
+        case .sleep:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { SleepView() }
+        case .steps:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HealthView() }
+        case .calories:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HealthView() }
+        }
+    }
+
+    /// A dashboard card's WHOOP-token tint (icon + accent). Score cards take their domain colour; vitals
+    /// take their biometric hue; everything else takes the blue accent. No gold (WHOOP), tokens only.
+    private func dashboardTint(_ card: DashboardCard) -> Color {
+        switch card {
+        case .stress:      return StrandPalette.effortColor
+        case .fitnessAge:  return StrandPalette.chargeColor
+        case .vitality:    return StrandPalette.restColor
+        case .hrv:         return StrandPalette.metricPurple
+        case .restingHr:   return StrandPalette.metricRose
+        case .respiratory: return StrandPalette.accent
+        case .bloodOxygen: return StrandPalette.metricCyan
+        case .skinTemp:    return StrandPalette.metricAmber
+        case .sleep:       return StrandPalette.restColor
+        case .steps:       return StrandPalette.metricCyan
+        case .calories:    return StrandPalette.metricAmber
+        }
+    }
+
+    /// Resolve a dashboard card's CURRENT display value from the values Today already loads, with its unit
+    /// suffix appended. Returns "—" when the value isn't available yet — never a fabricated number. Reuses
+    /// the same reads the Key-Metrics tiles use (displayDay vitals, restScore / sleep duration, the pinned
+    /// Stress / Fitness age / Vitality, steps, calories).
+    private func dashboardValue(_ card: DashboardCard) -> String {
+        let d = displayDay
+        func withUnit(_ s: String) -> String {
+            guard s != "—" else { return "—" }
+            return card.unit.isEmpty ? s : "\(s) \(card.unit)"
+        }
+        switch card {
+        case .hrv:
+            return withUnit(d?.avgHrv.map { "\(Int($0.rounded()))" } ?? "—")
+        case .restingHr:
+            return withUnit(d?.restingHr.map { "\($0)" } ?? "—")
+        case .respiratory:
+            return withUnit(d?.respRateBpm.map { String(format: "%.1f", $0) }
+                            ?? sparks["resp_rate"]?.last.map { String(format: "%.1f", $0) } ?? "—")
+        case .bloodOxygen:
+            return d?.spo2Pct.map { String(format: "%.0f%%", $0) } ?? "—"
+        case .skinTemp:
+            // Stored as a deviation from baseline (°C); show it signed so +/- reads honestly.
+            return d?.skinTempDevC.map { String(format: "%+.1f°", $0) } ?? "—"
+        case .sleep:
+            return sleepValue(d)
+        case .steps:
+            let appleStepsForDay = appleDays.last(where: { $0.day == selectedDayKey })?.steps
+                ?? (selectedDayOffset == 0 ? appleDays.last?.steps : nil)
+            let real = (d?.steps).map { intString(Double($0)) }
+                ?? appleStepsForDay.map { intString(Double($0)) }
+                ?? sparks["steps"]?.last.map { intString($0) }
+            let est = stepsEstByDay[selectedDayKey].map { intString(Double($0)) }
+            return real ?? est ?? "—"
+        case .calories:
+            return withUnit(caloriesValue(appleDays.last))
+        case .stress:
+            return stressToday.map { "\(Int($0.rounded()))" } ?? "—"
+        case .fitnessAge:
+            return withUnit(fitnessAgeToday.map { "\(Int($0.rounded()))" } ?? "—")
+        case .vitality:
+            return vitalityToday.map { "\(Int($0.rounded()))" } ?? "—"
+        }
+    }
+
+    /// One WHOOP "My Dashboard" metric row: a thin-line tinted icon, an UPPERCASE tracked label over a grey
+    /// baseline caption, the big white value, and a chevron — the whole row navigates to `destination`. Flat
+    /// WHOOP styling (FrostedCardSurface, no glow), tokens only.
     @ViewBuilder
     private func pinnedCardRow<Dest: View>(icon: String, tint: Color, title: String, subtitle: String,
                                            value: String, @ViewBuilder destination: @escaping () -> Dest) -> some View {
@@ -1140,9 +1253,16 @@ struct TodayView: View {
                     .fill(tint.opacity(0.14))
                     .frame(width: 34, height: 34)
                     .overlay(Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(tint))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
-                    Text(subtitle).font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title.uppercased())
+                        .font(StrandFont.overline)
+                        .tracking(StrandFont.overlineTracking)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: 8)
                 Text(value).font(StrandFont.rounded(18, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)

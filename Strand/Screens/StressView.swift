@@ -152,7 +152,7 @@ struct StressView: View {
             SectionHeader("Today's Timeline", overline: "Intraday",
                           trailing: timelineTrailing(day))
 
-            NoopCard(tint: StrandPalette.stressColor) {
+            NoopCard(tint: StressRamp.calm) {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         Text("Autonomic load through the day").strandOverline()
@@ -165,7 +165,7 @@ struct StressView: View {
                     }
 
                     // README screen-9: the day autonomic-load LINE, drawn with the same
-                    // 3-stop blue→gold→orange gradient as the gauge.
+                    // 3-stop blue→green→amber WHOOP gradient as the gauge.
                     DaytimeLoadLine(hours: day.hours)
 
                     // Hour ruler under the line (first / midday / last covered hour).
@@ -210,11 +210,11 @@ struct StressView: View {
     /// A passive, in-app nudge to run a Breathe session after a sustained high-stress run.
     /// No notification — just a card with a CTA that opens the existing trainer.
     private func sustainedBreatheCard(_ day: DaytimeStress.Result) -> some View {
-        NoopCard(tint: StrandPalette.stressColor) {
+        NoopCard(tint: StressRamp.calm) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
                     Image(systemName: "lungs.fill")
-                        .foregroundStyle(StrandPalette.stressColor)
+                        .foregroundStyle(StressRamp.calm)
                     Text("Sustained high stress").strandOverline()
                     Spacer()
                     StatePill("\(day.sustainedRun)h elevated", tone: .warning, showsDot: true)
@@ -247,13 +247,13 @@ struct StressView: View {
 
     // MARK: 1 · Hero — the README screen-9 SEMICIRCLE gauge on a clean frosted card.
     //
-    // A flat 180° Material gauge (surfaceInset track + the 3-stop blue→gold→orange
-    // stressGradient value arc, round caps) with a needle/marker at the value and a
-    // centred big number + state word in gold. No scenic starfield / bloom — the maintainer
-    // asked for less glow, so the hero reads clean and flat over the frosted card.
+    // A flat 180° Material gauge (surfaceInset track + the 3-stop blue→green→amber
+    // WHOOP stress arc, round caps) with a needle/marker at the value and a centred big
+    // WHITE number + UPPERCASE state word in its status colour. No scenic starfield / bloom —
+    // the hero reads clean and flat over the frosted card.
 
     private func heroCard(_ model: StressModel) -> some View {
-        NoopCard(tint: StrandPalette.stressColor) {
+        NoopCard(tint: StressRamp.calm) {
             VStack(spacing: 14) {
                 HStack {
                     Text("Stress monitor").strandOverline()
@@ -352,7 +352,7 @@ struct StressView: View {
                     title: "Stress · \(range.label)",
                     subtitle: "Daily 0–3 proxy",
                     trailing: "avg " + String(format: "%.1f", avg),
-                    tint: StrandPalette.stressColor
+                    tint: StressRamp.calm
                 ) {
                     TrendChart(
                         points: points,
@@ -376,7 +376,7 @@ struct StressView: View {
                     SegmentedPillControl(ExploreRange.allCases, selection: $range) { $0.label }
                 }
             } else {
-                NoopCard(tint: StrandPalette.stressColor) {
+                NoopCard(tint: StressRamp.calm) {
                     Text("Not enough recent days to chart a trend yet. Import a history or keep wearing your strap.")
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textTertiary)
@@ -400,7 +400,7 @@ struct StressView: View {
     // MARK: 4 · Methodology (transparency)
 
     private func methodologyCard(_ model: StressModel) -> some View {
-        NoopCard(tint: StrandPalette.stressColor) {
+        NoopCard(tint: StressRamp.calm) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("How this is computed").strandOverline()
                 Text(model.usingStored
@@ -470,31 +470,31 @@ enum StressBand {
     }
 }
 
-// MARK: - Stress ramp (the canonical Titanium & Gold Stress world: blue → gold → orange)
+// MARK: - Stress ramp (the WHOOP Stress sweep: blue → green → amber)
 //
-// The Stress screen's one ramp, read straight off the design token `stressGradient`
-// (calm blue `#4A90E2` → balanced gold `#E8B84B` → high burnt-orange `#E0662F`). The
+// The Stress screen's one ramp. WHOOP has NO gold: calm reads as the link blue, a
+// balanced day as positive green, and a high-stress day as warning amber. The
 // semicircle gauge fill, the day autonomic-load line, the Calm/Moderate/High totals bar
 // and the trend all sample this SAME ramp, so the colour language is identical across
-// the screen and matches the per-domain Stress world. Never the red→green recovery ramp.
+// the screen. Never the gold or red→green recovery ramp.
 
 enum StressRamp {
     /// Band anchors, lifted from the shared palette (no hard-coded hex). These are the
-    /// blue / gold / orange the totals legend and band dots use, kept in lock-step with
+    /// blue / green / amber the totals legend and band dots use, kept in lock-step with
     /// the gauge gradient below.
-    static let calm    = StrandPalette.sleepLight     // #4A90E2 — calm blue
-    static let steady  = StrandPalette.gold           // #E8B84B — balanced gold
-    static let tense   = StrandPalette.statusCritical // #E0662F — high burnt-orange
+    static let calm    = StrandPalette.accent         // #60A0E0 — calm WHOOP blue
+    static let steady  = StrandPalette.statusPositive // #03E095 — balanced WHOOP green
+    static let tense   = StrandPalette.statusWarning  // #F0A020 — high WHOOP amber
 
-    /// The 3-stop gauge ramp, evenly spaced (blue → gold → orange).
+    /// The 3-stop gauge ramp, evenly spaced (blue → green → amber).
     static let stops: [Gradient.Stop] = [
         .init(color: calm,   location: 0.00),
         .init(color: steady, location: 0.50),
         .init(color: tense,  location: 1.00),
     ]
 
-    /// The shared design token (same colours) — used directly for arc / line fills.
-    static let gradient = StrandPalette.stressGradient
+    /// The blue→green→amber gauge gradient, built from the WHOOP band anchors above.
+    static let gradient = Gradient(stops: stops)
 
     /// Sample the ramp at a 0–3 stress score.
     static func color(_ score: Double) -> Color {
@@ -708,10 +708,10 @@ enum StressMath {
 // MARK: - Stress hero gauge — the README screen-9 SEMICIRCLE gauge
 //
 // A flat 180° Material gauge: a `surfaceInset` track sweeps left→right across the top
-// half, the value arc is filled with the 3-stop `stressGradient` (calm blue → balanced
-// gold → high burnt-orange) with round caps, and a slim needle/marker points to the
-// value. The centre carries the big 0–3 number, an "of 3" caption and the band state
-// word (LOW/MEDIUM/HIGH) in gold. Clean and flat — no bloom/glow.
+// half, the value arc is filled with the 3-stop WHOOP stress ramp (calm blue → balanced
+// green → high amber) with round caps, and a slim needle/marker points to the value. The
+// centre carries the big white 0–3 number, an "of 3" caption and the band state word
+// (LOW/MEDIUM/HIGH) in its status colour. Clean and flat — no gold, no bloom/glow.
 
 struct StressHeroGauge: View {
     let score: Double          // 0–3
@@ -736,7 +736,7 @@ struct StressHeroGauge: View {
                         style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
 
             // Value arc — the 3-stop stress ramp, swept along the 180° span so the colour
-            // under the tip matches the value's band (blue calm → gold → orange high).
+            // under the tip matches the value's band (blue calm → green → amber high).
             Semicircle(track: false, fraction: animatedFraction, lineWidth: lineWidth)
                 .stroke(
                     AngularGradient(
@@ -747,11 +747,13 @@ struct StressHeroGauge: View {
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
 
-            // Needle / marker at the value — a slim gold pointer from the hub to the arc.
+            // Needle / marker at the value — a slim pointer from the hub to the arc, tinted
+            // to the value's band (WHOOP blue → green → amber).
             StressNeedle(fraction: animatedFraction, lineWidth: lineWidth)
 
-            // Centred read-out: big number + "of 3" + state word in gold. Sits inside the
-            // bowl, biased toward the hub so it never collides with the top of the arc.
+            // Centred read-out: big WHITE number + "of 3" + UPPERCASE state word in the band's
+            // status colour. Sits inside the bowl, biased toward the hub so it never collides
+            // with the top of the arc.
             VStack(spacing: 1) {
                 Text(String(format: "%.1f", score))
                     .font(StrandFont.rounded(diameter * 0.22, weight: .bold))
@@ -763,7 +765,7 @@ struct StressHeroGauge: View {
                 Text(band.title)
                     .font(StrandFont.overline)
                     .tracking(StrandFont.overlineTracking)
-                    .foregroundStyle(StrandPalette.gold)
+                    .foregroundStyle(StressRamp.color(score))
                     .padding(.top, 1)
             }
             .frame(maxHeight: .infinity, alignment: .bottom)
@@ -809,10 +811,11 @@ struct Semicircle: Shape {
     }
 }
 
-// MARK: - Stress needle — a slim gold marker at the value
+// MARK: - Stress needle — a slim marker at the value (WHOOP-tinted)
 //
-// A thin gold pointer from the gauge hub out to (just short of) the value arc, capped
-// with a small hub dot. Honours the gauge's animated fill so it sweeps in with the arc.
+// A thin pointer from the gauge hub out to (just short of) the value arc, capped with a
+// small hub dot. Tinted to the value's band (WHOOP blue → green → amber), no gold.
+// Honours the gauge's animated fill so it sweeps in with the arc.
 
 struct StressNeedle: View {
     var fraction: Double
@@ -822,6 +825,8 @@ struct StressNeedle: View {
         GeometryReader { geo in
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height)
             let radius = min(geo.size.width / 2, geo.size.height) - lineWidth / 2
+            // The pointer reads the value's band colour off the WHOOP stress ramp.
+            let tint = StressRamp.color(fraction * 3.0)
             // Angle along the 180° span (π … 2π), measured from the hub.
             // Explicitly-typed sub-expressions: the CGFloat↔Double mix in the tip arithmetic
             // makes the SwiftUI type-checker thrash (it times out the body on a Debug build),
@@ -836,12 +841,12 @@ struct StressNeedle: View {
                     p.move(to: center)
                     p.addLine(to: tip)
                 }
-                .stroke(StrandPalette.gold,
+                .stroke(tint,
                         style: StrokeStyle(lineWidth: max(2, lineWidth * 0.16), lineCap: .round))
 
                 // Hub knob.
                 Circle()
-                    .fill(StrandPalette.gold)
+                    .fill(tint)
                     .frame(width: lineWidth * 0.5, height: lineWidth * 0.5)
                     .overlay(Circle().stroke(StrandPalette.surfaceRaised, lineWidth: 2))
                     .position(center)
@@ -850,7 +855,7 @@ struct StressNeedle: View {
                 Circle()
                     .fill(StrandPalette.tipCore)
                     .frame(width: lineWidth * 0.42, height: lineWidth * 0.42)
-                    .overlay(Circle().fill(StressRamp.color(fraction * 3.0)).opacity(0.4))
+                    .overlay(Circle().fill(tint).opacity(0.4))
                     .position(tip)
             }
         }
@@ -861,7 +866,7 @@ struct StressNeedle: View {
 // MARK: - Daytime autonomic-load line (README screen-9)
 //
 // The day's intraday stress proxy drawn as a smooth LINE across the waking hours, filled
-// under the curve and stroked with the SAME 3-stop blue→gold→orange `stressGradient` as
+// under the curve and stroked with the SAME 3-stop blue→green→amber WHOOP ramp as
 // the gauge. Only scored hours contribute points (no-data hours are skipped, never a
 // guessed value); the smooth line connects the ones we have. The y-axis is the 0–3 scale
 // and a faint dashed mid-line marks the 1.5 baseline.
@@ -895,18 +900,18 @@ struct DaytimeLoadLine: View {
                 .stroke(StrandPalette.hairline, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
 
                 if pts.count >= 2 {
-                    // Soft area fill under the curve.
+                    // Soft area fill under the curve — a calm WHOOP-blue wash (no gold).
                     areaPath(pts, width: w, height: h)
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [
-                                    StrandPalette.stressColor.opacity(0.22),
-                                    StrandPalette.stressColor.opacity(0.02),
+                                    StressRamp.calm.opacity(0.22),
+                                    StressRamp.calm.opacity(0.02),
                                 ]),
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
-                    // The gradient line itself (blue→gold→orange, left→right).
+                    // The gradient line itself (blue→green→amber, left→right).
                     linePath(pts)
                         .stroke(
                             LinearGradient(gradient: StressRamp.gradient,
@@ -1010,7 +1015,7 @@ struct StressTotals {
 
 // MARK: - Stress totals bar (README screen-9)
 //
-// One stacked horizontal bar split Calm (blue) / Moderate (gold) / High (burnt-orange)
+// One stacked horizontal bar split Calm (blue) / Moderate (green) / High (amber)
 // by how much of the scored day sat in each band, with a legend of durations below. Empty
 // segments collapse; an all-empty day shows a faint placeholder track.
 
@@ -1131,7 +1136,7 @@ private struct StressPreviewHarness: View {
                 Text("Stress").font(StrandFont.title1).foregroundStyle(StrandPalette.textPrimary)
 
                 // Clean hero — the semicircle gauge on a frosted card (no scenic glow).
-                NoopCard(tint: StrandPalette.stressColor) {
+                NoopCard(tint: StressRamp.calm) {
                     VStack(spacing: 14) {
                         HStack {
                             Text("Stress monitor").strandOverline()
@@ -1148,7 +1153,7 @@ private struct StressPreviewHarness: View {
                 }
 
                 // Screen-9 day autonomic-load line + Calm/Moderate/High totals bar.
-                NoopCard(tint: StrandPalette.stressColor) {
+                NoopCard(tint: StressRamp.calm) {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Autonomic load through the day").strandOverline()
                         DaytimeLoadLine(hours: hours)
