@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "6.2.0"
+    static let currentVersion = "6.2.1"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,13 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "6.2.1",
+            title: "Fix: imported phone steps were being double-counted",
+            date: "June 2026",
+            items: [
+                "**Your imported steps add up properly now.** If you wear an Apple Watch as well as carrying your iPhone, Apple Health stores both their step counts for the same walk. NOOP was adding them together, so a busy day could read close to double the real number, which also threw off the steps calibration. It now does what the Health app does: it counts each source on its own and keeps the higher one, so a 7,000-step day reads 7,000, not 14,000. Re-import your Apple Health export after updating to clean up past days. Thanks @bringiton321 (#589).",
+            ]),
         Release(
             version: "6.2.0",
             title: "See Everything: the Deep Timeline, a sleep movement graph, and a big board-clear",

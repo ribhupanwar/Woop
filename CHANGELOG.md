@@ -17,6 +17,12 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 6.2.1 — Fix: imported phone steps were being double-counted (all platforms)
+
+- **Your imported steps add up properly now.** If you wear an Apple Watch as well as carrying your iPhone, Apple Health stores both their step counts for the same walk. NOOP was adding them together, so a busy day could read close to double the real number, which also threw off the steps calibration. It now does what the Health app does: it counts each source on its own and keeps the higher one, so a 7,000-step day reads 7,000, not 14,000. Re-import your Apple Health export after updating to clean up past days. Thanks @bringiton321 (#589).
+
+---
+
 ## 6.2.0 — See Everything: the Deep Timeline, a sleep movement graph, and a big board-clear (all platforms)
 
 A large update built straight from the open board: one big new feature plus a wave of fixes and community PRs, cross-referenced so related reports were solved together.
