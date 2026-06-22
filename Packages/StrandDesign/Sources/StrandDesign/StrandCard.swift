@@ -42,12 +42,10 @@ public struct FrostedCardSurface: View {
         // Base fill: tinted cards deepen into the 150° navy bevel (#15243C → #0B1424,
         // = surfaceOverlay → cardFillBottom); neutral cards sit on the flat raised
         // surface. The 150° axis ≈ top-trailing → bottom-leading.
-        let baseFill: AnyShapeStyle = tint == nil
-            ? AnyShapeStyle(StrandPalette.surfaceRaised)
-            : AnyShapeStyle(LinearGradient(
-                colors: [StrandPalette.surfaceOverlay, StrandPalette.cardFillBottom],
-                startPoint: .topTrailing, endPoint: .bottomLeading
-            ))
+        // Design Reset: a flat raised fill reads cleaner than the navy bevel gradient. Tinted and
+        // neutral cards now share the same flat surface; tint identity is carried by the softened
+        // hue wash + the tinted hairline below, not a gradient, so cards stay familiar but flatten.
+        let baseFill = AnyShapeStyle(StrandPalette.surfaceRaised)
         shape
             .fill(baseFill)
             .overlay(
@@ -55,8 +53,8 @@ public struct FrostedCardSurface: View {
                 shape.fill(
                     LinearGradient(
                         colors: [
-                            (tint ?? .clear).opacity(0.10 * washStrength),
-                            (tint ?? .clear).opacity(0.03 * washStrength),
+                            (tint ?? .clear).opacity(0.05 * washStrength),
+                            (tint ?? .clear).opacity(0.015 * washStrength),
                             .clear
                         ],
                         startPoint: .topLeading, endPoint: .bottomTrailing

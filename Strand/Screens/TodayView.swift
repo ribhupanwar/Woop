@@ -1351,9 +1351,11 @@ struct TodayView: View {
             // centred so the trio reads as one cluster, bottom-aligned so all three share a baseline and
             // the larger Charge ring rises above its neighbours. The rings float on the page (no boxed
             // card) like WHOOP.
-            let center = min(150, max(110, (geo.size.width - 12) / 2.3))
-            let side = (center * 0.66).rounded()
-            HStack(alignment: .bottom, spacing: 18) {
+            // Design Reset: smaller, near-equal rings in a tight row (was a big 150pt Charge with 66%
+            // flanks) so the trio reads compact like the clean target, not three big donuts of air.
+            let center = min(116, max(94, (geo.size.width - 28) / 3.1))
+            let side = (center * 0.86).rounded()
+            HStack(alignment: .center, spacing: 14) {
                 // Component 4 — the Charge ring badges its real per-day merge winner (On-device / Whoop /
                 // Apple Health); Rest does too via its tile. Effort has no cross-source merge, so no badge.
                 heroRingColumn(section: .rest, domain: .rest, provenanceKey: "sleep_performance") { restRing(diameter: side) }
@@ -1362,7 +1364,7 @@ struct TodayView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height, alignment: .center)
         }
-        .frame(height: 214)
+        .frame(height: 158)
     }
 
     /// One hero ring column: the ring centred, with a tappable UPPERCASE domain label + chevron

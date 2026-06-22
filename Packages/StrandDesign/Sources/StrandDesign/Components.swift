@@ -6,12 +6,12 @@ import SwiftUI
 // the uniform, instrument-grade look from the reference. Do not invent ad-hoc cards.
 
 public enum NoopMetrics {
-    public static let cardRadius: CGFloat = 18   // Bevel continuous radius (18–22pt)
-    public static let cardPadding: CGFloat = 16
-    public static let gap: CGFloat = 12          // gap between cards
-    public static let sectionGap: CGFloat = 28   // gap between sections
-    public static let screenPadding: CGFloat = 24
-    public static let tileHeight: CGFloat = 108  // every metric tile is this tall
+    public static let cardRadius: CGFloat = 16   // Design Reset: tighter continuous radius
+    public static let cardPadding: CGFloat = 14
+    public static let gap: CGFloat = 10          // gap between cards
+    public static let sectionGap: CGFloat = 16   // Design Reset: dense rhythm (was 28 — the loose air)
+    public static let screenPadding: CGFloat = 18
+    public static let tileHeight: CGFloat = 96   // Design Reset: tighter metric tile
     public static let chartHeight: CGFloat = 220
     public static let hypnogramBandMinThickness: CGFloat = 14  // floor so short stages read as bars, not ticks
     public static let tabBarClearance: CGFloat = 76  // iOS: extra bottom scroll room so the last card clears the floating tab bar
