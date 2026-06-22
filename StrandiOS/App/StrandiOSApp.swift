@@ -67,20 +67,22 @@ struct StrandiOSApp: App {
                 // clipping; the common Larger-Text range still scales fully.
                 .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 .onReceive(model.live.$heartRate) { _ in
+                    let day = model.repo.days.last(where: { $0.recovery != nil })
                     liveActivity.update(
                         bpm: model.live.connected ? (model.bpm ?? model.live.heartRate) : nil,
-                        recovery: model.repo.days.last(where: { $0.recovery != nil })?
-                            .recovery.map { Int($0.rounded()) },
-                        connected: model.live.connected
+                        recovery: day?.recovery.map { Int($0.rounded()) },
+                        connected: model.live.connected,
+                        effort: day?.strain.map { Int($0.rounded()) }
                     )
                 }
                 // End the Live Activity the moment the link drops, even if no further HR tick arrives.
                 .onReceive(model.live.$connected) { isConnected in
+                    let day = model.repo.days.last(where: { $0.recovery != nil })
                     liveActivity.update(
                         bpm: isConnected ? (model.bpm ?? model.live.heartRate) : nil,
-                        recovery: model.repo.days.last(where: { $0.recovery != nil })?
-                            .recovery.map { Int($0.rounded()) },
-                        connected: isConnected
+                        recovery: day?.recovery.map { Int($0.rounded()) },
+                        connected: isConnected,
+                        effort: day?.strain.map { Int($0.rounded()) }
                     )
                 }
                 // #581: the `noop://import-health` deep link the iOS Shortcut opens after building the
@@ -109,7 +111,7 @@ struct StrandiOSApp: App {
                 Task {
                     health.refreshAuthIfPreviouslyGranted()
                     await health.sync()
-                    WidgetSnapshot.publish(from: model)
+                    await WidgetSnapshot.publish(from: model)
                 }
             } else if phase == .background {
                 // #155: refresh the Documents/noop_sync.txt drop file the user's Siri Shortcut logs
