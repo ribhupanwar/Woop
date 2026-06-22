@@ -47,6 +47,11 @@ struct TodayView: View {
     @State private var sparks: [String: [Double]] = [:]
     @State private var workouts: [WorkoutRow] = []
     @State private var appleDays: [AppleDaily] = []
+    // Design Reset / #582 — the pinned "Your cards" values (Stress / Fitness age / Vitality), surfaced
+    // on Today so the buried Explore features sit on the home screen. Loaded in loadAll; nil hides the row.
+    @State private var stressToday: Double?
+    @State private var fitnessAgeToday: Double?
+    @State private var vitalityToday: Double?
     /// Distinct days + sleep sessions imported from a Mi Band (Mi Fitness), for the Data Sources row.
     @State private var xiaomiDays = 0
     @State private var xiaomiSleeps = 0
@@ -615,6 +620,10 @@ struct TodayView: View {
                 heroSection
                 #endif
                 heartRateTrendSection
+                // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
+                // Synthesis read-out + vitals now sit below the pinned cards instead of crowding the hero.
+                yourCardsSection
+                synthesisSection
                 readinessSection
                 metricsSection
                 workoutsSection
@@ -1003,13 +1012,17 @@ struct TodayView: View {
                 explainedScoreNote(chargeScoreState)
             }
 
-            // The greeting + SOLID/CALIBRATING data-confidence pill ride in their OWN header row
-            // ABOVE the card, not as a top-trailing overlay over it (#527). The old overlay reserved
-            // a fixed 188pt inset on the card's overline + status rows so the cluster wouldn't collide
-            // with them on a narrow iPhone — but that squeezed the big status word below its natural
-            // width, so a single word ("Calibrating") was force-broken mid-word ("Calibrati/ng").
-            // A separate row CAN'T overlap the "SYNTHESIS" overline or the status word, and lets the
-            // card keep its FULL width (titleTrailingInset: 0) so the status stays one line.
+        }
+    }
+
+    /// Design Reset: the greeting + gold Synthesis read-out + vitals, lifted OUT of the hero so Today
+    /// reads rings -> Heart rate -> Your cards (the flat mockup order). Same content + behaviour, it just
+    /// sits below the HR card and the pinned cards now instead of crowding directly under the rings.
+    @ViewBuilder
+    private var synthesisSection: some View {
+        let d = displayDay
+        let score = d?.recovery
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(greetingWord)
                     .font(StrandFont.subhead)
@@ -1018,18 +1031,10 @@ struct TodayView: View {
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 8)
                 recoveryStatePill(score: score)
-                    .layoutPriority(1)   // the pill keeps its width; the greeting yields/scales first
+                    .layoutPriority(1)
             }
             .accessibilityElement(children: .combine)
 
-            // The plain-English read-out — the gold Synthesis card. Full width now the greeting/pill
-            // moved to their own row, so the status word never gets squeezed into a mid-word break.
-            //
-            // Carry-over (#543): when today isn't scored and we're not mid-calibration, the Synthesis read
-            // mirrors the carried Charge ring — it summarises the LAST scored day (status word + detail
-            // from that row) with a "Last night · <date>" provenance appended, rather than blanking to
-            // "No Data" / "No metrics yet" while live HR ticks. Calibration still owns its own copy, and
-            // today's own synthesis wins the instant tonight is scored.
             InsightCard(
                 category: "Synthesis",
                 status: calibrationStatus ?? "\(synthesisCardStatus(d, score: score))",
@@ -1038,8 +1043,6 @@ struct TodayView: View {
                 tint: StrandPalette.chargeColor
             )
 
-            // Honest "why is Effort 0?" caption (#482/#480) — only when today's Effort is a real
-            // near-zero, so a calm day reads as explained rather than broken.
             if let note = effortZeroNote {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "info.circle")
@@ -1054,9 +1057,68 @@ struct TodayView: View {
                 .accessibilityElement(children: .combine)
             }
 
-            // HRV / Resting HR / Respiratory — the vitals that drive recovery, below the guidance.
+            // HRV / Resting HR / Respiratory — the vitals that drive recovery.
             recoveryVitalsCard(d)
         }
+    }
+
+    // MARK: - Your cards (#582 / Design Reset)
+
+    /// Pinned feature cards on Today — surfaces the buried Explore features (Stress, Fitness age,
+    /// Vitality) on the home screen as flat rows, mirroring the clean mockup. Each opens its detail
+    /// screen. TODAY only; hidden until at least one value has loaded.
+    @ViewBuilder
+    private var yourCardsSection: some View {
+        if selectedDayOffset == 0 && (stressToday != nil || fitnessAgeToday != nil || vitalityToday != nil) {
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                Text("Your cards").strandOverline()
+                if let s = stressToday {
+                    pinnedCardRow(icon: "waveform.path.ecg", tint: StrandPalette.effortColor,
+                                  title: "Stress", subtitle: "Autonomic load",
+                                  value: "\(Int(s.rounded()))") { StressView() }
+                }
+                if let a = fitnessAgeToday {
+                    pinnedCardRow(icon: "figure.run", tint: StrandPalette.chargeColor,
+                                  title: "Fitness age", subtitle: "Updated weekly",
+                                  value: "\(Int(a.rounded()))") { HealthView() }
+                }
+                if let v = vitalityToday {
+                    pinnedCardRow(icon: "heart.fill", tint: StrandPalette.restColor,
+                                  title: "Vitality", subtitle: "Wellness score",
+                                  value: "\(Int(v.rounded()))") { HealthView() }
+                }
+            }
+        }
+    }
+
+    /// One flat pinned-feature row: a tinted icon tile, title + subtitle, the value, and a chevron —
+    /// the whole row navigates to `destination`. Mirrors the mockup's card style.
+    @ViewBuilder
+    private func pinnedCardRow<Dest: View>(icon: String, tint: Color, title: String, subtitle: String,
+                                           value: String, @ViewBuilder destination: @escaping () -> Dest) -> some View {
+        NavigationLink {
+            destination()
+        } label: {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(tint.opacity(0.14))
+                    .frame(width: 34, height: 34)
+                    .overlay(Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(tint))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(StrandFont.subhead).foregroundStyle(StrandPalette.textPrimary)
+                    Text(subtitle).font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                Text(value).font(StrandFont.rounded(18, weight: .semibold)).foregroundStyle(StrandPalette.textPrimary)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+            }
+            .padding(.horizontal, 13).padding(.vertical, 11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(FrostedCardSurface(cornerRadius: 14))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Component 3 — recording-status chip
@@ -2143,6 +2205,11 @@ struct TodayView: View {
         let xSteps = await repo.series(key: "steps", source: "xiaomi-band")
         let xSleep = await repo.series(key: "sleep_total_min", source: "xiaomi-band")
         xiaomiDays = Set(xSteps.map(\.day) + xSleep.map(\.day)).count
+        // Your cards (#582 / Design Reset): latest Stress / Fitness age / Vitality for the pinned home
+        // cards. Same merged exploreSeries reads their detail screens use; nil simply hides that card.
+        stressToday = (await repo.exploreSeries(key: "stress", source: "my-whoop")).last?.value
+        fitnessAgeToday = (await repo.exploreSeries(key: "fitness_age", source: "my-whoop")).last?.value
+        vitalityToday = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
         if let store = await repo.storeHandle() {
             let farFuture = Int(Date.distantFuture.timeIntervalSince1970)
             xiaomiSleeps = ((try? await store.sleepSessions(deviceId: "xiaomi-band", from: 0, to: farFuture, limit: 4000))?.count) ?? 0
