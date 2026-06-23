@@ -2069,7 +2069,8 @@ struct TodayView: View {
                 caption: restScore != nil ? restCaption(d)
                     : (buildingHint(.rest) ?? restCaption(d) ?? Self.needsStrapCaption),
                 accent: restScore.map { StrandPalette.recoveryColor($0) } ?? StrandPalette.textPrimary,
-                sparkline: sparks["sleep_total_min"],
+                // The Rest composite (0–100) trend, not raw sleep minutes — tracks the score above (#614).
+                sparkline: sparks["sleep_performance"],
                 sparkColor: StrandPalette.metricPurple,
                 // Inline ⓘ in the tile header (not a corner overlay) so it never sits over the value (#495).
                 accessory: { scoreInfoButton(.rest) }
@@ -2422,6 +2423,11 @@ struct TodayView: View {
         // composite and an importer sees the export's figure — exactly like the Rest detail screen.
         let restSeries = await repo.exploreSeries(key: "sleep_performance", source: "my-whoop")
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
+        // The Rest TILE's sparkline (#614 follow-up). The tile's number is `restScore` (the Rest composite,
+        // 0–100) but its mini-graph used to plot raw sleep MINUTES (`sparks["sleep_total_min"]`), so the
+        // trend didn't track the score it sat under. Plot the SAME merged `sleep_performance` 0–100 series
+        // the score reads instead, windowed to the trailing 14 calendar days like every other spark.
+        sparks["sleep_performance"] = trailingWindow(restSeries, days: 14).map { $0.value }
 
         // Steps ESTIMATE per day (WHOOP 4.0 motion → calibrated steps). exploreSeries reads the computed
         // "-noop" metricSeries the IntelligenceEngine writes, exactly like the Explore "steps_est" metric.

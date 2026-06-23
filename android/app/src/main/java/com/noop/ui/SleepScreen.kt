@@ -1539,6 +1539,18 @@ private fun NightNavHeader(
                 )
             }
         }
+        // When the older-night arrow is disabled because no earlier night is banked yet, the chevron
+        // just greying out reads as broken. Show a short, honest hint instead — earlier nights only
+        // appear once the strap has offloaded them (typically the next morning sync). (#614 follow-up)
+        if (!canGoOlder) {
+            Text(
+                "No earlier night stored yet. Earlier nights sync in the morning.",
+                style = NoopType.footnote,
+                color = Palette.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 
     // Confirm before removing the night — the same on-brand AlertDialog the time-edit chooser
@@ -3086,7 +3098,11 @@ private fun buildSleepMetricPoints(days: List<DailyMetric>, key: String): List<P
     val needMin = max(450.0, days.mapNotNull { it.totalSleepMin?.takeIf { m -> m > 0.0 } }.average().let { if (it.isNaN()) 480.0 else it })
     return days.mapNotNull { d ->
         val v: Double? = when (key) {
-            "performance" -> d.totalSleepMin?.takeIf { it > 0.0 && needMin > 0.0 }?.let { minOf(100.0, it / needMin * 100.0) }
+            // The Rest detail graph reads the REAL resolved Rest composite per day — the same single
+            // source of truth the Today Rest score uses (RestScorer.restFromDaily, the composite the
+            // sleep_performance series carries) — not a local hours-vs-need approximation. Keeps the
+            // graph and the score in agreement. (#614 follow-up)
+            "performance" -> com.noop.analytics.RestScorer.restFromDaily(d)?.takeIf { it in 0.0..100.0 }
             "efficiency"  -> d.efficiency?.let { if (it <= 1.0) it * 100.0 else it }
             "consistency" -> {
                 val idx = days.indexOf(d)

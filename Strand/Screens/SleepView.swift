@@ -1460,26 +1460,37 @@ struct SleepView: View {
         let lastIndex = max(navDays.count - 1, 0)
         let title: LocalizedStringKey = nightOffset == 0 ? "Last night"
             : (nightOffset == 1 ? "1 night ago" : "\(nightOffset) nights ago")
-        HStack(spacing: NoopMetrics.cardInnerSpacing) {
-            Button { if nightOffset < lastIndex { nightOffset += 1 } } label: {
-                Image(systemName: "chevron.left")
-                    .font(StrandFont.headline)
-                    .foregroundStyle(nightOffset >= lastIndex ? StrandPalette.textTertiary : StrandPalette.accent)
-            }
-            .buttonStyle(.plain)
-            .disabled(nightOffset >= lastIndex)
-            .accessibilityLabel("Previous night")
+        VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
+            HStack(spacing: NoopMetrics.cardInnerSpacing) {
+                Button { if nightOffset < lastIndex { nightOffset += 1 } } label: {
+                    Image(systemName: "chevron.left")
+                        .font(StrandFont.headline)
+                        .foregroundStyle(nightOffset >= lastIndex ? StrandPalette.textTertiary : StrandPalette.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(nightOffset >= lastIndex)
+                .accessibilityLabel("Previous night")
 
-            SectionHeader(title, overline: "Sleep", trailing: trailing)
+                SectionHeader(title, overline: "Sleep", trailing: trailing)
 
-            Button { if nightOffset > 0 { nightOffset -= 1 } } label: {
-                Image(systemName: "chevron.right")
-                    .font(StrandFont.headline)
-                    .foregroundStyle(nightOffset == 0 ? StrandPalette.textTertiary : StrandPalette.accent)
+                Button { if nightOffset > 0 { nightOffset -= 1 } } label: {
+                    Image(systemName: "chevron.right")
+                        .font(StrandFont.headline)
+                        .foregroundStyle(nightOffset == 0 ? StrandPalette.textTertiary : StrandPalette.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(nightOffset == 0)
+                .accessibilityLabel("Next night")
             }
-            .buttonStyle(.plain)
-            .disabled(nightOffset == 0)
-            .accessibilityLabel("Next night")
+            // When the older-night arrow is disabled because no earlier night is banked yet, the
+            // chevron just greying out reads as broken. Show a short, honest hint instead — earlier
+            // nights only appear once the strap has offloaded them (next-morning sync). (#614 follow-up)
+            if nightOffset >= lastIndex {
+                Text("No earlier night stored yet. Earlier nights sync in the morning.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
         }
     }
 
@@ -1504,15 +1515,16 @@ struct SleepView: View {
     }
 
     /// Sleep performance %: the imported WHOOP figure (sleep_performance, 0–100) when the
-    /// export carried one for that day; else the APPROXIMATE fallback (asleep / personal
-    /// need, capped 100) so strap-only days after the import horizon stay populated.
+    /// export carried one for that day; else the REAL resolved Rest composite for that day —
+    /// the same single source of truth the Today Rest score reads (AnalyticsEngine.Rest.composite,
+    /// what Repository.dailyColumn resolves "sleep_performance" to), NOT a local hours-vs-need
+    /// approximation. Keeps the Rest detail graph in agreement with the Today Rest score. (#614
+    /// follow-up) Values land 0–100 via the composite; the metric() finite filter drops the rest.
     private var performanceSeries: Metric {
         let imported = repo.importedSleep
-        let need = sleepNeedMin
         return metric { d in
             if let p = imported[d.day]?.performancePct { return p }   // export-verbatim
-            guard let asleep = d.totalSleepMin, asleep > 0, need > 0 else { return nil }
-            return min(100, asleep / need * 100)   // APPROXIMATE fallback
+            return AnalyticsEngine.Rest.composite(daily: d)            // real resolved Rest composite
         }
     }
 

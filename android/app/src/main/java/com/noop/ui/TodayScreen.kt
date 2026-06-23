@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -142,7 +143,13 @@ fun TodayScreen(
     val days by viewModel.recentDays.collectAsStateWithLifecycle()
     val live by viewModel.live.collectAsStateWithLifecycle()
     var footer by remember { mutableStateOf(TodayFooterState()) }
-    var selectedDayOffset by remember { mutableIntStateOf(0) }
+    // rememberSaveable (not plain remember): the bottom-tab NavHost (AppRoot) navigates with
+    // saveState/restoreState, which only restores rememberSaveable-backed state. With plain remember a
+    // tab-away wiped this back to 0 AND reset didAutoLandLatest below, so on return the #605 auto-land
+    // re-fired and re-landed on an older day with data — the date "shifted" on app-switch/resume (#614
+    // follow-up). Persisting both across the save/restore keeps the chosen day put. iOS is unaffected
+    // (its @State in a live TabView survives), so this is Android-only.
+    var selectedDayOffset by rememberSaveable { mutableIntStateOf(0) }
     // Anchor offset-0 to the LOGICAL day (rolls at 04:00 local), so between midnight and 4am "Today"
     // still resolves to the prior calendar day's banked row instead of an empty new-calendar-day row
     // that blanks the dashboard (#144). Past offsets count back from this anchor. Presentation-only.
@@ -151,7 +158,10 @@ fun TodayScreen(
     // or a strap mid-backfill whose newest banked day is older than today), land on the most recent day
     // that DOES have data instead of an empty graph. One-shot via the guard, so the user can chevron back
     // to today freely. Parity with the iOS dashboard + the Deep Timeline's open-on-latest (#597).
-    var didAutoLandLatest by remember { mutableStateOf(false) }
+    // rememberSaveable so the one-shot guard SURVIVES a tab-away/restore (see selectedDayOffset note):
+    // once the auto-land has run (or the user has chevroned), it must stay "done" across the NavHost
+    // save/restore, otherwise it re-fires on return and overrides the day the user is looking at (#614).
+    var didAutoLandLatest by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(days) {
         if (didAutoLandLatest || selectedDayOffset != 0) return@LaunchedEffect
         val zone = ZoneId.systemDefault()
@@ -421,6 +431,26 @@ fun TodayScreen(
                 .values.associate { it.first to it.second }
         }.getOrDefault(emptyMap())
         restScoreForDay = byDay[selectedDayKey] ?: byDay.entries.maxByOrNull { it.key }?.value
+    }
+
+    // The Rest tile's SPARKLINE series (#614 follow-up). The Rest tile's NUMBER is the Rest composite
+    // (0–100) from `sleep_performance` above, but its mini-graph used to plot raw sleep MINUTES
+    // (`w.sleepMin`), so the trend line didn't track the score it sat under. Build the SAME 0–100
+    // `sleep_performance` series here, windowed to the trailing 14 calendar days ending on the selected
+    // day (oldest → newest, nulls dropped — mirrors remember14's windowing of the DailyMetric series), and
+    // feed it to the Rest tile instead. Now the sparkline tracks the Rest score. Empty until loaded.
+    var restCompositeSpark by remember { mutableStateOf<List<Double>>(emptyList()) }
+    LaunchedEffect(days, selectedDay) {
+        val byDay = runCatching {
+            viewModel.repo.resolvedSeries("sleep_performance", "my-whoop", "0000-00-00", "9999-99-99")
+                .values.associate { it.first to it.second }
+        }.getOrDefault(emptyMap())
+        val cutoff = selectedDay.minusDays(13).toString()
+        val end = selectedDay.toString()
+        restCompositeSpark = byDay.entries
+            .filter { it.key in cutoff..end }
+            .sortedBy { it.key }
+            .map { it.value }
     }
 
     // Provenance (COMPONENT 4): the REAL per-metric merge winner for the selected day's derived scores,
@@ -858,6 +888,7 @@ fun TodayScreen(
                 importedStepsForDay = importedStepsForDay,
                 estimatedStepsForDay = stepsEstForDay,
                 restScore = restScoreForDay,
+                restSpark = restCompositeSpark,
                 enabledMetrics = enabledKeyMetrics,
                 isToday = selectedDayOffset == 0,
                 onScoreInfo = openGuide,
@@ -2600,6 +2631,10 @@ private fun MetricGrid(
     importedStepsForDay: Int? = null,
     estimatedStepsForDay: Int? = null,
     restScore: Double? = null,
+    // The Rest tile's sparkline: the trailing-window Rest composite (0–100, `sleep_performance`), so the
+    // mini-graph tracks the Rest SCORE rather than raw sleep minutes (#614 follow-up). Other tiles still
+    // read their series off `w` (the DailyMetric windows).
+    restSpark: List<Double> = emptyList(),
     enabledMetrics: List<KeyMetric> = KeyMetric.defaultOrder,
     isToday: Boolean = false,
     onScoreInfo: (ScoreSection) -> Unit = {},
@@ -2666,7 +2701,8 @@ private fun MetricGrid(
                 caption = if (restScore != null) restCaption(d)
                           else buildingHint(KeyMetric.REST, isToday) ?: restCaption(d),
                 accent = restScore?.let { Palette.recoveryColor(it) } ?: Palette.textTertiary,
-                spark = w.sleepMin,
+                // The Rest composite (0–100) trend, not raw sleep minutes — tracks the score above (#614).
+                spark = restSpark,
                 sparkColor = Palette.metricPurple,
                 onInfo = { onScoreInfo(ScoreSection.REST) },
                 badge = if (restScore != null && restStageLowConfidence(d)) "Estimated" else null,
