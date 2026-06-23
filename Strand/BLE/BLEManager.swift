@@ -63,6 +63,70 @@ struct MarginalRadioDetector {
     }
 }
 
+/// Detects a WHOOP 4 "bond-loop" (#617): the strap bonds successfully, then the encrypted link drops
+/// ~1s later with a CONNECTION TIMEOUT (`CBError.connectionTimeout`), the auto-rescan reconnects, it
+/// bonds again, and dies again — an endless bond→timeout cycle on macOS/iOS that never settles and never
+/// tells the user why.
+///
+/// The tell is a TIMEOUT drop that lands shortly after a GENUINE bond: bond → die-soon → rescan → bond →
+/// die-soon. A bond that survives well past the window is healthy and breaks the streak — links flap for
+/// benign reasons minutes in, and a late drop must NOT be blamed on the bond. We don't trip on a single
+/// cycle (one quick drop is noise); we trip on >= `tripThreshold` CONSECUTIVE bond-then-quick-timeout
+/// cycles. Once tripped, BLEManager surfaces the EXISTING re-pair guide (`state.reconnectGuide`) so the
+/// user gets the forget-and-re-pair steps instead of watching a silent loop drain the battery.
+///
+/// Pure + value-typed so the decision is unit-testable without a CoreBluetooth seam — same shape as
+/// `MarginalRadioDetector`.
+struct PostBondTimeoutLoopDetector {
+    /// How many consecutive bond-then-quick-timeout cycles before we surface the re-pair guide.
+    /// 2 (not 1): one quick post-bond drop is noise; two in a row is the loop, not a fluke.
+    let tripThreshold: Int
+    /// A timeout only counts as "right after bonding" if it lands within this window of the bond. A drop
+    /// well into a healthy session is unrelated to bonding and must NOT count (that would mis-trip a good
+    /// link that merely flapped later). Generous vs the radio detector's 20s: the loop's signature is a
+    /// near-immediate (~1s) drop, but pre-loop links can limp a few seconds before timing out.
+    let quickTimeoutWindow: TimeInterval
+
+    private(set) var consecutiveBondTimeouts = 0
+    /// True once we've tripped: BLEManager has surfaced (or should surface) the re-pair guide.
+    private(set) var tripped = false
+
+    init(tripThreshold: Int = 2, quickTimeoutWindow: TimeInterval = 8) {
+        self.tripThreshold = tripThreshold
+        self.quickTimeoutWindow = quickTimeoutWindow
+    }
+
+    /// A connection ended. `wasBonded` = the link reached a genuine encrypted bond this connection;
+    /// `secondsSinceBond` = how long after bonding the link ended (nil if we never bonded); `timedOut` =
+    /// the drop looks like a connection timeout (vs an intentional disconnect, a bond reset, a clean close).
+    /// Returns true if THIS event tripped the loop (a freshly-crossed threshold), so the caller can
+    /// log/surface the guide exactly once.
+    mutating func connectionEnded(wasBonded: Bool, secondsSinceBond: TimeInterval?, timedOut: Bool) -> Bool {
+        // Only a timeout that lands within the window after we actually bonded is evidence of the loop.
+        // Anything else (never bonded, non-timeout close, a drop long after a healthy bond) breaks the
+        // streak — a single healthy spell should clear prior suspicion.
+        let bondThenQuickTimeout = wasBonded && timedOut
+            && (secondsSinceBond.map { $0 <= quickTimeoutWindow } ?? false)
+        guard bondThenQuickTimeout else {
+            consecutiveBondTimeouts = 0
+            return false
+        }
+        consecutiveBondTimeouts += 1
+        if !tripped && consecutiveBondTimeouts >= tripThreshold {
+            tripped = true
+            return true        // freshly tripped — caller surfaces the re-pair guide once
+        }
+        return false
+    }
+
+    /// Clear all suspicion: a clean session is flowing, or the user explicitly disconnected. Lets a
+    /// transient bond hiccup recover instead of permanently flagging the link as bond-looping.
+    mutating func reset() {
+        consecutiveBondTimeouts = 0
+        tripped = false
+    }
+}
+
 /// Decides when a completed sync that handed over only the strap's console/diagnostic output (no sensor
 /// records) is sustained enough to warn that the strap's clock has lost sync and it isn't banking to flash
 /// (#77 / #91 / #120). A SINGLE empty cycle is common on a perfectly healthy strap — the strap can hand
@@ -316,6 +380,13 @@ public final class BLEManager: NSObject, ObservableObject {
     /// #80 marginal-radio fallback: tracks consecutive arm-then-quick-timeout cycles. When it trips,
     /// `standardHRFallback` goes true and the next connect skips arming R10/R11 (relies on 0x2A37).
     private var marginalRadio = MarginalRadioDetector()
+    /// #617 bond-loop detector: tracks consecutive bond-then-quick-timeout cycles on a WHOOP 4. When it
+    /// trips, BLEManager surfaces the existing re-pair guide (`state.reconnectGuide`) instead of looping
+    /// silently. Reset on a clean session / intentional disconnect / a successful connect.
+    private var postBondLoop = PostBondTimeoutLoopDetector()
+    /// Wall time the encrypted bond was established this connection, to measure how soon a drop follows
+    /// the bond (the #617 bond-loop tell). nil until bonded; cleared on disconnect.
+    private var bondedAt: Date?
     /// #126 false-alarm guard: tracks CONSECUTIVE console-only completed syncs so the "clock has lost
     /// sync" banner only fires on sustained emptiness, not a single transient empty cycle on a healthy strap.
     private var emptySyncTracker = EmptySyncTracker()
@@ -670,6 +741,7 @@ public final class BLEManager: NSObject, ObservableObject {
         // A user-initiated teardown is a clean slate: clear any #80 marginal-radio fallback so the next
         // (manual) reconnect attempts the full R10/R11 stream again rather than inheriting old suspicion.
         marginalRadio.reset()
+        postBondLoop.reset()   // #617: a clean teardown clears the bond-loop streak so a manual reconnect starts fresh
         readoptingTo = nil   // #52: a clean teardown abandons any in-flight pin handoff
         standardHRFallback = false
         state.standardHRMode = nil
@@ -2134,6 +2206,30 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
             standardHRFallback = true
             log("Marginal radio (#80): \(marginalRadio.consecutiveArmTimeouts) arm-then-timeout cycles — next connect uses standard-HR mode (0x2A37 only)")
         }
+        // #617 bond-loop detection: same pre-reset read. The bond-loop tell is a CONNECTION TIMEOUT that
+        // lands within seconds of a genuine bond — bond → drop → rescan → bond → drop, forever. We require
+        // the OS to classify the drop as a connection timeout (`CBError.connectionTimeout`), not merely any
+        // error, so a one-off radio blip or a different failure doesn't get mistaken for the loop. Once it
+        // trips, surface the EXISTING re-pair guide (the same forget-and-re-pair steps the #74/firmware-reset
+        // path shows) rather than letting the link loop silently and drain the battery.
+        let connTimedOut: Bool = (error as? CBError)?.code == .connectionTimeout
+        let sinceBond = bondedAt.map { Date().timeIntervalSince($0) }
+        if postBondLoop.connectionEnded(wasBonded: bondedAt != nil,
+                                        secondsSinceBond: sinceBond,
+                                        timedOut: connTimedOut && !intentionalDisconnect) {
+            log("Bond-loop (#617): \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles — surfacing the re-pair guide")
+            if state.reconnectGuide == nil {
+                state.reconnectGuide = """
+                Your strap keeps connecting and then dropping a second later. This is almost always a stale Bluetooth pairing — usually after a WHOOP firmware update, or the official WHOOP app holding the strap. NOOP works fine once it's re-paired:
+
+                1. Quit the official WHOOP app (or turn off Bluetooth on that phone).
+                2. Open System Settings → Bluetooth and Forget your WHOOP if it's listed.
+                3. Tap the strap repeatedly until its LEDs flash blue (pairing mode).
+                4. Come back here and reconnect.
+                """
+            }
+        }
+        bondedAt = nil   // cleared after the bond-loop detector above read it (#617)
         state.connected = false
         state.encryptedBond = false   // cleared with didBond; next session must re-prove the bond (#69)
         state.charging = nil          // a stale charging flag must not outlive the link
@@ -2436,6 +2532,7 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                 didBond = true
                 state.bonded = true
                 state.encryptedBond = true   // genuine encrypted bond (not the live-HR shortcut) — #69
+                bondedAt = Date()            // #617: start the bond→drop stopwatch for the bond-loop detector
                 state.pairingHint = nil
                 bondRefusalStreak = 0         // #78: a genuine bond resets the refusal streak
                 noteGenuineBond(of: peripheral)   // #52: this strap bonds fine; clears any pin-refusal streak
@@ -2490,6 +2587,7 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
             didBond = true
             state.bonded = true
             state.encryptedBond = true   // WHOOP 4 confirmed-write bond is always genuine — #69
+            bondedAt = Date()            // #617: start the bond→drop stopwatch for the bond-loop detector
             noteGenuineBond(of: peripheral)   // #52: this strap bonds fine; clears any pin-refusal streak
             log("BONDED (confirmed write acknowledged) — custom channels should now flow")
         }

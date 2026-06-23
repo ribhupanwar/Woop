@@ -874,4 +874,110 @@ final class SleepStagerTests: XCTestCase {
         // Too little gravity to grid → [] so the caller persists NULL, never a fabricated zero series.
         XCTAssertTrue(SleepStager.sessionEpochMotion(start: 0, end: 1800, grav: []).isEmpty)
     }
+
+    // MARK: - REM-funnel diagnostic (#688)
+
+    /// A still, REM-eligible epoch (still + cardiac-activated + irregular resp). The percentile
+    /// arguments below are chosen so this epoch clears every REM gate.
+    private func remEpoch() -> SleepStager.EpochFeatures {
+        SleepStager.EpochFeatures(index: 0, midTs: 0, count: 0, moveFrac: 0,  // still
+                                  ckSleep: true, hr: 80, hrVar: 5, rmssd: 20, sdnn: 0,
+                                  respRate: 14, rrv: 2.0, clock: 0.5)          // irregular resp
+    }
+
+    func testRemRejectReasonAttributesEachGate() {
+        // Percentiles: hrLo=55, hrHi=70 (hr=80 is high), rmssdHi=50, hrvarHi=1 (hrVar=5 is high),
+        // rrvHi=1 (rrv=2 is irregular), rrvLo=0.5. The base remEpoch clears all REM gates.
+        let (hrLo, hrHi, rmssdHi, hrvarHi, rrvHi, rrvLo) =
+            (55.0, 70.0, 50.0, 1.0, 1.0, 0.5)
+        func reason(_ f: SleepStager.EpochFeatures) -> SleepStager.REMRejectReason {
+            SleepStager.remRejectReason(f, hrLo: hrLo, hrHi: hrHi, rmssdHi: rmssdHi,
+                                        hrvarHi: hrvarHi, rrvHi: rrvHi, rrvLo: rrvLo)
+        }
+        XCTAssertEqual(reason(remEpoch()), .remEligible, "still + cardiac + irregular resp → REM")
+
+        // notStill: raise moveFrac above the wake bar — but keep cardiac LOW so it doesn't win wake.
+        // hr=60 (< hrHi 70, > hrLo 55) and hrVar=0 → not cardiac-activated, so NOT wake; rrv high but
+        // not still → the REM rule fails first on stillness.
+        let notStill = SleepStager.EpochFeatures(index: 0, midTs: 0, count: 0, moveFrac: 0.5,
+                                                 ckSleep: true, hr: 60, hrVar: 0, rmssd: 60, sdnn: 0,
+                                                 respRate: 14, rrv: 2.0, clock: 0.5)
+        XCTAssertEqual(reason(notStill), .notStill, "moving body (no cardiac) → blocked notStill")
+
+        // noCardiacActivation: still, resp irregular, but HR mid + flat HR-variability.
+        let noCardiac = SleepStager.EpochFeatures(
+            index: 0, midTs: 0, count: 0, moveFrac: 0, ckSleep: true, hr: 60, hrVar: 0,
+            rmssd: 20, sdnn: 0, respRate: 14, rrv: 2.0, clock: 0.5)
+        XCTAssertEqual(reason(noCardiac), .noCardiacActivation, "still + irregular resp but no cardiac → blocked")
+
+        // respRegular: still + cardiac-activated but resp present and REGULAR (rrv below rrvLo).
+        // Keep RMSSD high so it doesn't win deep (deep needs hrLow too — hr=80 isn't low — so it's safe).
+        let respReg = SleepStager.EpochFeatures(index: 0, midTs: 0, count: 0, moveFrac: 0,
+                                                ckSleep: true, hr: 80, hrVar: 5, rmssd: 20, sdnn: 0,
+                                                respRate: 14, rrv: 0.1, clock: 0.5)  // rrv ≤ rrvLo → regular
+        XCTAssertEqual(reason(respReg), .respRegular, "still + cardiac but regular resp → blocked respRegular")
+
+        // noRespFallbackBar: resp ABSENT (rrv NaN) and the stricter no-resp REM bar unmet
+        // (needs BOTH hrHigh AND hrvarHigh). Here hr high but hrVar flat → fallback bar fails.
+        let noRespBar = SleepStager.EpochFeatures(index: 0, midTs: 0, count: 0, moveFrac: 0,
+                                                  ckSleep: true, hr: 80, hrVar: 0, rmssd: 20, sdnn: 0,
+                                                  respRate: .nan, rrv: .nan, clock: 0.5)
+        XCTAssertEqual(reason(noRespBar), .noRespFallbackBar, "resp absent + no-resp bar unmet → blocked")
+    }
+
+    func testRemRejectReasonNoRespFallbackIsRemEligible() {
+        // The no-resp REM fallback: still + HR-high + HR-variability-high + resp absent → REM eligible.
+        let f = SleepStager.EpochFeatures(index: 0, midTs: 0, count: 0, moveFrac: 0,
+                                          ckSleep: true, hr: 80, hrVar: 5, rmssd: 20, sdnn: 0,
+                                          respRate: .nan, rrv: .nan, clock: 0.5)
+        let r = SleepStager.remRejectReason(f, hrLo: 55, hrHi: 70, rmssdHi: 50,
+                                            hrvarHi: 1, rrvHi: 1, rrvLo: 0.5)
+        XCTAssertEqual(r, .remEligible, "no-resp fallback (high HR + high HR-var) is REM-eligible")
+    }
+
+    func testRemFunnelDiagnosticNilWhenNoGravity() {
+        XCTAssertNil(SleepStager.remFunnelDiagnostic(start: 0, end: 1800, grav: [],
+                                                     hr: [], rr: [], resp: []))
+    }
+
+    func testRemFunnelDiagnosticZeroREMNightSurfacesRespAbsent() {
+        // A WHOOP-4.0-style night: still body, low HR, NO respiration and NO R-R → the classifier
+        // can never reach REM (the no-resp fallback needs cardiac activation, which a flat low-HR
+        // still night lacks). The hypnogram is 0% REM; the diagnostic must say WHY: resp ABSENT, and
+        // every sleep epoch attributed to a concrete non-REM reason. This is a triage surface only —
+        // it asserts the diagnostic, NOT that the stager should have found REM.
+        let start = nightStart(02)
+        let dur = 90 * 60
+        let grav = stillGravity(start: start, durationS: dur)
+        let hr = hrStream(start: start, durationS: dur, bpm: 50)   // flat, low → no cardiac activation
+        let diag = SleepStager.remFunnelDiagnostic(start: start, end: start + dur,
+                                                   grav: grav, hr: hr, rr: [], resp: [])
+        XCTAssertNotNil(diag)
+        let d = diag!
+        XCTAssertTrue(d.isZeroREM, "a flat still low-HR no-resp night has 0% REM")
+        XCTAssertEqual(d.remAfterReimpose, 0)
+        XCTAssertFalse(d.respChannelPresent, "no resp and no R-R → respChannelPresent false")
+        XCTAssertGreaterThan(d.sleepEpochs, 0, "the sleep period must contain epochs to explain")
+        // Conservation: every sleep epoch is attributed to exactly one bucket at the classifier mouth.
+        let attributed = d.remAtClassify + d.wonOtherStage + d.blockedNotStill
+            + d.blockedNoCardiacActivation + d.blockedRespRegular + d.blockedNoRespFallbackBar
+        XCTAssertEqual(attributed, d.sleepEpochs, "per-epoch reasons must partition the sleep epochs")
+        // The summary line a caller would log mentions the absent resp channel.
+        XCTAssertTrue(d.summary.contains("resp=ABSENT"), "summary surfaces the absent resp channel")
+    }
+
+    func testRemFunnelDiagnosticIsReadOnly() {
+        // The diagnostic must not perturb the hypnogram stageSession produces for the same window.
+        let start = nightStart(02)
+        let dur = 90 * 60
+        let grav = stillGravity(start: start, durationS: dur)
+        let hr = hrStream(start: start, durationS: dur, bpm: 50)
+        let before = SleepStager.stageSession(start: start, end: start + dur,
+                                              grav: grav, hr: hr, rr: [], resp: [])
+        _ = SleepStager.remFunnelDiagnostic(start: start, end: start + dur,
+                                            grav: grav, hr: hr, rr: [], resp: [])
+        let after = SleepStager.stageSession(start: start, end: start + dur,
+                                             grav: grav, hr: hr, rr: [], resp: [])
+        XCTAssertEqual(before, after, "remFunnelDiagnostic must not change the staged hypnogram")
+    }
 }

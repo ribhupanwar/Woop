@@ -634,8 +634,15 @@ final class Repository: ObservableObject {
         let hr = (try? await store.hrSamples(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
         let rr = (try? await store.rrIntervals(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
         let resp = (try? await store.respSamples(deviceId: deviceId, from: lo, to: hi, limit: 200_000)) ?? []
+        // Opt-in experimental staging (Settings → Experimental · Sleep staging): when the user has flipped
+        // the V2 flag on, re-stage with the cardiorespiratory recipe `SleepStagerV2`; otherwise the default
+        // V1 `SleepStager`. Read once here off the actor; the switch is purely which engine runs over the
+        // already-detected window — V1 stays the default and is untouched. (V7 Pillar 3b)
+        let useV2 = PuffinExperiment.experimentalSleepV2Enabled
         let segs = await Task.detached(priority: .utility) {
-            SleepStager.stageSession(start: start, end: end, grav: grav, hr: hr, rr: rr, resp: resp)
+            useV2
+                ? SleepStagerV2.stageSession(start: start, end: end, grav: grav, hr: hr, rr: rr, resp: resp)
+                : SleepStager.stageSession(start: start, end: end, grav: grav, hr: hr, rr: rr, resp: resp)
         }.value
         return AnalyticsEngine.encodeStages(segs)
     }
@@ -861,12 +868,21 @@ final class Repository: ObservableObject {
     /// Read one candidate's rows for the window: its metricSeries, plus the matching DailyMetric column
     /// for any day the metricSeries doesn't carry (a Bluetooth-only WHOOP 5 user has values in the daily
     /// columns but not the long-format series). Ascending by day.
+    ///
+    /// The DailyMetric read uses a +1-day upper buffer (`Self.dayAfter(to)`). A night is keyed on its LOCAL
+    /// WAKE day, so the row backing the SELECTED day's Rest can sort on the day AFTER the caller's `to`
+    /// (a just-after-midnight wake, or a UTC+ user whose wake-day rolls a calendar day ahead of the
+    /// requested bound). Without the buffer that banked row was excluded and Today fell back to the latest
+    /// historical Rest (#614). The buffer only WIDENS the daily read; `byDay`'s metricSeries-first
+    /// precedence is unchanged, so an imported series point still wins its day. Mirrors Android
+    /// WhoopRepository.resolvedRows.
     private func resolvedRows(store: WhoopStore, candidate: MetricSourceCandidate,
                              from: String, to: String) async -> [(day: String, value: Double)] {
         let metricRows = (try? await store.metricSeries(deviceId: candidate.source, key: candidate.key,
                                                         from: from, to: to)) ?? []
         var byDay = Dictionary(metricRows.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        if let dailyRows = try? await store.dailyMetrics(deviceId: candidate.source, from: from, to: to) {
+        if let dailyRows = try? await store.dailyMetrics(deviceId: candidate.source,
+                                                         from: from, to: Self.dayAfter(to)) {
             for row in dailyRows where byDay[row.day] == nil {
                 if let value = Self.dailyColumn(key: candidate.key, day: row) { byDay[row.day] = value }
             }
@@ -982,8 +998,23 @@ final class Repository: ObservableObject {
     /// Android's dailyPick, extended to every Explore "my-whoop" key that maps to a daily column.
     /// Also handles the Apple-compatible sleep aliases (asleep_min / deep_min / rem_min / core_min) the
     /// resolver may request when filling an Apple candidate from its daily columns. Keys with no daily
-    /// column (avg_hr / max_hr / sleep_performance …) return nil — they resolve from metricSeries only.
-    private static func dailyColumn(key: String, day d: DailyMetric) -> Double? {
+    /// column (avg_hr / max_hr …) return nil — they resolve from metricSeries only.
+    ///
+    /// `sleep_performance` (the Rest composite, 0–100) is NOT a stored column: IntelligenceEngine persists
+    /// it as a metricSeries point. But a Bluetooth-only WHOOP 5 user — and, crucially, the SELECTED
+    /// (just-synced) day before the heavy daily pass has projected the series — has the night's totals
+    /// banked on the DailyMetric row while the metricSeries point is still missing. Without this case the
+    /// resolver returned no Rest for that day and Today borrowed the latest historical value (#614). Derive
+    /// it on the fly from the same banked totals via the single source of truth
+    /// `AnalyticsEngine.Rest.composite(daily:)` — the SAME composite the series carries (what
+    /// IntelligenceEngine projects) — so the day resolves to its own Rest. Consistency is left to the
+    /// scorer's neutral default here (the daily row carries no regularity term). Mirrors Android
+    /// WhoopRepository.dailyColumn / RestScorer.restFromDaily.
+    ///
+    /// Internal + nonisolated (not private) so the pure `EditMergePrecedenceTests` can exercise the #614
+    /// derivation directly off the main actor, the same way Android's `internal fun dailyColumn` is
+    /// unit-tested. No non-test caller outside this type.
+    nonisolated static func dailyColumn(key: String, day d: DailyMetric) -> Double? {
         switch key {
         case "recovery":         return d.recovery
         case "hrv":              return d.avgHrv
@@ -997,6 +1028,7 @@ final class Repository: ObservableObject {
         case "sleep_deep_min", "deep_min": return d.deepMin
         case "sleep_rem_min", "rem_min":   return d.remMin
         case "sleep_light_min", "core_min": return d.lightMin
+        case "sleep_performance": return AnalyticsEngine.Rest.composite(daily: d)
         case "steps":            return d.steps.map(Double.init)
         case "active_kcal", "energy_kcal": return d.activeKcalEst
         default:                 return nil
@@ -1087,8 +1119,12 @@ final class Repository: ObservableObject {
         // Imported lifting sessions (Hevy / Liftosaur) live under their own "lifting" source.
         rows += (try? await store.workouts(deviceId: "lifting", from: lo, to: hi, limit: 5000)) ?? []
         let spans = WorkoutSource.parseDismissedSpans(dismissedDetectedSpans)
-        let visible = rows.filter { !WorkoutSource.isDismissed($0, spans: spans) }
-            .sorted { $0.startTs > $1.startTs }
+        // #687: collapse the SAME activity tracked live under the strap AND imported from Health Connect /
+        // Apple Health into one richer entry — they sit under different sources so without this they show
+        // as two sessions. Dedup runs on the dismissed-filtered set, before the final newest-first sort.
+        let deduped = WorkoutSource.dedupCrossSource(
+            rows.filter { !WorkoutSource.isDismissed($0, spans: spans) })
+        let visible = deduped.sorted { $0.startTs > $1.startTs }
         return await reconcileWorkoutHrWithTrace(visible, store: store)
     }
 
@@ -1212,6 +1248,113 @@ final class Repository: ObservableObject {
                                             from: row.startTs, to: row.startTs)
     }
 
+    // MARK: - Auto-detect workouts (opt-in MVP) — the "Looks like a workout?" Today prompt
+    //
+    // Pure read + suggestion path for the opt-in `AutoWorkoutDetector`. This is SEPARATE from the
+    // gravity-gated detected-bouts pipeline above (which writes "detected" rows under the computed id):
+    // nothing here is ever persisted as a workout until the user taps Save, and a dismissed suggestion
+    // is remembered in its OWN durable span list (distinct key from `dismissedDetected`) so it never
+    // re-prompts. The detector + thresholds are byte-mirrored in the Android twin.
+
+    /// Dismissed AUTO-DETECT spans ("startSec:endSec"), kept apart from the gravity detector's
+    /// `dismissedDetected` list so the two features never cross-suppress each other.
+    private static let autoDetectDismissedKey = "workouts.autoDetectDismissed"
+    private var autoDetectDismissedSpans: [String] {
+        get { UserDefaults.standard.stringArray(forKey: Self.autoDetectDismissedKey) ?? [] }
+        set { UserDefaults.standard.set(newValue, forKey: Self.autoDetectDismissedKey) }
+    }
+
+    /// Token for one auto-detect span (matches the detector's integer seconds).
+    private func autoDetectToken(_ w: DetectedWorkout) -> String { "\(w.startSec):\(w.endSec)" }
+
+    /// Hard cap on the dismissed-span list — a backstop so the UserDefaults array can't grow without
+    /// bound even in pathological use. 200 most-recent (by span END) is far more than detection's ~2-day
+    /// window can ever re-surface; the age prune below normally keeps it much shorter. Mirrors Android.
+    private static let autoDetectDismissedMax = 200
+    /// Spans whose END is older than this many seconds can never be re-suggested (detection only scans
+    /// the last ~2 days), so we drop them. 30 days, matching the Android twin byte-for-byte.
+    private static let autoDetectDismissedMaxAgeSec = 30 * 86_400
+
+    /// Parse the END time (seconds) out of a "startSec:endSec" token; nil if malformed.
+    private func autoDetectTokenEnd(_ token: String) -> Int? {
+        guard let colon = token.lastIndex(of: ":") else { return nil }
+        return Int(token[token.index(after: colon)...])
+    }
+
+    /// Prune the dismissed-span list: drop spans whose END is older than ~30 days (they can never be
+    /// re-suggested anyway), then hard-cap to the `autoDetectDismissedMax` most-recent (by END) as a
+    /// backstop. Malformed tokens are kept (treated as newest) so we never silently lose data on a
+    /// parse miss. Byte-mirrored in the Android `AutoWorkoutPrefs.prune`.
+    private func prunedAutoDetectSpans(_ spans: [String], now: Int) -> [String] {
+        let cutoff = now - Self.autoDetectDismissedMaxAgeSec
+        // Drop anything that aged out; an unparseable token survives the age filter.
+        let fresh = spans.filter { token in
+            guard let end = autoDetectTokenEnd(token) else { return true }
+            return end >= cutoff
+        }
+        guard fresh.count > Self.autoDetectDismissedMax else { return fresh }
+        // Over the cap — keep the most-recent by END (unparseable sort as newest). Sort indices so we
+        // preserve the original list order among the kept entries and never collapse equal tokens.
+        let keepIdx = Set(fresh.indices
+            .sorted { (autoDetectTokenEnd(fresh[$0]) ?? .max) > (autoDetectTokenEnd(fresh[$1]) ?? .max) }
+            .prefix(Self.autoDetectDismissedMax))
+        return fresh.indices.filter { keepIdx.contains($0) }.map { fresh[$0] }
+    }
+
+    /// Run the opt-in detector over the last `daysBack` days of HR and return the single best
+    /// candidate to suggest — newest first — that is NOT already saved and NOT previously dismissed.
+    /// Returns nil when the toggle is off, there's nothing to suggest, or detection finds nothing.
+    /// PURE READ: never writes a workout. The window scans from `daysBack` days ago to now.
+    func autoDetectCandidate(daysBack: Int = 2) async -> DetectedWorkout? {
+        guard PuffinExperiment.autoDetectWorkoutsEnabled else { return nil }
+        let now = Int(Date().timeIntervalSince1970)
+        let from = now - daysBack * 86_400
+        let samples = await hrSamples(from: from, to: now, limit: 200_000)
+        guard samples.count >= 2 else { return nil }
+        let hr = samples.map { (ts: $0.ts, bpm: $0.bpm) }
+
+        // Resting HR: most recent nightly RHR in range, else the detector's own default (60).
+        let restingBpm = days.last(where: { $0.restingHr != nil })?.restingHr
+
+        // Exclude every already-saved workout window (any source — strap, manual, imported, detected).
+        let saved = await workoutRows()
+        let savedSpans = saved.map { SavedWorkoutSpan(startSec: $0.startTs, endSec: $0.endTs) }
+
+        let candidates = AutoWorkoutDetector.detect(hr: hr, restingBpm: restingBpm,
+                                                    motion: nil, savedSpans: savedSpans)
+        // Drop anything the user already dismissed, then take the most recent.
+        let dismissed = Set(autoDetectDismissedSpans)
+        return candidates
+            .filter { !dismissed.contains(autoDetectToken($0)) }
+            .max(by: { $0.startSec < $1.startSec })
+    }
+
+    /// SAVE a suggested window as a manual-style "Workout" (generic sport — we don't claim a sport we
+    /// didn't classify). Built through the same `WorkoutSource.buildManualRow` the manual sheet uses, so
+    /// it persists exactly like a hand-entered session under the strap source. After saving, the screen
+    /// re-queries (the new saved span now excludes this window from re-suggestion).
+    @discardableResult
+    func saveDetectedWorkout(_ w: DetectedWorkout) async -> Bool {
+        let durationMin = max(1, w.durationMin)
+        let start = Date(timeIntervalSince1970: TimeInterval(w.startSec))
+        guard let row = WorkoutSource.buildManualRow(start: start, durationMin: durationMin,
+                                                     sport: "Workout", avgHr: w.avgBpm,
+                                                     energyKcal: nil) else { return false }
+        await saveManualWorkout(row)
+        return true
+    }
+
+    /// DISMISS a suggested window: record its span durably so it never re-prompts. Idempotent.
+    /// Prunes the stored list on every add (drop spans older than ~30 days + hard-cap to 200 most-recent)
+    /// so it can never grow unbounded. Byte-mirrored in the Android `AutoWorkoutPrefs.dismiss`.
+    func dismissDetectedSuggestion(_ w: DetectedWorkout) {
+        let token = autoDetectToken(w)
+        var spans = autoDetectDismissedSpans
+        guard !spans.contains(token) else { return }
+        spans.append(token)
+        autoDetectDismissedSpans = prunedAutoDetectSpans(spans, now: Int(Date().timeIntervalSince1970))
+    }
+
     // MARK: - Workout detail (read-only helpers, additive) — #410
     //
     // The workout-detail screen needs two reads over a single session's [startTs, endTs] window:
@@ -1266,6 +1409,18 @@ final class Repository: ObservableObject {
     }()
 
     static func dayString(_ d: Date) -> String { dayFormatter.string(from: d) }
+
+    /// The "yyyy-MM-dd" day one calendar day AFTER `day`, or `day` verbatim when it isn't a parseable
+    /// ISO date (e.g. a wide-open sentinel already past every real day, so no buffer is needed). Backs the
+    /// +1-day daily read buffer in `resolvedRows` so a wake-day-keyed night that sorts just past the
+    /// requested upper bound still resolves the selected day (#614). Mirrors Android
+    /// WhoopRepository.bufferDayAfter.
+    static func dayAfter(_ day: String) -> String {
+        guard let d = dayFormatter.date(from: day),
+              let next = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: d)
+        else { return day }
+        return dayFormatter.string(from: next)
+    }
 }
 
 private extension DailyMetric {

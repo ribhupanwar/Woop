@@ -79,6 +79,33 @@ final class EditMergePrecedenceTests: XCTestCase {
         XCTAssertEqual(days, [expectedDay])
     }
 
+    // MARK: - sleep_performance daily-column derivation (#614)
+    //
+    // The resolver derives the Rest composite from a banked DailyMetric's sleep totals when no
+    // metricSeries point covers the day (a Bluetooth-only / just-synced selected day). Without it the
+    // selected day resolved to nothing and Today borrowed the latest historical Rest. Mirrors Android
+    // EditMergePrecedenceTest.
+
+    /// A banked night with sleep totals derives the SAME Rest the persisted sleep_performance series
+    /// carries (single source of truth: `AnalyticsEngine.Rest.composite(daily:)`).
+    func testSleepPerformanceDailyColumnDerivesRestFromTotals() {
+        let d = full(day: "2026-06-12", totalSleepMin: 480, deepMin: 90, remMin: 110,
+                     lightMin: 280, efficiency: 0.92, recovery: 80, strain: 9.0)
+        // Matches IntelligenceEngine's persisted sleep_performance projection (same composite).
+        let expected = AnalyticsEngine.Rest.composite(daily: d)
+        XCTAssertNotNil(expected)
+        XCTAssertEqual(Repository.dailyColumn(key: "sleep_performance", day: d), expected)
+    }
+
+    /// No banked night (totalSleepMin nil) → no Rest to derive; the resolver leaves the day empty
+    /// rather than fabricating a score.
+    func testSleepPerformanceDailyColumnNilWhenNoSleep() {
+        let d = DailyMetric(day: "2026-06-12", totalSleepMin: nil, efficiency: nil, deepMin: nil,
+                            remMin: nil, lightMin: nil, disturbances: nil, restingHr: nil, avgHrv: nil,
+                            recovery: 60, strain: nil, exerciseCount: nil)
+        XCTAssertNil(Repository.dailyColumn(key: "sleep_performance", day: d))
+    }
+
     private func full(day: String, totalSleepMin: Double, deepMin: Double, remMin: Double,
                       lightMin: Double, efficiency: Double, recovery: Double, strain: Double) -> DailyMetric {
         DailyMetric(day: day, totalSleepMin: totalSleepMin, efficiency: efficiency, deepMin: deepMin,

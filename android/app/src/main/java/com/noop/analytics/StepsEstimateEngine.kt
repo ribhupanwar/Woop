@@ -17,8 +17,10 @@ import kotlin.math.sqrt
  *
  * THE MODEL. `steps ≈ k · motionIntensity`, through-origin. `k` (steps per unit of motion) is the only free
  * parameter and is PERSONAL (wrist placement, gait, how the strap rides) — hence calibrated per user, not a
- * global constant. We fit `k` robustly (median of per-day steps/motion ratios) so one odd day can't drag it.
- * A user with no phone step history can set `k` by hand with the calibration slider.
+ * global constant. We fit `k` robustly (a MOTION-WEIGHTED median of per-day steps/motion ratios) so one odd
+ * day can't drag it AND high-activity days drive the fit (#682): a busy 15,000-step day pins the ratio far
+ * more reliably than a near-still 500-step day, so motion VOLUME votes, not every day equally. A user with no
+ * phone step history can set `k` by hand with the calibration slider.
  */
 object StepsEstimateEngine {
 
@@ -118,26 +120,33 @@ object StepsEstimateEngine {
 
     /**
      * Fit the personal coefficient from days that have BOTH a motion volume and a reference step count.
-     * Robust: median of each day's steps/motion ratio (days below MIN_MOTION_FOR_FIT skipped). Returns null
-     * below MIN_CALIBRATION_DAYS unless a positive [manualOverride] is supplied (which always wins, confidence 1).
+     * Robust: MOTION-WEIGHTED median of each day's steps/motion ratio (days below MIN_MOTION_FOR_FIT skipped),
+     * so outliers don't pull `k` AND high-activity days — which pin the ratio far more reliably — drive the fit
+     * instead of every day counting equally (#682). Each day's ratio carries weight = its motion volume. Returns
+     * null below MIN_CALIBRATION_DAYS unless a positive [manualOverride] is supplied (which always wins, conf 1).
      */
     fun calibrate(points: List<CalibrationPoint>, manualOverride: Double? = null): Calibration? {
         if (manualOverride != null && manualOverride > 0) {
             return Calibration(manualOverride, points.size, 1.0, manual = true)
         }
-        val ratios = points
+        // Usable days carry (ratio, weight) where weight = motion volume: a busier day votes harder.
+        val weighted = points
             .filter { it.motion >= MIN_MOTION_FOR_FIT && it.steps > 0 }
-            .map { it.steps / it.motion }
-            .sorted()
-        if (ratios.size < MIN_CALIBRATION_DAYS) return null
-        val k = median(ratios)
+            .map { Pair(it.steps / it.motion, it.motion) }
+        if (weighted.size < MIN_CALIBRATION_DAYS) return null
+        val ratios = weighted.map { it.first }
+        val weights = weighted.map { it.second }
+        val k = weightedMedian(ratios, weights)
         if (k <= 0) return null
-        val sizeTerm = min(1.0, ratios.size.toDouble() / GOOD_CALIBRATION_DAYS)
-        val mad = median(ratios.map { abs(it - k) })
+        // Confidence: grows with sample size toward GOOD_CALIBRATION_DAYS, discounted by relative spread
+        // (weighted MAD / weighted median) so a noisy fit is honestly less trusted than a tight one. The MAD is
+        // also motion-weighted so spread is measured against the same days that drove `k`.
+        val sizeTerm = min(1.0, weighted.size.toDouble() / GOOD_CALIBRATION_DAYS)
+        val mad = weightedMedian(ratios.map { abs(it - k) }, weights)
         val spread = if (k > 0) mad / k else 1.0
         val tightness = (1.0 - spread).coerceAtLeast(0.0)
         val confidence = (0.5 * sizeTerm + 0.5 * tightness).coerceIn(0.0, 1.0)
-        return Calibration(k, ratios.size, confidence, manual = false)
+        return Calibration(k, weighted.size, confidence, manual = false)
     }
 
     /**
@@ -153,5 +162,34 @@ object StepsEstimateEngine {
         if (xs.isEmpty()) return 0.0
         val s = xs.sorted(); val n = s.size
         return if (n % 2 == 1) s[n / 2] else (s[n / 2 - 1] + s[n / 2]) / 2.0
+    }
+
+    /**
+     * Weighted median of [xs] with per-element [weights] (#682). Sort by value, walk the cumulative weight,
+     * and return the value at which it first reaches half the total weight. When the cumulative weight lands
+     * EXACTLY on the half-mass boundary, average the two straddling values — so with equal weights this reduces
+     * to the plain even-count midpoint average and the unweighted fits stay byte-identical with Swift. Falls
+     * back to the plain median if weights are absent/degenerate (empty, mismatched, or non-positive total).
+     */
+    internal fun weightedMedian(xs: List<Double>, weights: List<Double>): Double {
+        if (xs.isEmpty()) return 0.0
+        if (weights.size != xs.size) return median(xs)
+        val order = xs.indices.sortedBy { xs[it] }
+        val total = weights.sum()
+        if (total <= 0) return median(xs)
+        val half = total / 2.0
+        var cum = 0.0
+        for (pos in order.indices) {
+            val idx = order[pos]
+            val w = weights[idx].coerceAtLeast(0.0)
+            cum += w
+            if (cum > half) return xs[idx]
+            if (cum == half) {
+                // Half-mass falls on a boundary: average this value with the next distinct one (if any).
+                val next = if (pos + 1 < order.size) order[pos + 1] else idx
+                return (xs[idx] + xs[next]) / 2.0
+            }
+        }
+        return xs[order[order.size - 1]]
     }
 }

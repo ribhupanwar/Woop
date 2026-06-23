@@ -45,6 +45,28 @@ class StepsEstimateEngineTest {
         assertEquals(3, cal.sampleDays)
     }
 
+    @Test fun calibrateMotionWeightedHighActivityDayDrivesFit() {
+        // #682: three near-still days read ratio 50 (motion 1, steps 50); one busy day reads ratio 100
+        // (motion 100, steps 10000). PLAIN median of [50,50,50,100] = 50 (low days win by count); the
+        // motion-weighted median lets the busy day's 100 units of motion outvote the still days → k = 100.
+        val pts = listOf(p(1.0, 50.0), p(1.0, 50.0), p(1.0, 50.0), p(100.0, 10000.0))
+        val cal = StepsEstimateEngine.calibrate(pts)
+        assertTrue(cal != null)
+        assertEquals(100.0, cal!!.coefficient, 1e-9) // weighted → busy day wins (plain median = 50)
+        assertEquals(4, cal.sampleDays)
+    }
+
+    @Test fun weightedMedianReducesToPlainMedianAtEqualWeights() {
+        assertEquals(105.0, StepsEstimateEngine.weightedMedian(listOf(90.0, 100.0, 110.0, 130.0), listOf(5.0, 5.0, 5.0, 5.0)), 1e-9)
+        assertEquals(2.0, StepsEstimateEngine.weightedMedian(listOf(3.0, 1.0, 2.0), listOf(7.0, 7.0, 7.0)), 1e-9)
+    }
+
+    @Test fun weightedMedianFallsBackOnDegenerateWeights() {
+        assertEquals(2.0, StepsEstimateEngine.weightedMedian(listOf(1.0, 2.0, 3.0), emptyList()), 1e-9)
+        assertEquals(2.0, StepsEstimateEngine.weightedMedian(listOf(1.0, 2.0, 3.0), listOf(0.0, 0.0, 0.0)), 1e-9)
+        assertEquals(0.0, StepsEstimateEngine.weightedMedian(emptyList(), emptyList()), 1e-9)
+    }
+
     @Test fun manualOverrideWinsFullConfidence() {
         val cal = StepsEstimateEngine.calibrate(emptyList(), manualOverride = 123.0)
         assertTrue(cal != null)

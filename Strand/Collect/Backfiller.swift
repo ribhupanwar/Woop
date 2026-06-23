@@ -319,7 +319,13 @@ final class Backfiller {
             // rare insert failure — which returns and re-sends the whole chunk next session — can't
             // leave duplicate lines in the append-only reject archive.
             let counts: (hr: Int, rr: Int, events: Int, battery: Int, spo2: Int, skinTemp: Int, resp: Int, gravity: Int)
-            do { counts = try await store.insert(decoded, deviceId: deviceId) } catch { return }
+            do { counts = try await store.insert(decoded, deviceId: deviceId) } catch {
+                // Diag (#601): the decoded rows couldn't be written — this is the "history stalls but live HR
+                // works" class. We return WITHOUT acking so the strap keeps this chunk and re-sends it next
+                // session (no data loss), but a silent return left a strap log with no trace of the stall.
+                log?("Backfill: failed to persist decoded rows (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; history won't advance until the write succeeds.")
+                return
+            }
             // Success-side observability (#150): tally what actually persisted so the session can emit
             // "persisted N rows (M with motion) across K night(s)" — the win-rate signal a log never had.
             let tally = Backfiller.chunkTally(counts: counts, timestamps: decoded.gravity.map(\.ts) + decoded.hr.map(\.ts))
@@ -351,10 +357,24 @@ final class Backfiller {
                     endTs: ref.wall,
                     frameCount: frames.count,
                     byteSize: frames.reduce(0) { $0 + $1.count })
-                do { try await store.enqueueRawBatch(meta, frames: frames) } catch { return }
+                do { try await store.enqueueRawBatch(meta, frames: frames) } catch {
+                    // Diag (#601): raw-capture is ON and the raw batch couldn't be enqueued. Hold the ack
+                    // (return) so the strap re-sends — the research toggle's contract is that raw is durable
+                    // before the trim advances. Surface it so a stalled offload with raw-capture on is visible.
+                    log?("Backfill: failed to enqueue raw batch (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; raw capture must be durable before the trim advances.")
+                    return
+                }
             }
         }
-        do { try await store.setCursor("strap_trim", Int(trim)) } catch { return }
+        do { try await store.setCursor("strap_trim", Int(trim)) } catch {
+            // Diag (#601): decoded (and raw, if on) are durable but the strap_trim cursor write failed. We
+            // return WITHOUT acking — acking now would let the strap trim past records the cursor hasn't
+            // recorded, so on reconnect the offload could replay or skip. Holding the ack keeps it safe; the
+            // strap re-offers this chunk next session. A silent return here was a prime "history won't advance"
+            // suspect with nothing in the log to confirm it.
+            log?("Backfill: failed to write strap_trim cursor (trim=\(trim)): \(error) — holding ack so the strap re-sends this chunk; history won't advance until the cursor write succeeds.")
+            return
+        }
 
         ackTrim(trim, endData)
         lastAckedTrim = trim   // #364: record the advanced cursor for the auto-continue spin-detector

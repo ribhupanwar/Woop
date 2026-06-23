@@ -211,14 +211,29 @@ struct TrendsView: View {
                 let hrv = resolve { $0.avgHrv }
                 let rhr = resolve { $0.restingHr.map(Double.init) }
                 let strain = resolve { $0.strain }
-                VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                    // Week-in-review digest (#208) — self-hides when this week has no data.
-                    WeeklyDigestCard()
-                    rangeBar(recovery: recovery)
-                    heroRecovery(recovery: recovery)
-                    smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
-                    yearStrip
-                    exportReportRow
+                // Rest = sleep efficiency over the window, on the same 0–100 score scale as Charge,
+                // so the trio reads as one pip language (efficiency is a 0–1 fraction → ×100).
+                let rest = resolve { $0.efficiency.map { $0 * 100 } }
+                VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                    // The main card list ripples in once on appear (Reduce-Motion safe).
+                    Group {
+                        // Week-in-review digest (#208) — self-hides when this week has no data.
+                        WeeklyDigestCard()
+                            .staggeredAppear(index: 0)
+                        // The Charge / Effort / Rest trio, presented in NOOP's pip language.
+                        weekInReview(charge: recovery, effort: strain, rest: rest)
+                            .staggeredAppear(index: 1)
+                        rangeBar(recovery: recovery)
+                            .staggeredAppear(index: 2)
+                        heroRecovery(recovery: recovery)
+                            .staggeredAppear(index: 3)
+                        smallMultiples(hrv: hrv, rhr: rhr, strain: strain)
+                            .staggeredAppear(index: 4)
+                        yearStrip
+                            .staggeredAppear(index: 5)
+                        exportReportRow
+                            .staggeredAppear(index: 6)
+                    }
                 }
             }
         }
@@ -228,39 +243,95 @@ struct TrendsView: View {
         }
     }
 
+    // MARK: Week in Review — the Charge / Effort / Rest trio in pip language
+
+    /// The three daily scores as NOOP pip rows over the resolved window: Charge (recovery, 0–100),
+    /// Effort (strain, shown on the WHOOP 0–21 scale per the unit toggle) and Rest (sleep efficiency,
+    /// 0–100). Each value ticks up via `CountUpText`; the segmented `PipBar` cascades on appear. Self-
+    /// hides when none of the three carry a window mean, so an empty history shows nothing here.
+    @ViewBuilder
+    private func weekInReview(charge: ResolvedMetric, effort: ResolvedMetric, rest: ResolvedMetric) -> some View {
+        let chargeAvg = mean(charge.points)
+        let effortAvg = mean(effort.points)   // stored 0–100 internal Effort scale
+        let restAvg = mean(rest.points)
+        if chargeAvg != nil || effortAvg != nil || restAvg != nil {
+            NoopCard(tint: StrandPalette.chargeColor) {
+                VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
+                    SectionHeader("Week in review", overline: "Charge · Effort · Rest")
+                    if let v = chargeAvg {
+                        pipScoreRow(label: "Charge", value: v, range: 0...100,
+                                    tint: StrandPalette.chargeColor,
+                                    format: { "\(Int($0.rounded()))" })
+                    }
+                    if let v = effortAvg {
+                        // Effort is stored 0–100 but reads on the WHOOP 0–21 scale per the unit toggle:
+                        // convert the displayed number + bar position to the user's chosen Effort scale so
+                        // the pip fill and the count-up value agree (both on the same scale).
+                        let display = UnitFormatter.effortValue(v, scale: effortScale)
+                        let maxV = UnitFormatter.effortValue(100, scale: effortScale)
+                        // On the 0–21 WHOOP scale Effort reads to one decimal (e.g. "9.0"); on the 0–100
+                        // scale it's a whole number — match `effortScaleMax` so the count-up format agrees.
+                        let oneDecimal = effortScale == .whoop
+                        pipScoreRow(label: "Effort", value: display, range: 0...maxV,
+                                    tint: StrandPalette.effortColor,
+                                    format: { oneDecimal ? String(format: "%.1f", $0) : "\(Int($0.rounded()))" })
+                    }
+                    if let v = restAvg {
+                        pipScoreRow(label: "Rest", value: v, range: 0...100,
+                                    tint: StrandPalette.restColor,
+                                    format: { "\(Int($0.rounded()))" })
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+        }
+    }
+
+    /// One pip row matching `PipBarRow`'s layout, but with the value driven by `CountUpText` so the big
+    /// number ticks up. UPPERCASE label + big white count-up value over the segmented count-up bar.
+    private func pipScoreRow(label: LocalizedStringKey, value: Double, range: ClosedRange<Double>,
+                             tint: Color, format: @escaping (Double) -> String) -> some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+            Text(label)
+                .font(StrandFont.overline)
+                .tracking(StrandFont.overlineTracking)
+                .textCase(.uppercase)
+                .foregroundStyle(StrandPalette.textSecondary)
+            CountUpText(value: value, format: format,
+                        font: StrandFont.number(30, weight: .bold),
+                        color: StrandPalette.textPrimary)
+            PipBar(value: value, range: range, tint: tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(label))
+        .accessibilityValue(Text(format(value)))
+    }
+
     // MARK: Export trends report (#436)
 
     /// A footer entry that opens the shareable-report sheet. Flat WHOOP card with a blue accent
     /// action — the icon, label and "Export" CTA all read in the accent (blue) world, no gold.
     private var exportReportRow: some View {
         NoopCard(tint: StrandPalette.accent) {
-            HStack(spacing: 14) {
+            HStack(spacing: NoopMetrics.space3) {
                 Image(systemName: "doc.richtext")
                     .font(StrandFont.title2)
                     .foregroundStyle(StrandPalette.accent)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space1) {
                     Text("Export trends report").strandOverline()
                     Text("A shareable one-page PDF of recovery, sleep, HRV, resting HR and strain over a range — saved on your \(Platform.deviceNoun).")
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 8)
-                Button {
+                Spacer(minLength: NoopMetrics.space2)
+                // The card's call-to-action — routed through the unified button system (secondary kind:
+                // a quiet raised capsule that reads as the card action, not the one primary on the page).
+                NoopButton("Export", systemImage: "square.and.arrow.up", kind: .secondary) {
                     showingReport = true
-                } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                        .labelStyle(.titleAndIcon)
-                        // WHOOP action link/button — blue accent, no gold. Quiet capsule that reads
-                        // as the card's call-to-action.
-                        .font(StrandFont.body.weight(.semibold))
-                        .foregroundStyle(StrandPalette.accent)
-                        .padding(.vertical, 8).padding(.horizontal, 14)
-                        .background(StrandPalette.accent.opacity(0.14), in: Capsule(style: .continuous))
-                        .overlay(Capsule(style: .continuous).strokeBorder(StrandPalette.accent.opacity(0.32), lineWidth: 1))
                 }
-                .buttonStyle(.plain)
                 .fixedSize()
             }
         }
@@ -272,7 +343,7 @@ struct TrendsView: View {
     private func rangeBar(recovery: ResolvedMetric) -> some View {
         let cap = recovery.caption
         let isWide = recovery.widened
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             HStack {
                 SegmentedPillControl(Range.allCases, selection: $range) { $0.label }
                 Spacer()
@@ -315,7 +386,7 @@ struct TrendsView: View {
                 }
             },
             footer: {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     HStack {
                         ChartFooter([
                             ("Avg", avg.map { "\(Int($0.rounded()))" } ?? "—"),
@@ -442,13 +513,13 @@ struct TrendsView: View {
         }
         let title = (range == .all && repo.days.count > 365) ? "Charge — all history" : "Charge — past year"
         return NoopCard(tint: StrandPalette.chargeColor) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 SectionHeader("\(title)", overline: "Calendar", trailing: "\(recoveryDays.filter { $0.score != nil }.count) days")
                 if recoveryDays.isEmpty {
                     sparsePlaceholder.frame(height: 120)
                 } else {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        YearHeatStrip(days: recoveryDays).padding(.vertical, 2)
+                        YearHeatStrip(days: recoveryDays).padding(.vertical, NoopMetrics.space1 / 2)
                     }
                     Divider().overlay(StrandPalette.hairline)
                     legend
@@ -458,7 +529,7 @@ struct TrendsView: View {
     }
 
     private var legend: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: NoopMetrics.space2) {
             Text("Depleted").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
             LinearGradient(gradient: StrandPalette.recoveryGradient, startPoint: .leading, endPoint: .trailing)
                 .frame(width: 120, height: 8)

@@ -49,7 +49,19 @@ struct TodayView: View {
     // Persistence is display-only — these cards read the SAME values the rest of Today already loads.
     @AppStorage(DashboardCardPrefs.selectionKey) private var dashboardCardsRaw = ""
     @State private var showingDashboardEditor = false
-    private var enabledDashboardCards: [DashboardCard] { DashboardCardPrefs.decodeEnabled(dashboardCardsRaw) }
+    // Hydration tracker (opt-in, default OFF). When off the hydration dashboard card is hidden even if a
+    // user had it in their saved selection — the feature owns its own gate.
+    @AppStorage(HydrationStore.enabledKey) private var hydrationEnabled = false
+    /// Today's hydration total + goal (ml), loaded in loadAll when the feature is on. nil hides the value.
+    @State private var hydrationTotalML: Double?
+    @State private var hydrationGoalML: Int?
+    private var enabledDashboardCards: [DashboardCard] {
+        // Opt-in gate (mirrors the Android TodayScreen filter `it != HYDRATION || hydrationEnabled`):
+        // the hydration card only renders when the feature is on AND the user has added it via CUSTOMISE.
+        // It's not in the default selection, so a fresh install never shows it until both are true.
+        DashboardCardPrefs.decodeEnabled(dashboardCardsRaw)
+            .filter { hydrationEnabled || $0 != .hydration }
+    }
 
     // 14-day sparkline series, keyed by metric key. Loaded once in .task.
     @State private var sparks: [String: [Double]] = [:]
@@ -602,17 +614,19 @@ struct TodayView: View {
                 .font(.system(size: 18))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(StrandPalette.textSecondary)
-                .frame(width: 30, height: 30)
+                .frame(width: 34, height: 34)
                 .overlay(alignment: .topTrailing) {
                     if updateStore.unreadCount > 0 {
                         Text("\(min(updateStore.unreadCount, 99))")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(StrandPalette.goldDeepText)
-                            .padding(.horizontal, 4).padding(.vertical, 1)
-                            .frame(minWidth: 15)
-                            .background(Capsule().fill(StrandPalette.statusCritical))
-                            .offset(x: 6, y: -4)
+                            // Fixed 14pt square + Circle() = a true CIRCLE on both platforms, kept INSIDE
+                            // the 34pt bell frame (offset -1,1) so the macOS toolbar (at the window's top
+                            // edge) no longer clips the badge's top (Aaron 2026-06-23).
+                            .frame(width: 14, height: 14)
+                            .background(Circle().fill(StrandPalette.statusCritical))
+                            .offset(x: -1, y: 1)
                             .accessibilityHidden(true)
                     }
                 }
@@ -625,7 +639,8 @@ struct TodayView: View {
     }
 
     var body: some View {
-        ScreenScaffold(title: scaffoldTitle, onRefresh: { await repo.refresh() }) {
+        ScreenScaffold(title: scaffoldTitle, onRefresh: { await repo.refresh() },
+                       topBackground: AnyView(SceneScreenBackground())) {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
                 #if os(iOS)
                 // Compact top bar: profile/settings (left) · ‹ Today › day-nav (centre, bold) · strap
@@ -662,21 +677,48 @@ struct TodayView: View {
                 }
                 // Design Reset: the "New here?" first-run card is off the dashboard for the clean WHOOP
                 // look. The scoring guide stays reachable from the i on each score and in Settings.
+                // The hero rings sit over a WHISPER of time-of-day atmosphere (dawn/day/dusk/night) — the
+                // backdrop is confined to the ring region via `.background`, so it lifts the identity rings
+                // without tinting the rest of the dashboard. The day-cycle scene wash caps at ~0.42 opacity
+                // and fades top-down with a bottom dark scrim, no glow, so the white ring numbers + labels
+                // stay crisp and high-contrast.
                 #if os(iOS)
                 // Pull the rings up under the compact top bar — the full section gap left too much air
-                // above them now the big "Today's Synthesis" header is gone.
-                heroSection.padding(.top, 8)
+                // above them now the big "Today's Synthesis" header is gone. The hero now sits over the
+                // day-cycle SCENE wash (picked by the local hour), which fades top-down behind the rings;
+                // the scene IS the atmosphere here, replacing the procedural time-of-day backdrop. It caps
+                // at ~0.42 opacity with a bottom dark scrim so the white ring numbers + labels stay crisp.
+                heroSection
+                    .padding(.vertical, NoopMetrics.space4)
+                    .frame(maxWidth: .infinity)
+                    // The dark hero CARD floats over the vivid day-scene so the rings + white numbers stay
+                    // crisp — the card does the contrast work, not a muted scene (Aaron 2026-06-23).
+                    .background(
+                        RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
+                            .fill(StrandPalette.surfaceBase.opacity(0.72))
+                    )
+                    .staggeredAppear(index: 0)
                 #else
                 heroSection
+                    .padding(.vertical, NoopMetrics.space4)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
+                            .fill(StrandPalette.surfaceBase.opacity(0.72))
+                    )
+                    .staggeredAppear(index: 0)
                 #endif
-                heartRateTrendSection
+                heartRateTrendSection.staggeredAppear(index: 1)
                 // Design Reset: rings -> Heart rate -> Your cards (the flat mockup order); the greeting +
                 // Synthesis read-out + vitals now sit below the pinned cards instead of crowding the hero.
-                yourCardsSection
-                synthesisSection
-                readinessSection
-                metricsSection
-                workoutsSection
+                yourCardsSection.staggeredAppear(index: 2)
+                synthesisSection.staggeredAppear(index: 3)
+                readinessSection.staggeredAppear(index: 4)
+                metricsSection.staggeredAppear(index: 5)
+                workoutsSection.staggeredAppear(index: 6)
+                // Opt-in "looks like a workout?" suggestion (default OFF). Renders only when the
+                // Settings toggle is on AND the detector finds a recent unsaved, un-dismissed window.
+                AutoWorkoutCard()
                 // Honest, dismissible 12-hourly donation ask — a card in the flow, never a modal.
                 DonationNudgeCard()
                 #if os(iOS)
@@ -1174,6 +1216,9 @@ struct TodayView: View {
         case .calories:
             pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
                           value: dashboardValue(card)) { HealthView() }
+        case .hydration:
+            pinnedCardRow(icon: card.icon, tint: tint, title: card.title, subtitle: card.subtitle,
+                          value: dashboardValue(card)) { HydrationView() }
         }
     }
 
@@ -1192,6 +1237,7 @@ struct TodayView: View {
         case .sleep:       return StrandPalette.restColor
         case .steps:       return StrandPalette.metricCyan
         case .calories:    return StrandPalette.metricAmber
+        case .hydration:   return StrandPalette.metricCyan
         }
     }
 
@@ -1236,6 +1282,11 @@ struct TodayView: View {
             return withUnit(fitnessAgeToday.map { "\(Int($0.rounded()))" } ?? "—")
         case .vitality:
             return vitalityToday.map { "\(Int($0.rounded()))" } ?? "—"
+        case .hydration:
+            // "<total> / <goal> L" in litres to 1 dp (the string bakes in the " L" itself). Always shows a
+            // value (a fresh day reads "0.0 / 3.2 L"); the goal is always derivable from the profile.
+            guard let goal = hydrationGoalML else { return "—" }
+            return HydrationGoal.cardValueString(totalML: hydrationTotalML ?? 0, goalML: goal)
         }
     }
 
@@ -1379,7 +1430,10 @@ struct TodayView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 2)
+            // Inset to the card's content margin so the "Last night · <date>" clock-icon footnote sits a
+            // proper distance from the hero's left edge rather than hugging it (it previously used a bare
+            // 2pt). Matches NoopMetrics.cardPadding, the standard card content inset.
+            .padding(.horizontal, NoopMetrics.cardPadding)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(state.accessibilityText ?? "")
         }
@@ -1633,7 +1687,7 @@ struct TodayView: View {
             GlowRing(fraction: s / 100, value: s, format: { "\(Int($0.rounded()))" },
                      color: StrandPalette.chargeColor, diameter: diameter, lineWidth: diameter * 0.10)
         } else {
-            emptyHeroRing(diameter: diameter) { ringEmptyOverlay(d: d) }
+            emptyHeroRing(diameter: diameter) { ringEmptyOverlay(d: d, diameter: diameter) }
         }
     }
 
@@ -1646,7 +1700,7 @@ struct TodayView: View {
                      format: { effortScale == .whoop ? String(format: "%.1f", $0) : "\(Int($0.rounded()))" },
                      color: StrandPalette.effortColor, diameter: diameter, lineWidth: diameter * 0.10)
         } else {
-            emptyHeroRing(diameter: diameter) { ringNoData() }
+            emptyHeroRing(diameter: diameter) { ringNoData(diameter: diameter) }
         }
     }
 
@@ -1657,7 +1711,7 @@ struct TodayView: View {
             GlowRing(fraction: s / 100, value: s, format: { "\(Int($0.rounded()))" },
                      color: StrandPalette.restColor, diameter: diameter, lineWidth: diameter * 0.10)
         } else {
-            emptyHeroRing(diameter: diameter) { ringNoData() }
+            emptyHeroRing(diameter: diameter) { ringNoData(diameter: diameter) }
         }
     }
 
@@ -1723,32 +1777,42 @@ struct TodayView: View {
     /// so we never fill the GlowRing as if it were today's number) — the carried value sits inside it as
     /// a labelled prior reading, the way WHOOP keeps last recovery visible until the new one lands.
     @ViewBuilder
-    private func ringEmptyOverlay(d: DailyMetric?) -> some View {
+    private func ringEmptyOverlay(d: DailyMetric?, diameter: CGFloat) -> some View {
         VStack(spacing: 3) {
             if let n = recoveryCalibration {
+                // "Calibrating" is a long word for the ring's interior — it reads as the centre label, with
+                // the same lineLimit/scaleFactor guard so it never wraps, then its "N of 4" subtitle below.
                 Text("Calibrating").font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.7).fixedSize()
                 Text("\(n) of \(Baselines.minNightsSeed)").font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                     .lineLimit(1)
             } else if let carried = lastScoredCharge {
+                // Ring text consistency (#hero): the carried "49%" centre number renders in the SAME size +
+                // weight as a filled ring's number (GlowRing.centerFont), so a carried Charge, a clean "93"
+                // and a "No data" ring all share one centre-number style. Its "Last night" subtitle stays a
+                // footnote, matching the calibrating subtitle.
                 Text("\(Int(carried.value.rounded()))%")
-                    .font(StrandFont.headline)
+                    .font(GlowRing.centerFont(diameter: diameter))
+                    .monospacedDigit()
                     .foregroundStyle(StrandPalette.recoveryColor(carried.value))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                 Text(carried.caption)
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             } else {
-                ringNoData()
+                ringNoData(diameter: diameter)
             }
         }
     }
 
     @ViewBuilder
-    private func ringNoData() -> some View {
-        // lineLimit + fixedSize so a small flanking ring (Rest/Effort) never wraps "No data" mid-word
-        // inside the ring's narrow interior (#495/#549).
+    private func ringNoData(diameter: CGFloat) -> some View {
+        // "No data" reads as the centre label at the same weight family as the ring numbers. lineLimit +
+        // fixedSize so a small flanking ring (Rest/Effort) never wraps it mid-word inside the ring's narrow
+        // interior (#495/#549).
         Text("No data").font(StrandFont.headline).foregroundStyle(StrandPalette.textSecondary)
             .lineLimit(1).minimumScaleFactor(0.7).fixedSize()
     }
@@ -2368,6 +2432,15 @@ struct TodayView: View {
         stressToday = (await repo.exploreSeries(key: "stress", source: "my-whoop")).last?.value
         fitnessAgeToday = (await repo.exploreSeries(key: "fitness_age", source: "my-whoop")).last?.value
         vitalityToday = (await repo.exploreSeries(key: "vitality", source: "my-whoop")).last?.value
+        // Hydration card (opt-in): today's stored total + the sex/Effort goal. Only loaded when the
+        // feature is on, so a disabled feature does zero work and the card stays hidden.
+        if hydrationEnabled {
+            hydrationTotalML = await repo.hydrationTotal(day: Repository.localDayKey(Date()))
+            hydrationGoalML = repo.hydrationGoalML(profileSex: profile.sex)
+        } else {
+            hydrationTotalML = nil
+            hydrationGoalML = nil
+        }
         if let store = await repo.storeHandle() {
             let farFuture = Int(Date.distantFuture.timeIntervalSince1970)
             xiaomiSleeps = ((try? await store.sleepSessions(deviceId: "xiaomi-band", from: 0, to: farFuture, limit: 4000))?.count) ?? 0

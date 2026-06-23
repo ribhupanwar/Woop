@@ -409,6 +409,19 @@ object NoopPrefs {
         of(context).edit().putBoolean(KEY_CYCLE_TRACKING, enabled).apply()
     }
 
+    /** Hydration tracking (MVP): an opt-in, on-device-only fluid log with a daily goal + quick-add
+     *  buttons. OPT-IN, default OFF (manual-first ethos) — the Today "Hydration" card and the detail
+     *  feature only appear once this is on. Nothing is synced; the day total lives in the local
+     *  metric-series store. */
+    const val KEY_HYDRATION_TRACKING = "noop.hydrationTracking"
+
+    fun hydrationTracking(context: Context): Boolean =
+        of(context).getBoolean(KEY_HYDRATION_TRACKING, false)
+
+    fun setHydrationTracking(context: Context, enabled: Boolean) {
+        of(context).edit().putBoolean(KEY_HYDRATION_TRACKING, enabled).apply()
+    }
+
     /** Coach on-device signals (v5): when ON, the opt-in BYO-key Coach's grounding context may include a
      *  SUMMARY-ONLY line of on-device correlations + Lab Book markers (no raw egress). A SECOND opt-in on
      *  top of the existing "let the coach use my data" consent. Default OFF — keeps the anonymity posture. */
@@ -419,6 +432,19 @@ object NoopPrefs {
 
     fun setCoachSignals(context: Context, enabled: Boolean) {
         of(context).edit().putBoolean(KEY_COACH_SIGNALS, enabled).apply()
+    }
+
+    /** "Auto-detect workouts" (MVP, opt-in, on-device, NON-DESTRUCTIVE). When ON, NOOP scans the last
+     *  day or two of strap HR for a sustained-elevated bout and surfaces ONE dismissible Today card
+     *  suggesting you save it — it NEVER creates a workout on its own (the user taps Save). Default OFF;
+     *  when off no detection runs and no card shows. Mirrors macOS/iOS @AppStorage("autoDetectWorkouts"). */
+    const val KEY_AUTO_DETECT_WORKOUTS = "noop.autoDetectWorkouts"
+
+    fun autoDetectWorkouts(context: Context): Boolean =
+        of(context).getBoolean(KEY_AUTO_DETECT_WORKOUTS, false)
+
+    fun setAutoDetectWorkouts(context: Context, enabled: Boolean) {
+        of(context).edit().putBoolean(KEY_AUTO_DETECT_WORKOUTS, enabled).apply()
     }
 
     /** Last local day (ISO yyyy-MM-dd) an illness notification was posted — the once-a-day gate,

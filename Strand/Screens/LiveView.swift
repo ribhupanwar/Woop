@@ -255,9 +255,9 @@ struct LiveView: View {
     /// (iPhone) via ViewThatFits. The whole console floats over an Effort-tinted scenic hero so the live
     /// readout reads like a Bevel hero, and the card carries the Effort wash.
     private var bodyConsole: some View {
-        NoopCard(padding: 20, tint: StrandPalette.effortColor) {
+        NoopCard(padding: NoopMetrics.space5, tint: StrandPalette.effortColor) {
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 24) {
+                HStack(alignment: .center, spacing: NoopMetrics.space6) {
                     heartReadout
                         .frame(minWidth: 260, maxWidth: 340)
                     Divider().overlay(StrandPalette.hairline)
@@ -279,30 +279,35 @@ struct LiveView: View {
 
     private var heartReadout: some View {
         let tint = hrTint
-        return VStack(alignment: .center, spacing: 8) {
+        return VStack(alignment: .center, spacing: NoopMetrics.space2) {
             Text("HEART RATE")
                 .font(StrandFont.overline)
                 .tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.textSecondary)
             ZStack {
-                // Soft zone-tinted bloom behind the ring — the Bevel "glow" that breathes with each beat.
-                Circle()
-                    .fill(tint.opacity(displayHR == nil ? 0 : (heartPulse ? 0.22 : 0.10)))
-                    .blur(radius: 26)
-                    .scaleEffect(heartPulse ? 1.0 : 0.9)
+                // Crisp, flat zone ring that "beats" by a subtle scale + opacity step — NO glow/bloom
+                // (the prior blurred halo is removed per the design reset). The outer ring is the live
+                // pulse, the inner hairline is a static frame; both stay sharp and high-contrast.
                 Circle()
                     .stroke((displayHR == nil ? StrandPalette.hairline : tint)
-                        .opacity(heartPulse ? 0.42 : 0.16), lineWidth: 2)
-                    .scaleEffect(heartPulse ? 1.07 : 0.96)
+                        .opacity(heartPulse ? 0.55 : 0.28), lineWidth: 2.5)
+                    .scaleEffect(heartPulse ? 1.05 : 0.97)
                 Circle()
                     .stroke(StrandPalette.hairline, lineWidth: 1)
                     .padding(10)
                 VStack(spacing: 0) {
-                    Text(displayHR.map(String.init) ?? "—")
-                        .font(StrandFont.rounded(96, weight: .semibold))
-                        .foregroundStyle(displayHR == nil ? StrandPalette.textTertiary : tint)
-                        .contentTransition(.numericText())
-                        .animation(.snappy, value: displayHR)
+                    // The big focal HR numeral ticks up to the live value (the hero number); a crisp
+                    // em-dash while there's no HR yet. Reduce Motion snaps it (CountUpText handles that).
+                    if let bpm = displayHR {
+                        CountUpText(value: Double(bpm),
+                                    format: { "\(Int($0.rounded()))" },
+                                    font: StrandFont.rounded(96, weight: .semibold),
+                                    color: tint)
+                    } else {
+                        Text("—")
+                            .font(StrandFont.rounded(96, weight: .semibold))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                    }
                     Text("bpm")
                         .font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textSecondary)
@@ -311,7 +316,7 @@ struct LiveView: View {
                             .font(StrandFont.overline)
                             .tracking(StrandFont.overlineTracking)
                             .foregroundStyle(tint)
-                            .padding(.top, 4)
+                            .padding(.top, NoopMetrics.space1)
                     }
                 }
             }
@@ -328,7 +333,7 @@ struct LiveView: View {
     }
 
     private var physiologyStack: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: NoopMetrics.space4) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("LIVE PHYSIOLOGY")
@@ -414,7 +419,7 @@ struct LiveView: View {
                 .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
+        .padding(NoopMetrics.rowSpacing)
         .background(StrandPalette.surfaceInset, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
             .strokeBorder(StrandPalette.hairline, lineWidth: 1))
@@ -468,8 +473,9 @@ struct LiveView: View {
             SectionHeader("Signal Trust", overline: "Proof that the console is current")
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
                       spacing: NoopMetrics.gap) {
-                ForEach(signalTiles) { tile in
+                ForEach(Array(signalTiles.enumerated()), id: \.element.id) { idx, tile in
                     SignalTrustTile(tile: tile)
+                        .staggeredAppear(index: idx)
                 }
             }
         }
@@ -577,33 +583,26 @@ struct LiveView: View {
     }
 
     private var sessionActions: some View {
-        HStack(spacing: 10) {
-            Button { showStartSport = true } label: {
-                Label("Start workout", systemImage: "figure.run")
-                    .lineLimit(1).minimumScaleFactor(0.7)
+        HStack(spacing: NoopMetrics.rowSpacing) {
+            // All three routed through the unified button system: a filled primary for the lead
+            // action, secondary surfaces for the supporting two — sentence-case, single line, 48pt.
+            NoopButton("Start workout", systemImage: "figure.run", kind: .primary) {
+                showStartSport = true
             }
-            .buttonStyle(.borderedProminent)
-            .tint(StrandPalette.accent)
             .disabled(!activeConnection)
             .help("Track a workout manually — records heart rate and effort until you end it.")
 
-            Button { model.getBattery() } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-                    .lineLimit(1).minimumScaleFactor(0.7)
+            NoopButton("Refresh", systemImage: "arrow.clockwise", kind: .secondary) {
+                model.getBattery()
             }
-            .buttonStyle(.bordered)
-            .tint(StrandPalette.accent)
             .disabled(!activeConnection)
             .help("Refresh strap battery and connection state.")
 
             // Manual HRV snapshot (#127) — a still, seated 60s R-R reading. Needs the live R-R
             // stream, so it's gated on a bonded connection just like the workout/refresh actions.
-            Button { showHRVSnapshot = true } label: {
-                Label("HRV reading", systemImage: "waveform.path.ecg")
-                    .lineLimit(1).minimumScaleFactor(0.7)
+            NoopButton("HRV reading", systemImage: "waveform.path.ecg", kind: .secondary) {
+                showHRVSnapshot = true
             }
-            .buttonStyle(.bordered)
-            .tint(StrandPalette.restBright)
             .disabled(!activeConnection)
             .help(activeConnection
                   ? "Take a 60-second seated HRV reading from the live R-R stream."
@@ -633,18 +632,16 @@ struct LiveView: View {
                     workoutStat("Effort", UnitFormatter.effortDisplay(w.liveStrain, scale: effortScale),
                                 tint: StrandPalette.strainColor(w.liveStrain))
                 }
-                HStack(spacing: 10) {
+                HStack(spacing: NoopMetrics.rowSpacing) {
                     // Re-open the full live workout screen (#238) after it's been dismissed.
-                    Button { showLiveWorkout = true } label: {
-                        Label("Open live view", systemImage: "rectangle.expand.vertical")
-                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                    NoopButton("Open live view", systemImage: "rectangle.expand.vertical",
+                               kind: .secondary, fullWidth: true) {
+                        showLiveWorkout = true
                     }
-                    .buttonStyle(.bordered).tint(StrandPalette.accent)
-                    Button(role: .destructive) { model.endWorkout() } label: {
-                        Label("End workout", systemImage: "stop.circle.fill")
-                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                    NoopButton("End workout", systemImage: "stop.circle.fill",
+                               kind: .destructive, fullWidth: true) {
+                        model.endWorkout()
                     }
-                    .buttonStyle(.borderedProminent).tint(StrandPalette.metricRose)
                 }
             }
         }
@@ -692,7 +689,7 @@ struct LiveView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(NoopMetrics.space3)
         .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .strokeBorder(StrandPalette.statusWarning.opacity(0.5), lineWidth: 1))
@@ -714,7 +711,7 @@ struct LiveView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(NoopMetrics.space3)
         .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .strokeBorder(StrandPalette.statusWarning.opacity(0.5), lineWidth: 1))
@@ -751,7 +748,7 @@ struct LiveView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(NoopMetrics.space3)
         .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .strokeBorder(StrandPalette.accent.opacity(0.4), lineWidth: 1))
@@ -861,7 +858,7 @@ struct LiveView: View {
                     .foregroundStyle(StrandPalette.textTertiary)
                     .accessibilityHidden(true)
             }
-            .padding(12)
+            .padding(NoopMetrics.space3)
             .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(StrandPalette.hairline, lineWidth: 1))
@@ -888,15 +885,15 @@ struct LiveView: View {
         // primary action takes a full-width row and the two secondary actions share the row beneath;
         // macOS keeps the single three-up row, where the window is always wide enough. (#175)
         #if os(iOS)
-        VStack(spacing: 12) {
+        VStack(spacing: NoopMetrics.rowSpacing) {
             scanButton
-            HStack(spacing: 12) {
+            HStack(spacing: NoopMetrics.rowSpacing) {
                 buzzButton
                 disconnectButton
             }
         }
         #else
-        HStack(spacing: 12) {
+        HStack(spacing: NoopMetrics.rowSpacing) {
             scanButton
             buzzButton
             disconnectButton
@@ -904,34 +901,31 @@ struct LiveView: View {
         #endif
     }
 
+    // The connect / buzz / disconnect controls, all routed through the unified NOOP button system:
+    // a filled primary for the lead Scan action, a secondary surface for Buzz, and the destructive
+    // role for Disconnect — sentence-case, single line, optical-centred at controlHeight.
     private var scanButton: some View {
-        Button { model.scan(model: selectedModel) } label: {
-            Label(live.connected ? "Re-scan" : "Scan & Connect",
-                  systemImage: "antenna.radiowaves.left.and.right")
-                .lineLimit(1).minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity).padding(.vertical, 8)
+        NoopButton(live.connected ? "Re-scan" : "Scan & connect",
+                   systemImage: "antenna.radiowaves.left.and.right",
+                   kind: .primary, fullWidth: true) {
+            model.scan(model: selectedModel)
         }
-        .buttonStyle(.borderedProminent).tint(StrandPalette.accent)
     }
 
     private var buzzButton: some View {
-        Button { model.buzz() } label: {
-            Label("Buzz strap", systemImage: "waveform.path")
-                .lineLimit(1).minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity).padding(.vertical, 8)
+        NoopButton("Buzz strap", systemImage: "waveform.path",
+                   kind: .secondary, fullWidth: true) {
+            model.buzz()
         }
-        .buttonStyle(.bordered).tint(StrandPalette.accent)
         .disabled(!activeConnection)
         .help("Fire a test haptic buzz on the strap (requires an active strap connection)")
     }
 
     private var disconnectButton: some View {
-        Button(role: .destructive) { model.disconnect() } label: {
-            Label("Disconnect", systemImage: "xmark.circle")
-                .lineLimit(1).minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity).padding(.vertical, 8)
+        NoopButton("Disconnect", systemImage: "xmark.circle",
+                   kind: .destructive, fullWidth: true) {
+            model.disconnect()
         }
-        .buttonStyle(.bordered)
         .disabled(!live.connected)
     }
 

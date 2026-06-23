@@ -20,17 +20,21 @@ struct StorageView: View {
     var body: some View {
         ScreenScaffold(title: "Storage",
                        subtitle: "Where NOOP's on-device space is going — and a one-tap clean-up.") {
-            if loading && report == nil {
-                StatePill("Measuring…", tone: .accent, pulsing: true)
-            } else if let report {
-                breakdownCard(report)
-                cleanUpCard(report)
-            } else {
-                DataPendingNote(title: "Storage unavailable",
-                                message: "Couldn't read the local store right now. Try again in a moment.",
-                                symbol: "internaldrive")
+            VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                if loading && report == nil {
+                    StatePill("Measuring…", tone: .accent, pulsing: true)
+                        .staggeredAppear(index: 0)
+                } else if let report {
+                    breakdownCard(report).staggeredAppear(index: 0)
+                    cleanUpCard(report).staggeredAppear(index: 1)
+                } else {
+                    DataPendingNote(title: "Storage unavailable",
+                                    message: "Couldn't read the local store right now. Try again in a moment.",
+                                    symbol: "internaldrive")
+                        .staggeredAppear(index: 0)
+                }
+                explainerCard.staggeredAppear(index: 2)
             }
-            explainerCard
         }
         .task { await load() }
     }
@@ -39,7 +43,7 @@ struct StorageView: View {
 
     private func breakdownCard(_ r: AppModel.StorageReport) -> some View {
         StrandCard {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 Text("On-device footprint")
                     .font(StrandFont.headline)
                     .foregroundStyle(StrandPalette.textPrimary)
@@ -67,7 +71,7 @@ struct StorageView: View {
     private func cleanUpCard(_ r: AppModel.StorageReport) -> some View {
         let reclaimable = r.inbox + r.importTemp
         return StrandCard {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 Text("Clean up")
                     .font(StrandFont.headline)
                     .foregroundStyle(StrandPalette.textPrimary)
@@ -87,14 +91,12 @@ struct StorageView: View {
                 Button {
                     Task { await cleanUp() }
                 } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: NoopMetrics.space2) {
                         if cleaning { ProgressView().controlSize(.small) }
                         Text(cleaning ? "Cleaning up…" : "Clean up now")
                     }
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(StrandPalette.accent)
+                .buttonStyle(NoopButtonStyle(.primary, fullWidth: true))
                 .disabled(cleaning || reclaimable == 0)
                 .accessibilityLabel("Clean up leftover import files")
             }
@@ -112,7 +114,7 @@ struct StorageView: View {
 
     private func row(icon: String, label: LocalizedStringKey, bytes: Int64?,
                      tint: Color, note: LocalizedStringKey? = nil) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: NoopMetrics.space3) {
             Image(systemName: icon)
                 .font(StrandFont.headline)
                 .foregroundStyle(tint)

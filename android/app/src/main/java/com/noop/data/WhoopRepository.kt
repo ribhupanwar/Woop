@@ -771,6 +771,13 @@ class WhoopRepository(private val dao: WhoopDao) {
      * Read one candidate's rows for the window: its metricSeries, plus the matching DailyMetric column
      * for any day the metricSeries doesn't carry (a Bluetooth-only WHOOP 5 user has values in the daily
      * columns but not the long-format series). Ascending by day.
+     *
+     * The DailyMetric read uses a +1-day upper buffer ([bufferDayAfter]). A night is keyed on its LOCAL
+     * WAKE day, so the row backing the SELECTED day's Rest can sort on the day AFTER the caller's `to`
+     * (a just-after-midnight wake, or a UTC+ user whose wake-day rolls a calendar day ahead of the
+     * requested bound). Without the buffer that banked row was excluded and Today fell back to the latest
+     * historical Rest (#614). The buffer only WIDENS the daily read; `byDay`'s metricSeries-first
+     * precedence is unchanged, so an imported series point still wins its day.
      */
     private suspend fun resolvedRows(
         candidate: MetricSourceCandidate,
@@ -779,13 +786,20 @@ class WhoopRepository(private val dao: WhoopDao) {
     ): List<Pair<String, Double>> {
         val byDay = LinkedHashMap<String, Double>()
         for (row in dao.metricSeries(candidate.source, candidate.key, from, to)) byDay[row.day] = row.value
-        for (row in dao.dailyMetricsRange(candidate.source, from, to)) {
+        for (row in dao.dailyMetricsRange(candidate.source, from, bufferDayAfter(to))) {
             if (!byDay.containsKey(row.day)) {
                 dailyColumn(candidate.key, row)?.let { byDay[row.day] = it }
             }
         }
         return byDay.entries.sortedBy { it.key }.map { it.key to it.value }
     }
+
+    /** The "yyyy-MM-dd" day one calendar day AFTER [day], or [day] verbatim when it isn't a parseable
+     *  ISO date (e.g. the wide-open "9999-99-99" sentinel Today passes — already past every real day, so
+     *  no buffer is needed). The +1-day read buffer in [resolvedRows] so a wake-day-keyed night that sorts
+     *  just past the requested upper bound still resolves the selected day (#614). */
+    private fun bufferDayAfter(day: String): String =
+        runCatching { java.time.LocalDate.parse(day).plusDays(1).toString() }.getOrDefault(day)
 
     /**
      * A compact snapshot of how much history each source holds, for the Data Sources "Freshness
@@ -952,6 +966,16 @@ class WhoopRepository(private val dao: WhoopDao) {
          * (strap-only WHOOP 5 users). Also handles the Apple-compatible sleep aliases (asleep_min /
          * deep_min / rem_min / core_min) the resolver may request. Keys with no daily column return
          * null. Mirrors macOS Repository.dailyColumn.
+         *
+         * `sleep_performance` (the Rest composite, 0–100) is NOT a stored column: IntelligenceEngine
+         * persists it as a metricSeries point. But a Bluetooth-only WHOOP 5 user — and, crucially, the
+         * SELECTED (just-synced) day before the heavy daily pass has projected the series — has the
+         * night's totals banked on the DailyMetric row while the metricSeries point is still missing.
+         * Without this case the resolver returned no Rest for that day and Today borrowed the latest
+         * historical value (#614). Derive it on the fly from the same banked totals via the single
+         * source of truth [com.noop.analytics.RestScorer.restFromDaily] (the SAME composite the series
+         * carries), so the day resolves to its own Rest. Consistency is left to the scorer's neutral
+         * default here (the daily row carries no regularity term).
          */
         internal fun dailyColumn(key: String, d: DailyMetric): Double? = when (key) {
             "recovery" -> d.recovery
@@ -966,6 +990,7 @@ class WhoopRepository(private val dao: WhoopDao) {
             "sleep_deep_min", "deep_min" -> d.deepMin
             "sleep_rem_min", "rem_min" -> d.remMin
             "sleep_light_min", "core_min" -> d.lightMin
+            "sleep_performance" -> com.noop.analytics.RestScorer.restFromDaily(d)
             "steps" -> d.steps?.toDouble()
             "active_kcal", "energy_kcal" -> d.activeKcalEst
             else -> null

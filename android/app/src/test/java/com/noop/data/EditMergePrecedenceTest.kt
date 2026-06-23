@@ -1,7 +1,9 @@
 package com.noop.data
 
 import com.noop.analytics.AnalyticsEngine
+import com.noop.analytics.RestScorer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.TimeZone
@@ -109,5 +111,28 @@ class EditMergePrecedenceTest {
     fun decode_unparseable_returnsNull() {
         assertNull(WhoopRepository.decodeDoubleArray("not json"))
         assertNull(WhoopRepository.decodeIntArray("{\"x\":1}"))
+    }
+
+    // MARK: - sleep_performance daily-column derivation (#614)
+    //
+    // The resolver derives the Rest composite from a banked DailyMetric's sleep totals when no
+    // metricSeries point covers the day (a Bluetooth-only / just-synced selected day). Without it the
+    // selected day resolved to nothing and Today borrowed the latest historical Rest.
+
+    @Test
+    fun sleepPerformance_dailyColumn_derivesRestFromTotals() {
+        val d = full("2026-06-12", 480.0, 90.0, 110.0, 280.0, 0.92, 80.0, 9.0, "my-whoop-noop")
+        // Matches IntelligenceEngine's persisted sleep_performance projection (same single source of truth).
+        val expected = RestScorer.restFromDaily(d)
+        assertNotNull(expected)
+        assertEquals(expected!!, WhoopRepository.dailyColumn("sleep_performance", d)!!, 0.0)
+    }
+
+    @Test
+    fun sleepPerformance_dailyColumn_nullWhenNoSleep() {
+        // No banked night (totalSleepMin null) → no Rest to derive; the resolver leaves the day empty
+        // rather than fabricating a score.
+        val d = DailyMetric(deviceId = "my-whoop-noop", day = "2026-06-12", recovery = 60.0)
+        assertNull(WhoopRepository.dailyColumn("sleep_performance", d))
     }
 }

@@ -480,9 +480,13 @@ private fun RestHero(score: Double?, asleepMin: Double?, source: String) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(Metrics.cardRadius)),
+                .clip(RoundedCornerShape(Metrics.cardRadius))
+                // A subtle night atmosphere sits behind the sleep hero ONLY (the Rest world's whisper:
+                // faint indigo wash + crescent moon + a few stars over the near-black canvas, no glow),
+                // clipped to the card. Mirrors the macOS SleepView.restHero .timeOfDayBackground(.night),
+                // replacing the heavier ScenicHeroBackground here. (Bevel)
+                .timeOfDayBackground(DayPart.Night),
         ) {
-            ScenicHeroBackground(modifier = Modifier.matchParentSize(), domain = DomainTheme.Rest)
             Column(
                 modifier = Modifier.fillMaxWidth().padding(Metrics.space24),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -500,14 +504,17 @@ private fun RestHero(score: Double?, asleepMin: Double?, source: String) {
                         lineWidth = 15.dp,
                     )
                 } else {
-                    // No 0–100 score for the night — lead with hours slept as a big rounded headline.
+                    // No 0–100 score for the night — lead with hours slept as a big rounded headline
+                    // whose minutes tick up on appear (the same count-up the scored hero's arc draws in
+                    // with). Mirrors the macOS SleepView.restHero CountUpText fallback.
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Metrics.space4),
                         modifier = Modifier.padding(vertical = Metrics.space16),
                     ) {
-                        Text(
-                            durationText(asleepMin ?: 0.0),
+                        CountUpText(
+                            value = asleepMin ?: 0.0,
+                            format = { durationText(it) },
                             style = NoopType.number(46f),
                             color = Palette.restBright,
                         )
@@ -593,14 +600,11 @@ private fun Hero(
                 trailing = durationText(s.asleep),
                 tint = Palette.restColor,
                 footer = {
-                    ChartFooter(
-                        listOf(
-                            "REM" to "${durationText(s.rem)} · ${pct(s.rem, s.total)}%",
-                            "Deep" to "${durationText(s.deep)} · ${pct(s.deep, s.total)}%",
-                            "Light" to "${durationText(s.light)} · ${pct(s.light, s.total)}%",
-                            "Awake" to "${durationText(s.awake)} · ${pct(s.awake, s.total)}%",
-                        ),
-                    )
+                    // WHOOP-style stage rows in the NOOP pip language: swatch + UPPERCASE stage +
+                    // coloured % + a segmented PipBar of the share-of-night + right-aligned duration.
+                    // Same minutes/percentages the old "label · value" footer carried — no new numbers.
+                    // Mirrors the macOS SleepView.stageBreakdownRows. (PipBar)
+                    StageBreakdownRows(s)
                 },
             ) {
                 // True per-epoch segments when the stager persisted them; else the reconstructed
@@ -918,6 +922,81 @@ private fun NapRow(
             dialog.show()
             onDispose { runCatching { dialog.dismiss() } }
         }
+    }
+}
+
+/**
+ * The four WHOOP-style stage rows that replace the old "label · value" footer grid, read like WHOOP's
+ * sleep detail: a colour swatch, the UPPERCASE stage name, the share-of-night % in the stage colour, a
+ * segmented [PipBar] (the NOOP signature) tinted in the stage colour, and the right-aligned duration.
+ * Same data as the prior footer (rem / deep / light / awake over total) — no new numbers. Mirrors the
+ * macOS SleepView.stageBreakdownRows. (PipBar)
+ */
+@Composable
+private fun StageBreakdownRows(s: Stages) {
+    Column(verticalArrangement = Arrangement.spacedBy(Metrics.space12)) {
+        StageBreakdownRow("REM", s.rem, s.total, Palette.sleepREM)
+        StageBreakdownRow("Deep", s.deep, s.total, Palette.sleepDeep)
+        StageBreakdownRow("Light", s.light, s.total, Palette.sleepLight)
+        StageBreakdownRow("Awake", s.awake, s.total, Palette.sleepAwake)
+    }
+}
+
+/**
+ * One WHOOP-style stage row. `fraction = minutes / total` sets both the % and the PipBar fill, so the
+ * coloured percent and the segmented bar always agree. Mirrors the macOS SleepView.stageBreakdownRow.
+ */
+@Composable
+private fun StageBreakdownRow(stage: String, minutes: Double, total: Double, color: Color) {
+    val fraction = if (total > 0.0) (minutes / total).coerceIn(0.0, 1.0) else 0.0
+    val percent = (fraction * 100.0).roundToInt()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Metrics.space10),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription =
+                    "$stage: ${durationText(minutes)}, $percent percent of the night"
+            },
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(color),
+        )
+        Text(
+            stage.uppercase(Locale.getDefault()),
+            style = NoopType.overline,
+            color = Palette.textPrimary,
+            maxLines = 1,
+            modifier = Modifier.width(56.dp),
+        )
+        Text(
+            "$percent%",
+            style = NoopType.captionNumber,
+            color = color,
+            maxLines = 1,
+            modifier = Modifier.width(38.dp),
+        )
+        // The NOOP signature: a segmented bar that counts up to the share-of-night fraction, tinted in
+        // the stage colour over the canonical inset track. Flat, crisp, no glow. Takes the remaining width.
+        PipBar(
+            value = (fraction * 100.0).toFloat(),
+            segments = 20,
+            tint = color,
+            height = 8.dp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            durationText(minutes),
+            style = NoopType.captionNumber,
+            color = Palette.textPrimary,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.width(60.dp),
+        )
     }
 }
 

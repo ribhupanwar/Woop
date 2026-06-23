@@ -1392,6 +1392,187 @@ public enum SleepStager {
         return out
     }
 
+    // MARK: - REM-funnel diagnostic (#688)
+
+    // 0% REM over a whole night is physiologically implausible (healthy adults cycle ~20–25% REM),
+    // so a 0%-REM hypnogram — common on WHOOP 4.0 nights staged WITHOUT a respiration channel —
+    // points at the STAGER, not the sleeper. The REM path in `classifyOne` is gated by three
+    // predicates (still body + activated cardiac + irregular respiration), with a no-resp fallback
+    // (still + high HR + high HR-variability), and any surviving early-REM is then stripped by the
+    // no-REM-after-onset re-imposition. This pure, READ-ONLY diagnostic re-runs that exact funnel and
+    // counts where REM was lost — WITHOUT changing a single label or score — so a 0%-REM night can be
+    // triaged (e.g. "respiration unavailable AND HR-variability never cleared its high bar → no epoch
+    // could be REM" vs "REM was detected but all of it fell inside the 15-min onset guard"). It is a
+    // triage surface, logged by the caller, never a scoring change.
+
+    /// Why REM funneled toward zero for one staged session window. Counts are over the SLEEP-PERIOD
+    /// epochs (onset…finalWake) the classifier actually ranges; pure + deterministic; shares the exact
+    /// classifier seam with `stageSession`, so it explains the SAME hypnogram the app shows. (#688)
+    public struct REMFunnelDiagnostic: Equatable, Sendable {
+        /// Sleep-period epochs considered (onset…finalWake inclusive).
+        public let sleepEpochs: Int
+        /// Epochs the classifier labelled "rem" BEFORE smoothing / re-imposition.
+        public let remAtClassify: Int
+        /// "rem" epochs surviving the no-REM-after-onset re-imposition (the final hypnogram's REM).
+        public let remAfterReimpose: Int
+        /// Classified-REM epochs stripped specifically by the 15-min onset guard.
+        public let remStrippedByOnsetGuard: Int
+        /// Whether ANY epoch carried a finite respiration-variability feature (the resp channel was
+        /// usable). False ⇒ the whole night ran the no-resp REM fallback — the dominant 4.0 cause.
+        public let respChannelPresent: Bool
+        /// Among sleep-period epochs, how many were blocked from REM by each gate (a per-epoch reason,
+        /// counted at the FIRST gate that rejected it, in classifier precedence). These sum with
+        /// `remAtClassify` (and any wake/deep wins) to the sleep-epoch total.
+        public let blockedNotStill: Int          // body not still enough (moveFrac above the still bar)
+        public let blockedNoCardiacActivation: Int  // neither HR-high nor HR-variability-high
+        public let blockedRespRegular: Int       // resp present but NOT irregular (regular breathing)
+        public let blockedNoRespFallbackBar: Int // resp absent and the stricter no-resp REM bar unmet
+        /// Won a non-REM stage outright (wake/deep/light) before any REM gate — not a REM rejection.
+        public let wonOtherStage: Int
+
+        public init(sleepEpochs: Int, remAtClassify: Int, remAfterReimpose: Int,
+                    remStrippedByOnsetGuard: Int, respChannelPresent: Bool,
+                    blockedNotStill: Int, blockedNoCardiacActivation: Int,
+                    blockedRespRegular: Int, blockedNoRespFallbackBar: Int, wonOtherStage: Int) {
+            self.sleepEpochs = sleepEpochs; self.remAtClassify = remAtClassify
+            self.remAfterReimpose = remAfterReimpose; self.remStrippedByOnsetGuard = remStrippedByOnsetGuard
+            self.respChannelPresent = respChannelPresent
+            self.blockedNotStill = blockedNotStill
+            self.blockedNoCardiacActivation = blockedNoCardiacActivation
+            self.blockedRespRegular = blockedRespRegular
+            self.blockedNoRespFallbackBar = blockedNoRespFallbackBar
+            self.wonOtherStage = wonOtherStage
+        }
+
+        /// True when the final hypnogram carries no REM at all — the case this diagnostic exists to
+        /// triage. (`remAfterReimpose == 0`.)
+        public var isZeroREM: Bool { remAfterReimpose == 0 }
+
+        /// One human-readable line for the caller to LOG. No I/O here — the engine stays pure.
+        public var summary: String {
+            "REM-funnel: \(sleepEpochs) sleep-epochs, classify=\(remAtClassify) rem, "
+            + "final=\(remAfterReimpose) rem (onset-guard stripped \(remStrippedByOnsetGuard)); "
+            + "resp=\(respChannelPresent ? "present" : "ABSENT"); "
+            + "blocked[notStill=\(blockedNotStill), noCardiac=\(blockedNoCardiacActivation), "
+            + "respRegular=\(blockedRespRegular), noRespBar=\(blockedNoRespFallbackBar)], "
+            + "otherStage=\(wonOtherStage)"
+        }
+    }
+
+    /// Per-epoch reason REM was rejected, evaluated in classifier precedence order. `remEligible`
+    /// means the epoch WOULD be labelled REM. Internal — drives `remFunnelDiagnostic`.
+    enum REMRejectReason { case remEligible, wonOtherStage, notStill, noCardiacActivation, respRegular, noRespFallbackBar }
+
+    /// Classify a single epoch's REM-eligibility AND, when not eligible, the FIRST reason it failed —
+    /// using the exact predicates and precedence of `classifyOne` so the diagnostic can never diverge
+    /// from the real classifier. Read-only. (#688)
+    static func remRejectReason(_ f: EpochFeatures, hrLo: Double?, hrHi: Double?,
+                                rmssdHi: Double?, hrvarHi: Double?, rrvHi: Double?, rrvLo: Double?) -> REMRejectReason {
+        // Mirror classifyOne's derived predicates exactly.
+        let hasHR = f.hr.isFinite
+        let hrLow = hasHR && hrLo != nil && f.hr <= hrLo!
+        let hrHigh = hasHR && hrHi != nil && f.hr >= hrHi!
+        let parasympOK = (!f.rmssd.isFinite) || (rmssdHi != nil && f.rmssd >= rmssdHi!)
+        let hrvarHigh = f.hrVar.isFinite && hrvarHi != nil && f.hrVar >= hrvarHi!
+        let cardiacActivated = hrHigh || hrvarHigh
+        let rrvIrregular = f.rrv.isFinite && rrvHi != nil && f.rrv >= rrvHi!
+        let rrvRegular = (!f.rrv.isFinite) || (rrvLo != nil && f.rrv <= rrvLo!)
+        let still = f.moveFrac <= stageStillMoveFrac
+        let moving = f.moveFrac >= stageWakeMoveFrac
+
+        // classifyOne precedence: WAKE, then DEEP, then REM (then REM fallback), else LIGHT.
+        // An epoch that wins WAKE or DEEP was never a REM candidate.
+        if moving && (cardiacActivated || !hasHR) { return .wonOtherStage }     // → wake
+        if still && parasympOK && hrLow && rrvRegular { return .wonOtherStage } // → deep
+        // From here the epoch did NOT win wake/deep; it is either REM or falls through to LIGHT.
+        if still && cardiacActivated && rrvIrregular { return .remEligible }
+        if still && hrHigh && hrvarHigh && !f.rrv.isFinite { return .remEligible }
+        // Not REM → attribute to the FIRST unmet REM precondition (in REM-rule order).
+        if !still { return .notStill }
+        if !cardiacActivated { return .noCardiacActivation }
+        if f.rrv.isFinite { return .respRegular }       // resp present but not irregular
+        return .noRespFallbackBar                         // resp absent and the no-resp bar unmet
+    }
+
+    /// Read-only REM-funnel triage for ONE in-bed window [start, end] (#688). Re-runs the SAME Stage-0→3
+    /// staging seam `stageSession` uses (epoch grid → Cole–Kripke → features → classify → smooth →
+    /// re-impose), but instead of emitting a hypnogram it COUNTS where REM was lost. Changes NOTHING:
+    /// no label, no score, no session. Returns nil only when the window has too little gravity to grid
+    /// (mirroring `stageSession`'s degenerate fallback, which carries no REM to explain). The caller
+    /// logs `.summary`; tests assert the counts. Pure + deterministic. (#688)
+    public static func remFunnelDiagnostic(start: Int, end: Int, grav: [GravitySample],
+                                           hr: [HRSample], rr: [RRInterval],
+                                           resp: [RespSample]) -> REMFunnelDiagnostic? {
+        let gSeg = rowsBetween(grav, start: start, end: end) { $0.ts }
+        if gSeg.count < 2 { return nil }
+        let gDeltas = gravityDeltas(gSeg)
+        let gTimes = gSeg.map { $0.ts }
+        let hrSeg = rowsBetween(hr, start: start, end: end) { $0.ts }
+        let rrSeg = rowsBetween(rr, start: start, end: end) { $0.ts }
+        let respSeg = rowsBetween(resp, start: start, end: end) { $0.ts }
+
+        let grid = buildEpochGrid(start: Double(start), end: Double(end),
+                                  gravTimes: gTimes, gravDeltas: gDeltas,
+                                  hr: hrSeg, rr: rrSeg, resp: respSeg)
+        if grid.nEpochs == 0 { return nil }
+
+        let rescaled = rescaleCounts(grid.counts)
+        let ckFlags = coleKripke(rescaled)
+        let (onsetIdx, finalWakeIdx) = onsetAndFinalWake(ckFlags)
+        let dogHR = dogHRVariability(grid.hr)
+        let feats = extractFeatures(grid: grid, ckFlags: ckFlags, dogHR: dogHR,
+                                    onsetIdx: onsetIdx, finalWakeIdx: finalWakeIdx)
+
+        // The SAME session-relative reference percentiles classifyEpochs derives.
+        let sleepFeats = feats.contains { $0.ckSleep } ? feats.filter { $0.ckSleep } : feats
+        let hrLo = percentile(sleepFeats.map { $0.hr }, stageHRLowPct)
+        let hrHi = percentile(sleepFeats.map { $0.hr }, stageHRHighPct)
+        let rmssdHi = percentile(sleepFeats.map { $0.rmssd }, stageHRVHighPct)
+        let hrvarHi = percentile(sleepFeats.map { $0.hrVar }, stageHRVarHighPct)
+        let rrvHi = percentile(sleepFeats.map { $0.rrv }, stageRRVHighPct)
+        let rrvLo = percentile(sleepFeats.map { $0.rrv }, stageRRVLowPct)
+
+        // Classify + post-process exactly as stageSession does, so we explain the SAME hypnogram.
+        let labels = classifyEpochs(feats)
+        let smoothed = smoothLabels(labels)
+        let reimposed = reimposePhysiology(smoothed, features: feats,
+                                           onsetIdx: onsetIdx, finalWakeIdx: finalWakeIdx)
+
+        let noREMEpochs = Int((noREMAfterOnsetMin * 60.0 / epochS).rounded())
+        var sleepEpochs = 0, remAtClassify = 0, remAfterReimpose = 0, remStrippedByOnsetGuard = 0
+        var blockedNotStill = 0, blockedNoCardiacActivation = 0, blockedRespRegular = 0
+        var blockedNoRespFallbackBar = 0, wonOtherStage = 0
+        var respChannelPresent = false
+
+        for i in onsetIdx...max(onsetIdx, finalWakeIdx) where i < feats.count {
+            let f = feats[i]
+            sleepEpochs += 1
+            if f.rrv.isFinite { respChannelPresent = true }
+            // Per-epoch REM reason at the raw classifier seam (pre-smoothing) — the funnel's mouth.
+            switch remRejectReason(f, hrLo: hrLo, hrHi: hrHi, rmssdHi: rmssdHi,
+                                   hrvarHi: hrvarHi, rrvHi: rrvHi, rrvLo: rrvLo) {
+            case .remEligible:           remAtClassify += 1
+            case .wonOtherStage:         wonOtherStage += 1
+            case .notStill:              blockedNotStill += 1
+            case .noCardiacActivation:   blockedNoCardiacActivation += 1
+            case .respRegular:           blockedRespRegular += 1
+            case .noRespFallbackBar:     blockedNoRespFallbackBar += 1
+            }
+            // Final-hypnogram REM (post smooth + re-impose) and the onset-guard strip.
+            if reimposed[i] == "rem" { remAfterReimpose += 1 }
+            // The re-imposition strips a SMOOTHED "rem" epoch inside the onset guard → light; count
+            // the strip off the smoothed labels reimpose actually sees (exact, not the raw seam).
+            if smoothed[i] == "rem" && (i - onsetIdx) < noREMEpochs { remStrippedByOnsetGuard += 1 }
+        }
+
+        return REMFunnelDiagnostic(
+            sleepEpochs: sleepEpochs, remAtClassify: remAtClassify, remAfterReimpose: remAfterReimpose,
+            remStrippedByOnsetGuard: remStrippedByOnsetGuard, respChannelPresent: respChannelPresent,
+            blockedNotStill: blockedNotStill, blockedNoCardiacActivation: blockedNoCardiacActivation,
+            blockedRespRegular: blockedRespRegular, blockedNoRespFallbackBar: blockedNoRespFallbackBar,
+            wonOtherStage: wonOtherStage)
+    }
+
     /// Sleep-depth rank, lighter → deeper: wake 0, light 1, rem 2, deep 3. Used by
     /// mergeFragments to bias an ambiguous merge toward the LIGHTER stage so smoothing
     /// can never inflate deep/REM. Unknown labels rank lightest (0) — they never win deep.

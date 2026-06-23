@@ -154,7 +154,9 @@ private val builtInMetrics: List<MetricSpec> = listOf(
     ),
     MetricSpec(
         key = "sleep", title = "Sleep", unit = "h", category = "Rest",
-        accent = Palette.metricPurple, higherIsBetter = true, decimals = 1,
+        // Rest-score accent rides the reset accent token (iOS metricAccent maps every Rest metric —
+        // sleep_performance / sleep_total_min — to StrandPalette.accent), not a stray metric hue.
+        accent = Palette.accent, higherIsBetter = true, decimals = 1,
         dailyPick = { it.totalSleepMin?.let { m -> m / 60.0 } },
         description = "How restorative your sleep was — duration, efficiency, deep+REM, timing.",
     ),

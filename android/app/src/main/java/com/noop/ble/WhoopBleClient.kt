@@ -482,6 +482,10 @@ class WhoopBleClient(
          *  pinned here as raw values because the underlying ATT codes are what some stacks pass through. */
         private const val GATT_INSUFFICIENT_AUTHENTICATION = 5    // BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
         private const val GATT_INSUFFICIENT_ENCRYPTION = 15       // BluetoothGatt.GATT_INSUFFICIENT_ENCRYPTION
+        /** GATT disconnect `status` for a link-supervision/connection timeout — the Android analogue of
+         *  CoreBluetooth's `CBError.connectionTimeout` that the iOS #617 bond-loop detector keys on. The
+         *  stack's `GATT_CONN_TIMEOUT` (HCI 0x08). Pinned as a raw value (no public BluetoothGatt const). */
+        private const val GATT_CONN_TIMEOUT = 0x08               // GATT_CONN_TIMEOUT (HCI link-supervision timeout)
         /** Consecutive bond refusals on the pinned strap before handing the pin off to a different,
          *  live-bonding strap (#52). 3 (not 1): a single "insufficient" can be a transient just-works
          *  race; three in a row on the pin while ANOTHER strap bonds fine is an unrecoverable stale pin.
@@ -1090,6 +1094,16 @@ class WhoopBleClient(
                             .getLong(Baselines.hrvBaselineEpochKey, 0L).toDouble(),
                         recoveryEpoch = NoopPrefs.of(context)
                             .getLong(Baselines.recoveryBaselineEpochKey, 0L).toDouble(),
+                        // #691: route the engine's per-day diagnostics (incl. the new RHR floor-vs-mean
+                        // line) into THIS sync's strap log, so a "NOOP RHR reads lower than my sleeping-HR
+                        // app" report carries the proof — the floor (NOOP's WHOOP-style resting HR) beside
+                        // the night MEAN (the other app's number) — from the post-backfill scoring pass, not
+                        // only the UI's 15-min loop. log() PII-scrubs at the sink. Best-effort + logging only.
+                        diag = { s -> log(s) },
+                        // Opt-in experimental sleep staging (V2): stage this post-backfill pass with the same
+                        // engine the user chose in Settings, read off SharedPreferences here (the analytics
+                        // layer is Context-free). Default off → V1. (V7 Pillar 3b)
+                        useExperimentalSleepV2 = PuffinExperiment.from(context).experimentalSleepV2,
                     )
                 }.onSuccess {
                     log("Backfill: post-sync scoring pass done")
@@ -1133,6 +1147,15 @@ class WhoopBleClient(
     /** #126 false-alarm guard: CONSECUTIVE console-only completed syncs, so the "clock has lost sync"
      *  banner only fires on sustained emptiness, not a single transient empty cycle on a healthy strap. */
     private val emptySyncTracker = EmptySyncTracker()
+    /** #617 bond-loop detector: tracks consecutive bond-then-quick-timeout cycles on a WHOOP 4. When it
+     *  trips, the client surfaces the existing re-pair guide ([LiveState.reconnectGuide]) instead of
+     *  looping silently. Reset on a user-initiated disconnect; the streak is otherwise broken naturally by
+     *  any healthy (non-quick-timeout) disconnect. Twin of macOS BLEManager.postBondLoop. */
+    private val postBondLoop = PostBondTimeoutLoopDetector()
+    /** Wall time (System.currentTimeMillis) the encrypted bond was established this connection, to
+     *  measure how soon a drop follows the bond (the #617 bond-loop tell). null until bonded; cleared on
+     *  disconnect after the detector reads it. Twin of macOS BLEManager.bondedAt. */
+    private var bondedAtMs: Long? = null
     /** #580: tracks CONSECUTIVE empty 5/MG offloads so a 5/MG whose firmware serves no history (but streams
      *  live HR fine) reads as "history sync experimental on 5.0" instead of a sync error, and the 120s
      *  bounce loop backs off while live HR is flowing. Reset on connect / a banking offload. Twin of macOS. */
@@ -1399,6 +1422,9 @@ class WhoopBleClient(
         intentionalDisconnect = true
         handler.removeCallbacks(scanTimeoutRunnable)
         stopScan()
+        // A user-initiated teardown is a clean slate: clear the #617 bond-loop streak so the next (manual)
+        // reconnect starts fresh rather than inheriting old suspicion. Twin of macOS disconnect().
+        postBondLoop.reset()
         _state.value = _state.value.copy(scanning = false, statusNote = null)
         // disconnect() can throw on a dead binder (radio off, #314). If it does, the OS won't deliver
         // onConnectionStateChange(DISCONNECTED), so tear down directly instead of crashing.
@@ -2536,6 +2562,7 @@ class WhoopBleClient(
                 bondedDirectAttempt = false   // fast-path connect reached a real session (#78 fork)
                 staleDirectFailures = 0       // genuine bond — clear the wiped-bond counter (#84 parity)
                 _state.value = _state.value.copy(bonded = true, encryptedBond = true)   // genuine bond (#69)
+                bondedAtMs = System.currentTimeMillis()   // #617: stamp the bond so handleDisconnect can spot a bond-then-quick-timeout loop
                 log("WHOOP 5/MG: CLIENT_HELLO acked — link established; subscribing notify chars (experimental).")
                 g.getService(WHOOP5_SERVICE)?.let { svc ->
                     for (u in WHOOP5_NOTIFY_CHARS) svc.getCharacteristic(u)?.let { cccdQueue.add(it) }
@@ -2554,6 +2581,7 @@ class WhoopBleClient(
                 noteGenuineBond(g.device.address)   // #52: this strap bonds fine; clears any pin-refusal streak
                 clearPairingHint()            // #78: a genuine bond means the pairing guidance no longer applies
                 _state.value = _state.value.copy(bonded = true, encryptedBond = true)   // WHOOP4 bond is genuine (#69)
+                bondedAtMs = System.currentTimeMillis()   // #617: stamp the bond so handleDisconnect can spot a bond-then-quick-timeout loop
                 log("BONDED (confirmed write acknowledged) — custom channels should now flow")
             }
 
@@ -4060,6 +4088,38 @@ class WhoopBleClient(
         // strap can still be found (and "No WHOOP strap found" guidance still appears). (#78 fork)
         val staleDirectBond = bondedDirectAttempt && !didBond
         bondedDirectAttempt = false
+
+        // #617 bond-loop detection: read the bond timestamp before it's cleared below. The bond-loop
+        // tell is a CONNECTION TIMEOUT that lands within seconds of a genuine bond — bond -> drop -> rescan
+        // -> bond -> drop, forever. We require the stack to classify the drop as GATT_CONN_TIMEOUT (the twin
+        // of iOS CBError.connectionTimeout), not merely any non-zero status, so a one-off radio blip or a
+        // different failure doesn't get mistaken for the loop. Once it trips, surface the EXISTING re-pair
+        // guide (the same forget-and-re-pair steps the stale-bond path shows) rather than letting the link
+        // loop silently and drain the battery.
+        val bondedAtSnapshot = bondedAtMs
+        val msSinceBond = bondedAtSnapshot?.let { System.currentTimeMillis() - it }
+        val connTimedOut = status == GATT_CONN_TIMEOUT && !intentionalDisconnect
+        if (postBondLoop.connectionEnded(
+                wasBonded = bondedAtSnapshot != null,
+                msSinceBond = msSinceBond,
+                timedOut = connTimedOut,
+            )
+        ) {
+            log("Bond-loop (#617): ${postBondLoop.consecutiveBondTimeouts} bond-then-timeout cycles — surfacing the re-pair guide")
+            if (_state.value.reconnectGuide == null) {
+                _state.value = _state.value.copy(
+                    reconnectGuide = """
+                    Your strap keeps connecting and then dropping a second later. This is almost always a stale Bluetooth pairing — usually after a WHOOP firmware update, or the official WHOOP app holding the strap. NOOP works fine once it's re-paired:
+
+                    1. Quit the official WHOOP app (or turn off Bluetooth on that phone).
+                    2. Open Settings → Bluetooth, find your WHOOP, and Forget / Unpair it.
+                    3. Tap the band repeatedly until its LEDs flash blue (pairing mode).
+                    4. Come back here and tap Connect.
+                    """.trimIndent()
+                )
+            }
+        }
+        bondedAtMs = null   // cleared after the bond-loop detector above read it (#617)
 
         // Persist anything buffered before tearing down (port of the collector.flush() +
         // flushStandardHR() calls in didDisconnectPeripheral). Runs on the IO scope.

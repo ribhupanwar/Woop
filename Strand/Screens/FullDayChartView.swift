@@ -76,14 +76,14 @@ struct FullDayChartView: View {
     private var metricPills: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             SegmentedPillControl(Repository.TimelineMetric.allCases, selection: $metric) { $0.title }
-                .padding(.vertical, 2)
+                .padding(.vertical, NoopMetrics.space1 / 2)
         }
     }
 
     @ViewBuilder private var sourcePill: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: NoopMetrics.rowSpacing) {
             Image(systemName: "dot.radiowaves.left.and.right")
-                .font(.system(size: 13, weight: .medium))
+                .font(StrandFont.footnote.weight(.medium))
                 .foregroundStyle(StrandPalette.textTertiary)
             Text("My WHOOP")
                 .font(StrandFont.footnote)
@@ -94,15 +94,15 @@ struct FullDayChartView: View {
             SegmentedPillControl([true, false], selection: $ownedOnly) { $0 ? "Owned" : "All" }
                 .fixedSize()
         }
-        .padding(.horizontal, 2)
+        .padding(.horizontal, NoopMetrics.space1)
     }
 
     /// Day stepper — move the whole timeline back/forward a day so a user can reach the days that actually
     /// hold their data, not just today (#597). Forward is clamped at today (no future days).
     private var dayNav: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: NoopMetrics.cardInnerSpacing) {
             Button { stepDay(-1) } label: {
-                Image(systemName: "chevron.left").font(.system(size: 14, weight: .semibold))
+                Image(systemName: "chevron.left").font(StrandFont.headline.weight(.semibold))
             }
             .buttonStyle(.plain)
             .foregroundStyle(StrandPalette.accent)
@@ -116,14 +116,14 @@ struct FullDayChartView: View {
             Spacer()
 
             Button { stepDay(1) } label: {
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                Image(systemName: "chevron.right").font(StrandFont.headline.weight(.semibold))
             }
             .buttonStyle(.plain)
             .foregroundStyle(isOnLatestDay ? StrandPalette.textTertiary : StrandPalette.accent)
             .disabled(isOnLatestDay)
             .accessibilityLabel("Next day")
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, NoopMetrics.space1)
     }
 
     private var isOnLatestDay: Bool { dayStart >= Repository.logicalDayStart(Date()) }
@@ -198,7 +198,7 @@ struct FullDayChartView: View {
     // MARK: States
 
     private var loadingState: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: NoopMetrics.rowSpacing) {
             ProgressView().controlSize(.large)
             Text("Loading the day…")
                 .font(StrandFont.footnote)
@@ -210,7 +210,7 @@ struct FullDayChartView: View {
     /// Honest empty/dash state — a window the strap offloaded nothing for (a not-yet-synced stretch, an
     /// off-wrist gap, or a metric this device doesn't record). Never a fabricated flat line.
     private var emptyState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: NoopMetrics.space2) {
             Image(systemName: "waveform.slash")
                 .font(.system(size: 26, weight: .light))
                 .foregroundStyle(StrandPalette.textTertiary)
@@ -225,13 +225,13 @@ struct FullDayChartView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 24)
+        .padding(.horizontal, NoopMetrics.space6)
     }
 
     @ViewBuilder private var zoomHint: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: NoopMetrics.space2) {
             Image(systemName: zoomDomain == nil ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
-                .font(.system(size: 11, weight: .semibold))
+                .font(StrandFont.footnote.weight(.semibold))
             #if os(macOS)
             Text(zoomDomain == nil ? "Scroll to zoom · drag to pan" : "Zoomed in — drag to pan")
             #else
@@ -247,8 +247,8 @@ struct FullDayChartView: View {
         }
         .font(StrandFont.footnote)
         .foregroundStyle(StrandPalette.textTertiary)
-        .padding(.horizontal, 4)
-        .padding(.top, 2)
+        .padding(.horizontal, NoopMetrics.space1)
+        .padding(.top, NoopMetrics.space1 / 2)
     }
 
     private var statsFooter: some View {

@@ -124,9 +124,16 @@ object IntelligenceEngine {
         // are unaffected; the AppViewModel wires it to the BLE client's strap log (ble.externalLog),
         // which PII-scrubs every line at the sink. Pure-JVM (a closure), matching persistStepsCalibration.
         diag: (String) -> Unit = {},
+        // Opt-in "Experimental sleep staging (V2)" flag (Settings → Experimental · Sleep staging). The
+        // analytics layer is Context-free, so the Context-aware caller (AppViewModel / WhoopBleClient) reads
+        // it off SharedPreferences (PuffinExperiment.experimentalSleepV2) and threads it down to the sleep
+        // self-heal, which re-stages with SleepStagerV2 when true. Default false → V1 (the default, untouched
+        // path), so existing callers / tests are unaffected. (V7 Pillar 3b)
+        useExperimentalSleepV2: Boolean = false,
     ): List<Computed> = withContext(Dispatchers.Default) {
         analyzeRecentOnCpu(repo, profile, maxDays, importedDeviceId, maxHROverride, nowSeconds,
-            ownerSource, manualStepCoefficient, persistStepsCalibration, baselineEpoch, recoveryEpoch, diag)
+            ownerSource, manualStepCoefficient, persistStepsCalibration, baselineEpoch, recoveryEpoch, diag,
+            useExperimentalSleepV2)
     }
 
     /** History span for the one-shot Effort rescore — large enough to cover any real wear history,
@@ -184,6 +191,8 @@ object IntelligenceEngine {
         baselineEpoch: Double = 0.0,
         recoveryEpoch: Double = 0.0,
         diag: (String) -> Unit = {},
+        // Opt-in experimental staging (V2), threaded down to the sleep self-heal. Default false → V1. (3b)
+        useExperimentalSleepV2: Boolean = false,
     ): List<Computed> {
         val hrvCfg = Baselines.metricCfg["hrv"] ?: return emptyList()
         val rhrCfg = Baselines.metricCfg["resting_hr"] ?: return emptyList()
@@ -355,6 +364,23 @@ object IntelligenceEngine {
             nightlyRhrByDay[day] = res.daily.restingHr?.toDouble()
             nightlySkinByDay[day] = res.nightlySkinTempC
             nightlyRespByDay[day] = res.daily.respRateBpm
+            // ── RHR floor-vs-mean diagnostic (#691) ────────────────────────────────────────────────
+            // Make the recurring "NOOP's resting HR reads LOWER than my sleeping-HR app" reports
+            // explainable from the strap log instead of a guess. The two numbers measure different
+            // things BY DESIGN, not a bug: NOOP's restingHr is the WHOOP-style FLOOR (the lowest
+            // sustained 5-min in-bed level — SleepStager picks the min 5-min rolling-mean HR per session,
+            // and the day takes the min across them), whereas a "sleeping HR" app reports the night MEAN
+            // over the whole asleep span. The mean always sits above the floor, so NOOP looking lower is
+            // correct. Log BOTH so a report ships proof of the gap. Mean is computed over the SAME matched
+            // in-bed span the floor came from (so they're directly comparable); a night with no banked
+            // floor (no matched sleep) logs nil and the line is skipped. Logging only — no scoring change.
+            // Counts/bpm only; no timestamps or PII (the diag sink also scrubs). Byte-identical to Swift.
+            val rhrFloor = res.daily.restingHr
+            if (rhrFloor != null) {
+                val inBedBpms = hr.filter { s -> res.sleepSessions.any { s.ts >= it.start && s.ts < it.end } }
+                    .map { it.bpm }
+                diag(rhrFloorMeanLogLine(day, rhrFloor, inBedBpms))
+            }
             scoredNights.add(res)
         }
 
@@ -467,6 +493,7 @@ object IntelligenceEngine {
             strapDeviceId = importedDeviceId,
             windowStart = windowStart,
             windowEnd = nowSeconds,
+            useExperimentalSleepV2 = useExperimentalSleepV2,
         )
         val editsByStart: Map<Long, String?> = editedRows.associate { it.startTs to it.stagesJSON }
         // #547 (audit finding C / #8): each edited block's EFFECTIVE onset (startTsAdjusted ?: startTs)
@@ -1002,5 +1029,23 @@ object IntelligenceEngine {
         day in importedWhoopDays -> "imported:whoop"
         day in appleHealthDays -> "imported:apple"
         else -> "computed"
+    }
+
+    /**
+     * The per-day RHR floor-vs-mean diagnostic line (#691). NOOP's [floor] is the WHOOP-style resting
+     * HR — the lowest SUSTAINED 5-min in-bed level (SleepStager picks the min 5-min rolling-mean HR per
+     * session, the day takes the min across them) — whereas a "sleeping HR" app reports the night MEAN
+     * over the whole asleep span. The mean always sits at-or-above the floor, so NOOP reading lower is
+     * BY DESIGN, not a bug; logging both makes a "NOOP RHR is lower than my other app" report explainable
+     * from the strap log. [inBedBpms] is the bpm of every HR sample inside a matched in-bed session (the
+     * SAME span the floor came from, so the two numbers are directly comparable). Empty in-bed → nightMean
+     * is "nil". Counts/bpm only — no timestamps or PII. Pure so it's unit-tested directly and is the SAME
+     * line analyzeRecent ships. Byte-identical to the Swift `rhrFloorMeanLogLine`.
+     */
+    internal fun rhrFloorMeanLogLine(day: String, floor: Int, inBedBpms: List<Int>): String {
+        val meanLog = if (inBedBpms.isEmpty()) "nil"
+            else Math.round(inBedBpms.sum().toDouble() / inBedBpms.size).toString()
+        return "rhr day=$day floor=$floor nightMean=$meanLog inBedSamples=${inBedBpms.size} " +
+            "(floor = WHOOP-style lowest-sustained = NOOP RHR; mean = sleeping-HR-app number)"
     }
 }

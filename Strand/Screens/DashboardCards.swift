@@ -29,6 +29,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
     case skinTemp
     case sleep
     case calories
+    case hydration
 
     var id: String { rawValue }
 
@@ -46,6 +47,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .skinTemp:    return "Skin Temp"
         case .sleep:       return "Sleep"
         case .calories:    return "Calories"
+        case .hydration:   return "Hydration"
         }
     }
 
@@ -64,6 +66,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .skinTemp:    return "Skin temperature"
         case .sleep:       return "Last night"
         case .calories:    return "Active energy"
+        case .hydration:   return "Today's fluid"
         }
     }
 
@@ -81,6 +84,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .skinTemp:    return "thermometer.medium"
         case .sleep:       return "bed.double.fill"
         case .calories:    return "flame.fill"
+        case .hydration:   return "drop.fill"
         }
     }
 
@@ -98,6 +102,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
         case .skinTemp:    return ""    // value carries the ° itself
         case .sleep:       return ""    // value carries the h/m itself
         case .calories:    return "kcal"
+        case .hydration:   return ""    // value bakes in "<total> / <goal> L" itself
         }
     }
 

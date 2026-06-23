@@ -28,6 +28,7 @@ import com.noop.location.GpsSession
 import kotlinx.coroutines.Job
 import com.noop.ble.HrBroadcaster
 import com.noop.ble.LiveState
+import com.noop.ble.PuffinExperiment
 import com.noop.ble.WhoopConnectionService
 import com.noop.ble.WhoopModel
 import androidx.health.connect.client.HealthConnectClient
@@ -630,6 +631,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         // report ships proof of what was computed per day. Mirrors the macOS sink wired to
                         // live.append(log:). (Sleep overhaul §2.5.)
                         diag = { line -> ble.externalLog(line) },
+                        // Opt-in experimental sleep staging (V2) — read off SharedPreferences here (the
+                        // analytics layer is Context-free) and thread it into the sleep self-heal. (V7 3b)
+                        useExperimentalSleepV2 = PuffinExperiment.from(appContext).experimentalSleepV2,
                     )
                     // analyzeRecent now hops to Dispatchers.Default; a scope cancellation surfaces as a
                     // CancellationException that runCatching would otherwise swallow, breaking the loop's
@@ -1011,6 +1015,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     .getLong(Baselines.hrvBaselineEpochKey, 0L).toDouble(),
                 recoveryEpoch = NoopPrefs.of(appContext)
                     .getLong(Baselines.recoveryBaselineEpochKey, 0L).toDouble(),
+                // Opt-in experimental sleep staging (V2) — same flag the 15-min loop reads, so a manual
+                // re-score after an edit stages with the same engine the user chose. (V7 Pillar 3b)
+                useExperimentalSleepV2 = PuffinExperiment.from(appContext).experimentalSleepV2,
             )
         }.onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
     }
@@ -1031,8 +1038,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Fill imported sessions' missing HR from strap samples (#77), same as before; detected /
             // manual rows already carry their own HR so they pass through unchanged.
             val filled = repository.fillWorkoutHrFromStrap((whoop + apple + detected))
+            // #687: collapse the SAME activity tracked live under the strap AND imported from Health
+            // Connect / Apple Health into one richer entry — they sit under different sources so without
+            // this they show as two sessions. Dedup runs on the dismissed-filtered set, before the sort.
             val sorted = WorkoutEditing
-                .filterDismissed(filled + lifting, markers)
+                .dedupCrossSource(WorkoutEditing.filterDismissed(filled + lifting, markers))
                 .sortedByDescending { it.startTs }
             _workouts.value = sorted
             // Post-workout summary (#517) — opt-in, default OFF. The newest session (by start) drives a

@@ -15,6 +15,47 @@ public enum NoopMetrics {
     public static let chartHeight: CGFloat = 220
     public static let hypnogramBandMinThickness: CGFloat = 14  // floor so short stages read as bars, not ticks
     public static let tabBarClearance: CGFloat = 76  // iOS: extra bottom scroll room so the last card clears the floating tab bar
+
+    // MARK: Standardised spacing scale (the ONE source of truth for margins)
+    //
+    // A 4pt-based ramp. Reach for these instead of literal numbers so every gap,
+    // inset and margin lines up to the same grid. Note `cardPadding` (16) above is
+    // the same value as `space4` — kept as a named alias for the existing call sites.
+    public static let space1:  CGFloat = 4
+    public static let space2:  CGFloat = 8
+    public static let space3:  CGFloat = 12
+    public static let space4:  CGFloat = 16
+    public static let space5:  CGFloat = 20
+    public static let space6:  CGFloat = 24
+    public static let space8:  CGFloat = 32
+    public static let space10: CGFloat = 40
+
+    // MARK: Named layout constants — the canonical margins/heights screens compose with.
+    /// Horizontal page margin (the gutter on the left/right edge of a screen). Use via `.screenPadding()`.
+    public static let screenHPadding: CGFloat = 20
+    /// Vertical gap between top-level page sections.
+    public static let sectionSpacing: CGFloat = 24
+    /// Interior padding inside a card's content (matches `cardPadding`).
+    public static let cardInnerPadding: CGFloat = 16
+    /// Vertical gap between stacked elements INSIDE a card.
+    public static let cardInnerSpacing: CGFloat = 12
+    /// Vertical gap between rows in a list-style card.
+    public static let rowSpacing: CGFloat = 10
+    /// Standard interactive-control height (buttons, fields, segmented controls).
+    public static let controlHeight: CGFloat = 48
+    /// Fully-rounded corner radius — pills, chips, capsule buttons.
+    public static let pillRadius: CGFloat = 999
+}
+
+// MARK: - Screen padding
+
+public extension View {
+    /// Apply the canonical horizontal page gutter (`NoopMetrics.screenHPadding`). The single
+    /// source of truth for left/right screen margins — use this instead of a literal padding so
+    /// every screen lines up to the same edge.
+    func screenPadding() -> some View {
+        self.padding(.horizontal, NoopMetrics.screenHPadding)
+    }
 }
 
 // MARK: - iOS sheet presentation idiom

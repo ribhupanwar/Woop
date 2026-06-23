@@ -859,6 +859,17 @@ final class AppModel: ObservableObject {
         hhmm.locale = Locale(identifier: "en_US_POSIX")
         hhmm.dateFormat = "HH:mm"
         live.append(log: "Sleep mark @ \(hhmm.string(from: date))")
+        // Persistence parity with Android's `AppViewModel.markSleep` (#461): also upsert the TYPED
+        // `sleep_mark` metric-series row that the Sleep screen reads back (SleepView.logMark writes the
+        // same row when the user taps a button). A physical double-tap can't choose bedtime vs wake, so
+        // it defaults to `.bedtime` — the boundary the gesture most naturally marks. Idempotent by
+        // (deviceId, day, key) through the repo's live store handle: no new Repository API, no schema
+        // change. The UserDefaults list + buzz + freetext log line above are unchanged.
+        let mark = SleepMark(type: .bedtime, at: date)
+        Task { [weak self] in
+            guard let self, let store = await self.repo.storeHandle() else { return }
+            try? await store.upsertMetricSeries([mark.metricPoint], deviceId: self.repo.deviceId)
+        }
     }
 
     private func handleWristChange(_ worn: Bool) {

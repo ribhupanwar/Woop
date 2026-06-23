@@ -110,14 +110,15 @@ struct SleepView: View {
                        onRefresh: { await repo.refresh() }) {
             Group {
                 if let resolved {
-                    VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                        restHero(resolved)
-                        sleepMarkCard
-                        hero(resolved)
-                        metricGrid(resolved)
-                        sleepDebtLedger(resolved)
-                        stagesVsTypical(resolved)
-                        durationTrend(resolved)
+                    // Each top-level section fades + rises in sequence on first appear (Reduce-Motion safe).
+                    VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                        restHero(resolved).staggeredAppear(index: 0)
+                        sleepMarkCard.staggeredAppear(index: 1)
+                        hero(resolved).staggeredAppear(index: 2)
+                        metricGrid(resolved).staggeredAppear(index: 3)
+                        sleepDebtLedger(resolved).staggeredAppear(index: 4)
+                        stagesVsTypical(resolved).staggeredAppear(index: 5)
+                        durationTrend(resolved).staggeredAppear(index: 6)
                     }
                 } else {
                     emptyState
@@ -230,43 +231,48 @@ struct SleepView: View {
         let frac = heroScoreFraction(model)
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Sleep performance", overline: "Last night", trailing: "Rest")
-            ZStack {
-                ScenicHeroBackground(domain: .rest)
-                    .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
-                VStack(spacing: 14) {
-                    if let score {
-                        BevelGauge(
-                            fraction: frac,
-                            stops: StrandPalette.restGradient.stops,
-                            tipColor: StrandPalette.restColor,
-                            numberText: "\(Int(score.rounded()))",
-                            captionText: "of 100",
-                            stateText: sleepScoreWord(score),
-                            diameter: 184,
-                            lineWidth: 15,
-                            animatedFraction: heroFraction
+            // A subtle night atmosphere sits behind the sleep hero ONLY (the Rest world's whisper:
+            // faint indigo wash + crescent moon over the near-black canvas, no glow), clipped to the
+            // card. Replaces the now-flat ScenicHeroBackground here.
+            VStack(spacing: NoopMetrics.space4) {
+                if let score {
+                    BevelGauge(
+                        fraction: frac,
+                        stops: StrandPalette.restGradient.stops,
+                        tipColor: StrandPalette.restColor,
+                        numberText: "\(Int(score.rounded()))",
+                        captionText: "of 100",
+                        stateText: sleepScoreWord(score),
+                        diameter: 184,
+                        lineWidth: 15,
+                        animatedFraction: heroFraction
+                    )
+                    .padding(.top, NoopMetrics.space1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
+                } else {
+                    // No 0–100 score for the night — lead with hours slept as a big rounded headline
+                    // whose minutes tick up on appear (the same count-up the scored hero gets).
+                    VStack(spacing: NoopMetrics.space1) {
+                        CountUpText(
+                            value: model.night.stages.asleep,
+                            format: { durationText($0) },
+                            font: StrandFont.number(46),
+                            color: StrandPalette.restBright
                         )
-                        .padding(.top, 4)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
-                    } else {
-                        // No 0–100 score for the night — lead with hours slept as a big rounded headline.
-                        VStack(spacing: 4) {
-                            Text(durationText(model.night.stages.asleep))
-                                .font(StrandFont.number(46))
-                                .foregroundStyle(StrandPalette.restBright)
-                            Text("asleep last night")
-                                .font(StrandFont.subhead)
-                                .foregroundStyle(StrandPalette.textSecondary)
-                        }
-                        .padding(.vertical, 18)
-                        .accessibilityElement(children: .combine)
+                        Text("asleep last night")
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textSecondary)
                     }
-                    SourceBadge(score != nil ? sleepScoreSource(model) : "On-device", tint: StrandPalette.restColor)
+                    .padding(.vertical, NoopMetrics.space5)
+                    .accessibilityElement(children: .combine)
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity)
+                SourceBadge(score != nil ? sleepScoreSource(model) : "On-device", tint: StrandPalette.restColor)
             }
+            .padding(NoopMetrics.cardInnerPadding + NoopMetrics.space1)
+            .frame(maxWidth: .infinity)
+            .timeOfDayBackground(.night)
+            .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
         }
     }
 
@@ -314,25 +320,21 @@ struct SleepView: View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Sleep marks", overline: "Tap to log", trailing: "Phase 1")
             NoopCard(tint: StrandPalette.restColor) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                     Text("Tap when you're heading to bed or when you wake. Each tap is logged with the time — it doesn't change tonight's detected sleep.")
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: NoopMetrics.gap) {
-                        Button { logMark(.bedtime) } label: {
-                            Label("Going to sleep", systemImage: "moon.zzz.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.noopSecondary)
-                        .accessibilityLabel("Log going to sleep")
+                        // Routed through the unified NoopButton system so the two marks sit identically
+                        // (sentence-case label, leading icon at 8pt, controlHeight=48, no glow).
+                        NoopButton("Going to sleep", systemImage: "moon.zzz.fill",
+                                   kind: .secondary, fullWidth: true) { logMark(.bedtime) }
+                            .accessibilityLabel("Log going to sleep")
 
-                        Button { logMark(.wake) } label: {
-                            Label("I'm awake", systemImage: "sun.max.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.noopSecondary)
-                        .accessibilityLabel("Log waking up")
+                        NoopButton("I'm awake", systemImage: "sun.max.fill",
+                                   kind: .secondary, fullWidth: true) { logMark(.wake) }
+                            .accessibilityLabel("Log waking up")
                     }
                     if let lastMark {
                         Text(lastMark.confirmation)
@@ -420,8 +422,8 @@ struct SleepView: View {
             .sorted { $0.effectiveStartTs < $1.effectiveStartTs }
         let mainMin = night.stages.total
         let napMin = naps.reduce(0.0) { $0 + Double($1.endTs - $1.effectiveStartTs) / 60.0 }
-        NoopCard(padding: 14, tint: StrandPalette.restColor) {
-            VStack(alignment: .leading, spacing: 12) {
+        NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.restColor) {
+            VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 HStack {
                     SectionHeader("Naps", overline: "Daytime sleep", trailing: nil)
                     Spacer(minLength: 8)
@@ -545,7 +547,7 @@ struct SleepView: View {
     private func stageCard(_ night: Night, intervals: [SleepInterval]) -> some View {
         let s = night.stages
         let isPersisted = (night.realSegments?.count ?? 0) >= 2
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             ChartCard(
                 title: "Stage breakdown",
                 subtitle: "\(durationText(night.timeInBed)) in bed · \(efficiencyText(night)) efficiency"
@@ -677,8 +679,8 @@ struct SleepView: View {
     private func sleepWindowRow(_ night: Night) -> some View {
         // A frosted Rest-tinted card (was a flat surfaceRaised block) so the window row sits in the
         // same colour world as the rest of the screen. Bevel treatment — content unchanged.
-        NoopCard(padding: 14, tint: StrandPalette.restColor) {
-            VStack(alignment: .leading, spacing: 10) {
+        NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.restColor) {
+            VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
                 HStack(spacing: 0) {
                     sleepTime(icon: "moon.zzz.fill", label: "Asleep", value: night.onsetText)
                     Spacer(minLength: 12)
@@ -733,8 +735,8 @@ struct SleepView: View {
     /// and the spec's nap-row suffix). Sized for both macOS and iOS. (spec 2026-06-20 C1)
     @ViewBuilder
     private func whyPopover(text: String, napSuffix: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+            HStack(spacing: NoopMetrics.space2) {
                 Image(systemName: "moon.stars.fill")
                     .foregroundStyle(StrandPalette.restColor)
                     .accessibilityHidden(true)
@@ -755,7 +757,7 @@ struct SleepView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(14)
+        .padding(NoopMetrics.cardInnerPadding)
         .frame(width: 260)
         .background(StrandPalette.surfaceOverlay)
         .accessibilityElement(children: .combine)
@@ -860,7 +862,7 @@ struct SleepView: View {
     /// as the prior footer (`s.rem` / `s.deep` / `s.light` / `s.awake` over `s.total`) — no new numbers.
     @ViewBuilder
     private func stageBreakdownRows(_ s: Stages) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
             stageBreakdownRow(.rem,   minutes: s.rem,   total: s.total)
             stageBreakdownRow(.deep,  minutes: s.deep,  total: s.total)
             stageBreakdownRow(.light, minutes: s.light, total: s.total)
@@ -888,16 +890,9 @@ struct SleepView: View {
                 .font(StrandFont.captionNumber)
                 .foregroundStyle(color)
                 .frame(width: 38, alignment: .leading)
-            // Proportional fill over a faint track — the bar "context" for the share-of-night.
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule(style: .continuous).fill(StrandPalette.surfaceInset)
-                    Capsule(style: .continuous)
-                        .fill(color)
-                        .frame(width: geo.size.width * CGFloat(fraction))
-                }
-            }
-            .frame(height: 6)
+            // The NOOP signature: a segmented PipBar that counts up to the share-of-night fraction,
+            // tinted in the stage colour over the canonical inset track. Flat, crisp, no glow.
+            PipBar(value: fraction * 100, segments: 20, tint: color, height: 8)
             Text(durationText(minutes))
                 .font(StrandFont.captionNumber)
                 .foregroundStyle(StrandPalette.textPrimary)
@@ -1005,15 +1000,19 @@ struct SleepView: View {
                         .foregroundStyle(StrandPalette.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    VStack(alignment: .leading, spacing: 14) {
-                        // Headline: net balance + the short tag (DEBT / SURPLUS / ON TARGET).
+                    VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+                        // Headline: net balance (count-up on appear) + the short tag (DEBT / SURPLUS / ON
+                        // TARGET). The number ticks from the accumulated magnitude via the same formatter.
                         HStack(alignment: .firstTextBaseline) {
-                            Text(debtHeadline(ledger))
-                                .font(StrandFont.number(26))
-                                .foregroundStyle(debtBalanceColor(ledger))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.6)
-                            Spacer(minLength: 8)
+                            CountUpText(
+                                value: ledger.magnitudeMin,
+                                format: { debtHeadline(forMagnitudeMin: $0, ledger: ledger) },
+                                font: StrandFont.number(26),
+                                color: debtBalanceColor(ledger)
+                            )
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            Spacer(minLength: NoopMetrics.space2)
                             Text(debtTag(ledger))
                                 .font(StrandFont.captionNumber)
                                 .foregroundStyle(debtBalanceColor(ledger))
@@ -1082,7 +1081,7 @@ struct SleepView: View {
             SectionHeader("Stages vs typical", overline: "Last night",
                           trailing: "hatch = typical")
             NoopCard(tint: StrandPalette.restColor) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space4) {
                     stageRow(stage: "Deep",  last: s.deep,  typical: model.typicalDeepMin,  nightTotal: s.total, color: StrandPalette.sleepDeep)
                     Divider().overlay(StrandPalette.hairline)
                     stageRow(stage: "REM",   last: s.rem,   typical: model.typicalRemMin,   nightTotal: s.total, color: StrandPalette.sleepREM)
@@ -1456,7 +1455,7 @@ struct SleepView: View {
         let lastIndex = max(navDays.count - 1, 0)
         let title: LocalizedStringKey = nightOffset == 0 ? "Last night"
             : (nightOffset == 1 ? "1 night ago" : "\(nightOffset) nights ago")
-        HStack(spacing: 12) {
+        HStack(spacing: NoopMetrics.cardInnerSpacing) {
             Button { if nightOffset < lastIndex { nightOffset += 1 } } label: {
                 Image(systemName: "chevron.left")
                     .font(StrandFont.headline)
@@ -1696,8 +1695,16 @@ struct SleepView: View {
     /// "≈2h 10m" magnitude headline — leading "≈" because it's an accumulated estimate.
     /// Reads "On target" inside the deadband so a few stray minutes don't show as debt.
     private func debtHeadline(_ ledger: SleepDebtLedger) -> String {
-        if ledger.magnitudeMin < SleepDebt.onTargetBandMin { return "On target" }
-        return "≈\(durationText(ledger.magnitudeMin))"
+        debtHeadline(forMagnitudeMin: ledger.magnitudeMin, ledger: ledger)
+    }
+
+    /// The same headline formatter, but for an arbitrary (interpolated) magnitude so `CountUpText` can
+    /// render a coherent string on every frame as the number ticks up. The on-target deadband check
+    /// uses the LIVE magnitude `m` so the headline crosses from "On target" to "≈…" mid-count exactly
+    /// once, matching the final reading. Final-value identical to `debtHeadline(_:)`.
+    private func debtHeadline(forMagnitudeMin m: Double, ledger: SleepDebtLedger) -> String {
+        if m < SleepDebt.onTargetBandMin { return "On target" }
+        return "≈\(durationText(m))"
     }
 
     /// Short tag under/beside the headline: DEBT / SURPLUS / ON TARGET.

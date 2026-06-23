@@ -195,7 +195,7 @@ struct TrendsReportPage: View {
     static let pageWidth: CGFloat = 612
 
     var body: some View {
-        VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
+        VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
             header
             if report.isEmpty {
                 emptyState
@@ -205,7 +205,7 @@ struct TrendsReportPage: View {
             }
             footer
         }
-        .padding(28)
+        .padding(NoopMetrics.space8)
         .frame(width: Self.pageWidth, alignment: .leading)
         .background(StrandPalette.surfaceBase)
         .environment(\.colorScheme, .dark)
@@ -219,7 +219,7 @@ struct TrendsReportPage: View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous)
                 .fill(StrandPalette.surfaceRaised)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: NoopMetrics.space1) {
                 HStack(alignment: .firstTextBaseline) {
                     BrandMark(size: 22)
                     Text("NOOP").font(StrandFont.overline).tracking(StrandFont.overlineTracking)
@@ -248,10 +248,10 @@ struct TrendsReportPage: View {
 
     private var headlines: some View {
         NoopCard(tint: StrandPalette.chargeColor) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
                 SectionHeader("What changed", overline: "Summary")
                 ForEach(Array(report.headlines.enumerated()), id: \.offset) { _, line in
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .top, spacing: NoopMetrics.space2) {
                         Image(systemName: "sparkles")
                             .font(StrandFont.footnote)
                             .foregroundStyle(StrandPalette.accent)
@@ -280,7 +280,7 @@ struct TrendsReportPage: View {
         let metric = stat.metric
         let spark = series[metric] ?? []
         return NoopCard(tint: metric.accent) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
                 // Title + mean read-out + trend chip.
                 HStack(alignment: .firstTextBaseline) {
                     Text(metric.label).strandOverline()
@@ -336,11 +336,11 @@ struct TrendsReportPage: View {
 
     private var emptyState: some View {
         NoopCard {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: NoopMetrics.space3) {
                 Image(systemName: "calendar.badge.exclamationmark")
                     .font(StrandFont.headline)
                     .foregroundStyle(StrandPalette.accent)
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     Text("Not enough data in this range yet")
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textPrimary)
@@ -356,7 +356,7 @@ struct TrendsReportPage: View {
     // MARK: Footer
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: NoopMetrics.space1) {
             Divider().overlay(StrandPalette.hairline)
             // Provenance legend (#457): a clinician (or anyone) reading this needs to know which numbers
             // are directly measured vs. NOOP's own derived scores. HRV / Resting HR come off the strap;
@@ -458,8 +458,8 @@ struct TrendsReportSheet: View {
     var body: some View {
         let rpt = report
         ScrollView {
-            VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     Text("Export trends report")
                         .font(StrandFont.title2)
                         .foregroundStyle(StrandPalette.textPrimary)
@@ -469,7 +469,7 @@ struct TrendsReportSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     Text("Range").strandOverline()
                     SegmentedPillControl(ReportRange.allCases, selection: $range) { $0.label }
                     Text(range.longName)
@@ -479,7 +479,7 @@ struct TrendsReportSheet: View {
 
                 // A scaled-down live preview of the page so the user sees exactly what
                 // they'll get before exporting.
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     Text("Preview").strandOverline()
                     page(for: rpt)
                         .scaleEffect(0.46, anchor: .topLeading)
@@ -493,29 +493,20 @@ struct TrendsReportSheet: View {
                         )
                 }
 
-                Button {
+                // WHOOP primary action — routed through the unified button system (filled blue accent,
+                // white ink, no glow). The label swaps to "Preparing…" while a PDF is being written.
+                NoopButton(exporting ? "Preparing…" : "Export PDF",
+                           systemImage: "square.and.arrow.up", kind: .primary, fullWidth: true) {
                     export(rpt)
-                } label: {
-                    Label(exporting ? "Preparing…" : "Export PDF", systemImage: "square.and.arrow.up")
-                        // WHOOP primary action — solid blue accent fill, white ink, no gold.
-                        .font(StrandFont.body.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 11).padding(.horizontal, 18)
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                .fill(StrandPalette.accent)
-                        )
-                        .opacity(exporting ? 0.6 : 1)
                 }
-                .buttonStyle(.plain)
                 .disabled(exporting)
 
                 Text("Tip: the share sheet can save the PDF to Files, AirDrop it, or send it on.")
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
             }
-            .padding(24)
+            .screenPadding()
+            .padding(.vertical, NoopMetrics.space6)
         }
         .background(StrandPalette.surfaceBase)
         .frame(width: 460, height: 640)

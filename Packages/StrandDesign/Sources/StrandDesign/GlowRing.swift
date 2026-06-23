@@ -34,6 +34,14 @@ public struct GlowRing: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
 
+    /// The centre-number font for a ring of the given diameter — the house numeral at `diameter * 0.36`,
+    /// bold. Exposed so an EMPTY / carried / "No data" ring (which doesn't draw a `GlowRing`) can render
+    /// its centre text in the EXACT same size + weight as a filled ring, keeping the hero trio's three
+    /// centre read-outs visually consistent regardless of state.
+    public static func centerFont(diameter: CGFloat) -> Font {
+        StrandFont.rounded(diameter * 0.36, weight: .bold)
+    }
+
     private var clamped: CGFloat { CGFloat(min(max(fraction, 0), 1)) }
     private var filled: CGFloat { appeared ? clamped : 0 }
     private var shown: Double { appeared ? value : 0 }
@@ -51,7 +59,7 @@ public struct GlowRing: View {
 
             // Centred rolling number.
             Text(format(shown))
-                .font(StrandFont.rounded(diameter * 0.36, weight: .bold))
+                .font(Self.centerFont(diameter: diameter))
                 .foregroundStyle(StrandPalette.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)

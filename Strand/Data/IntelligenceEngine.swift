@@ -98,6 +98,22 @@ final class IntelligenceEngine: ObservableObject {
         return n % 2 == 1 ? s[n / 2] : (s[n / 2 - 1] + s[n / 2]) / 2
     }
 
+    /// The per-day RHR floor-vs-mean diagnostic line (#691). NOOP's `floor` is the WHOOP-style resting
+    /// HR — the lowest SUSTAINED 5-min in-bed level (SleepStager picks the min 5-min rolling-mean HR per
+    /// session, the day takes the .min() across them) — whereas a "sleeping HR" app reports the night MEAN
+    /// over the whole asleep span. The mean always sits at-or-above the floor, so NOOP reading lower is BY
+    /// DESIGN, not a bug; logging both makes a "NOOP RHR is lower than my other app" report explainable
+    /// from the strap log. `inBedBpms` is the bpm of every HR sample inside a matched in-bed session (the
+    /// SAME span the floor came from, so the two numbers are directly comparable). Empty in-bed → nightMean
+    /// is "nil". Counts/bpm only — no timestamps or PII. Pure so it's unit-tested directly and is the SAME
+    /// line `analyzeRecent` ships. Byte-identical to the Android `rhrFloorMeanLogLine`.
+    static func rhrFloorMeanLogLine(day: String, floor: Int, inBedBpms: [Int]) -> String {
+        let meanLog: String = inBedBpms.isEmpty ? "nil"
+            : String(Int((Double(inBedBpms.reduce(0, +)) / Double(inBedBpms.count)).rounded()))
+        return "rhr day=\(day) floor=\(floor) nightMean=\(meanLog) inBedSamples=\(inBedBpms.count) "
+            + "(floor = WHOOP-style lowest-sustained = NOOP RHR; mean = sleeping-HR-app number)"
+    }
+
     /// The Saturday on-or-before a "yyyy-MM-dd" local-day string — the weekly key Fitness Age writes to.
     static func saturdayKey(onOrBefore dayStr: String) -> String {
         var cal = Calendar(identifier: .gregorian); cal.timeZone = .current
@@ -363,6 +379,23 @@ final class IntelligenceEngine: ObservableObject {
             nightlyRhrByDay[res.daily.day] = res.daily.restingHr.map(Double.init)
             nightlyRespByDay[res.daily.day] = res.daily.respRateBpm
             nightlySkinByDay[res.daily.day] = res.nightlySkinTempC
+            // ── RHR floor-vs-mean diagnostic (#691) ────────────────────────────────────────────────
+            // Make the recurring "NOOP's resting HR reads LOWER than my sleeping-HR app" reports
+            // explainable from the strap log instead of a guess. The two numbers measure different
+            // things BY DESIGN, not a bug: NOOP's `restingHr` is the WHOOP-style FLOOR (the lowest
+            // sustained 5-min in-bed level — SleepStager picks the min 5-min rolling-mean HR per session,
+            // and the day takes the .min() across them), whereas a "sleeping HR" app reports the night
+            // MEAN over the whole asleep span. The mean always sits above the floor, so NOOP looking
+            // lower is correct. Log BOTH so a report ships proof of the gap. Mean is computed over the
+            // SAME matched in-bed span the floor came from (so they're directly comparable); a night
+            // with no banked floor (no matched sleep) logs nil and the line is skipped. Logging only —
+            // no scoring change. Counts/bpm only; no timestamps or PII (LiveState.append also scrubs).
+            if let floor = res.daily.restingHr {
+                let inBedBpms = hr.filter { s in
+                    res.cachedSleep.contains { s.ts >= $0.startTs && s.ts < $0.endTs }
+                }.map { $0.bpm }
+                diagnosticSink?(Self.rhrFloorMeanLogLine(day: res.daily.day, floor: floor, inBedBpms: inBedBpms))
+            }
             scoredNights.append((daily: res.daily, strain: res.strain, cachedSleep: res.cachedSleep,
                                  workouts: res.workouts, nightlySkin: res.nightlySkinTempC,
                                  sessionMotion: res.sessionMotionByStart))

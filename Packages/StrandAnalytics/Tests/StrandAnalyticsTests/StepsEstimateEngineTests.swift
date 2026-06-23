@@ -55,6 +55,35 @@ final class StepsEstimateEngineTests: XCTestCase {
         XCTAssertEqual(cal!.sampleDays, 3)
     }
 
+    func testCalibrateMotionWeightedHighActivityDayDrivesFit() {
+        // #682: three near-still low-activity days all read ratio 50 (motion 1, steps 50); one busy day reads
+        // ratio 100 (motion 100, steps 10000). The PLAIN median of [50,50,50,100] would be 50 — the low days
+        // win by COUNT. The motion-weighted median lets the busy day's 100 units of motion outvote the 3 units
+        // from the still days (half-mass 51.5 lands inside the busy day), so k = 100.
+        let pts = [
+            (1.0, 50.0), (1.0, 50.0), (1.0, 50.0),   // ratio 50, weight 1 each
+            (100.0, 10000.0),                        // ratio 100, weight 100
+        ].map { StepsEstimateEngine.CalibrationPoint(motion: $0.0, steps: $0.1) }
+        let cal = StepsEstimateEngine.calibrate(pts)
+        XCTAssertNotNil(cal)
+        XCTAssertEqual(cal!.coefficient, 100, accuracy: 1e-9)   // weighted → busy day wins (plain median = 50)
+        XCTAssertEqual(cal!.sampleDays, 4)
+    }
+
+    func testWeightedMedianReducesToPlainMedianAtEqualWeights() {
+        // Equal weights must reproduce the old even-count midpoint average exactly (byte-identical fits).
+        XCTAssertEqual(StepsEstimateEngine.weightedMedian([90, 100, 110, 130], weights: [5, 5, 5, 5]),
+                       105, accuracy: 1e-9)                       // plain median = (100+110)/2
+        XCTAssertEqual(StepsEstimateEngine.weightedMedian([3, 1, 2], weights: [7, 7, 7]),
+                       2, accuracy: 1e-9)                         // odd count, order-independent
+    }
+
+    func testWeightedMedianFallsBackOnDegenerateWeights() {
+        XCTAssertEqual(StepsEstimateEngine.weightedMedian([1, 2, 3], weights: []), 2, accuracy: 1e-9)
+        XCTAssertEqual(StepsEstimateEngine.weightedMedian([1, 2, 3], weights: [0, 0, 0]), 2, accuracy: 1e-9)
+        XCTAssertEqual(StepsEstimateEngine.weightedMedian([], weights: []), 0, accuracy: 1e-9)
+    }
+
     func testManualOverrideWinsWithFullConfidence() {
         let cal = StepsEstimateEngine.calibrate([], manualOverride: 123)
         XCTAssertNotNil(cal)
