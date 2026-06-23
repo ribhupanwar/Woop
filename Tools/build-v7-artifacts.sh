@@ -3,7 +3,7 @@
 # each anonymized + leak-checked. Writes dist/NOOP-v7.0.0-{macos.zip,.ipa,.apk}.
 set -uo pipefail
 cd ~/Documents/Strand
-VER="7.0.0"
+VER="${1:-7.0.1}"
 DIST="dist"; mkdir -p "$DIST"
 HOMEPATH="$HOME"
 ok_mac=0; ok_ios=0; ok_apk=0
