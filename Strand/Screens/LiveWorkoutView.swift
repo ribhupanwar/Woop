@@ -58,6 +58,15 @@ struct LiveWorkoutView: View {
         }
         // If the workout ended elsewhere (process restart cleared it), close the screen.
         .onChangeCompat(of: model.activeWorkout == nil) { gone in if gone { onClose() } }
+        // Arm the realtime HR stream while the in-exercise screen is up (#681). On a WHOOP 5/MG live HR
+        // only flows while the puffin realtime stream is armed; previously only the Live tab armed it, so
+        // starting a manual workout straight from Workouts (Live never opened) left `model.bpm == nil` —
+        // captureWorkoutSample bailed on every sample and endWorkout silently discarded the empty
+        // session. Ref-counted in AppModel, so when this sheet sits over an already-armed Live tab the
+        // two balance and neither disarms the other (mirrors Android LiveWorkoutScreen's DisposableEffect
+        // requestRealtimeHr/releaseRealtimeHr). Balanced: one start on appear, one stop on disappear.
+        .onAppear { model.startRealtimeHR() }
+        .onDisappear { model.stopRealtimeHR() }
     }
 
     private var header: some View {

@@ -157,4 +157,79 @@ final class StepsEstimateEngineTests: XCTestCase {
         XCTAssertTrue(status.canEstimate)
         XCTAssertEqual(status.headline, "Calibrated by hand")
     }
+
+    // MARK: #693 — apple-health steps + strap motion over the calibration window
+
+    /// A day's still-with-walking-bursts gravity at 1 Hz: `bursts` short active windows separated by stillness,
+    /// so `dayMotionIntensity` returns a positive, day-distinct motion volume (the strap-side input the engine
+    /// pairs with the phone step count).
+    private func walkingGravity(start: Int, bursts: Int) -> [GravitySample] {
+        var out: [GravitySample] = []
+        var t = start
+        for b in 0..<bursts {
+            // a 60 s active burst (oscillating gravity → real deltas) then 540 s still
+            for i in 0..<60 {
+                let phase = Double(i % 2) * 0.5
+                out.append(GravitySample(ts: t, x: phase, y: 0, z: 1.0)); t += 1
+            }
+            for _ in 0..<540 { out.append(GravitySample(ts: t, x: 0, y: 0, z: 1.0)); t += 1 }
+            _ = b
+        }
+        return out
+    }
+
+    /// #693 regression (iOS/Mac): steps calibration must advance once the phone has counted steps on
+    /// >= minCalibrationDays days that ALSO have strap motion. The live bug was a wrong DATA SOURCE in
+    /// IntelligenceEngine — the phone reference was read from `dailyMetrics` (always empty for steps;
+    /// Apple-Health writes the count into `appleDaily.steps`, an `Int?`), so `refStepsByDay` stayed empty
+    /// and the fit never had any points → "Need 3 more days" forever. This pins the calibration-point
+    /// ASSEMBLY the fixed read feeds: building `CalibrationPoint`s from an apple-steps source (`Int?`) keyed
+    /// by day + per-day `dayMotionIntensity` over >= 3 overlapping days yields a non-nil Calibration and a
+    /// status that is NOT `needsMoreDays`.
+    func testCalibrationFromAppleStepsAndStrapMotionAdvances() {
+        // Five days, each with a real phone step count (the `appleDaily.steps` Int? source) AND strap motion.
+        // (Day 4 carries a nil step count — the gap the engine's `if let s = r.steps` filter must skip; it
+        //  contributes motion but no calibration point, exactly like a day the phone didn't count.)
+        let daySecs = 86_400
+        let appleSteps: [(day: String, steps: Int?)] = [
+            ("2026-06-15", 8000),
+            ("2026-06-16", 11000),
+            ("2026-06-17", 6000),
+            ("2026-06-18", nil),      // phone didn't count this day → no reference, must be skipped
+            ("2026-06-19", 9000),
+        ]
+        // Per-day strap motion, distinct volumes (more bursts on busier days), keyed by the same day string.
+        var motionByDay: [String: Double] = [:]
+        for (i, e) in appleSteps.enumerated() {
+            let grav = walkingGravity(start: 1_750_000_000 + i * daySecs, bursts: 6 + i)
+            let m = StepsEstimateEngine.dayMotionIntensity(grav)
+            XCTAssertGreaterThan(m, StepsEstimateEngine.minMotionForFit, "each active day must clear the fit floor")
+            motionByDay[e.day] = m
+        }
+
+        // Build reference steps from the apple-steps source the SAME way the fixed engine does:
+        // `for r in appleRows { if let s = r.steps, s > 0 { refStepsByDay[r.day] = Double(s) } }`.
+        var refStepsByDay: [String: Double] = [:]
+        for e in appleSteps { if let s = e.steps, s > 0 { refStepsByDay[e.day] = Double(s) } }
+        XCTAssertEqual(refStepsByDay.count, 4, "the nil-step day must not enter the reference set")
+
+        // Pair into calibration points exactly as the engine's `calPoints` does (motion + reference step).
+        let calPoints = motionByDay.compactMap { (day, motion) -> StepsEstimateEngine.CalibrationPoint? in
+            guard let s = refStepsByDay[day] else { return nil }
+            return StepsEstimateEngine.CalibrationPoint(motion: motion, steps: s)
+        }
+        XCTAssertEqual(calPoints.count, 4, "4 overlapping (motion + phone-step) days, the nil day dropped")
+
+        // The fix's payoff: a real fit now exists, and the status is NOT stuck on needsMoreDays.
+        let cal = StepsEstimateEngine.calibrate(calPoints)
+        XCTAssertNotNil(cal, "4 usable overlapping days must fit a coefficient (the #693 regression)")
+        XCTAssertGreaterThan(cal!.coefficient, 0)
+        XCTAssertGreaterThanOrEqual(cal!.sampleDays, StepsEstimateEngine.minCalibrationDays)
+
+        let status = StepsEstimateEngine.status(calPoints)
+        if case .needsMoreDays = status {
+            XCTFail("calibration must have advanced past needsMoreDays, got \(status)")
+        }
+        XCTAssertTrue(status.canEstimate)
+    }
 }

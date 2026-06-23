@@ -355,6 +355,11 @@ object IntelligenceEngine {
                 wristOff = wristOff,
                 habitualMidsleepSec = habitualMidsleepSec,
                 bandSleepState = bandSleepState,
+                // #690: thread the V2 toggle into the NORMAL staging path so it affects detected nights,
+                // not just the userEdited self-heal restage (which already reads this same flag at line ~496).
+                // The Context-aware caller (AppViewModel/WhoopBleClient) supplied it from
+                // PuffinExperiment.from(context).experimentalSleepV2.
+                useSleepStagerV2 = useExperimentalSleepV2,
             )
 
             // Harvest the baseline-independent nightly aggregates (a day with no detected

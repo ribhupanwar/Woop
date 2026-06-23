@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "6.2.2"
+    static let currentVersion = "7.0.1"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,29 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "7.0.1",
+            title: "Fixes: the experimental sleep toggle now works, steps calibration, manual workouts on WHOOP 5/MG, and a sane HRV reading",
+            date: "June 2026",
+            items: [
+                "**Experimental Sleep Staging V2 actually re-stages your nights now.** Turning it on was only re-staging nights you'd hand-edited, so most of your sleep looked unchanged. It now re-stages every night, so the new staging shows up across your history the moment you switch it on.",
+                "**WHOOP 4.0 steps calibration moves on.** The steps estimate could get stuck saying it needed more days even once it had them, so it never finished calibrating. It now advances and locks in your personal coefficient as soon as there's enough to learn from.",
+                "**Manual workouts on a WHOOP 5/MG record heart rate again.** A workout you started by hand on a 5/MG could finish with no heart rate and fail to save. It now captures your heart rate through the session and saves the workout properly.",
+                "**A wildly out-of-range imported HRV no longer shows a nonsense headline.** An imported HRV value that was far outside any believable range could drive a silly \"way over baseline\" headline. NOOP now ignores the impossible value instead of building a verdict on it.",
+                "**The About screen shows the right version.** The version pill in Settings → About now reads the app's real version, so it can't drift out of date again.",
+            ]),
+        Release(
+            version: "7.0.0",
+            title: "Everything: a whole new look, hydration, automatic workout detection, and smarter sleep",
+            date: "June 2026",
+            items: [
+                "**A whole new look.** NOOP has been redesigned from the ground up — flat, clean colour rings, a day-cycle scene that moves with your day, and a Today screen you can customise to show what matters to you. The same fresh look lands on iPhone, Mac and Android together.",
+                "**New: Hydration tracking.** Opt in and log your water through the day with a simple tap, set a daily target, and see how you're doing at a glance. Off by default — turn it on in Settings.",
+                "**New: Automatic workout detection.** Opt in and NOOP spots a likely workout from your heart rate and motion and offers it for a one-tap add, so a session you forgot to start doesn't go unrecorded. Nothing is logged without you confirming it. Off by default.",
+                "**Experimental: Sleep Staging V2.** A new on-device sleep stager you can switch on to try a sharper deep/REM/light breakdown. Clearly labelled experimental while we prove it against real nights.",
+                "**Sleep marks.** Tap to mark when you turned in and when you woke, so you keep your own record of bedtime and wake alongside what the strap worked out.",
+                "**Plus a batch of fixes** across sync, scoring and the screens you use every day.",
+            ]),
         Release(
             version: "6.2.2",
             title: "Deep Timeline you can scroll through days, faster manual workouts, and a storage clean-up",

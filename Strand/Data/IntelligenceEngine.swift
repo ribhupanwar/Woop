@@ -365,6 +365,11 @@ final class IntelligenceEngine: ObservableObject {
             let bandSleepState = await bandSleepStateSamples(computedId: deviceId + "-noop",
                                                              from: from, to: to, store: store)
 
+            // #690: read the experimental-V2 toggle ONCE here (off the detached executor, matching the
+            // Repository self-heal call site) and capture the Bool, so the Settings toggle now drives the
+            // NORMAL detected-night staging path — not only the userEdited self-heal restage.
+            let useSleepStagerV2 = PuffinExperiment.experimentalSleepV2Enabled
+
             let res = await Task.detached(priority: .utility) {
                 AnalyticsEngine.analyzeDay(day: day, hr: hr, rr: rr, resp: resp, gravity: grav,
                                            steps: steps, dayHr: dayHr, daySteps: daySteps,
@@ -373,7 +378,10 @@ final class IntelligenceEngine: ObservableObject {
                                            profile: up, baselines: baselines1, maxHROverride: maxHR,
                                            tzOffsetSeconds: tzOffset, wristOff: wristOff,
                                            habitualMidsleepSec: habitualMidsleepSec,
-                                           bandSleepState: bandSleepState)
+                                           bandSleepState: bandSleepState,
+                                           // #690: thread the V2 toggle into the NORMAL staging path so
+                                           // it affects detected nights, not just the self-heal restage.
+                                           useSleepStagerV2: useSleepStagerV2)
             }.value
             nightlyHrvByDay[res.daily.day] = res.daily.avgHrv
             nightlyRhrByDay[res.daily.day] = res.daily.restingHr.map(Double.init)
@@ -645,10 +653,14 @@ final class IntelligenceEngine: ObservableObject {
         let calOldest = AnalyticsEngine.dayString(
             nowLocalMidnight - (stepsCalDays - 1) * 86_400, offsetSec: tzOffset)
         // Phone reference steps per day, from the apple-health daily rows (steps > 0 only).
-        let appleRows = (try? await store.dailyMetrics(deviceId: Repository.appleHealthSource,
-                                                       from: calOldest, to: newestDay)) ?? []
+        // #693: read `appleDaily`, NOT `dailyMetrics`. Apple-Health import writes the phone step count into
+        // `appleDaily.steps` (Int?), never into a dailyMetric `steps` row — so the old `dailyMetrics` read
+        // was always empty and the calibration never advanced past "Need 3 more days" (Android already reads
+        // appleDaily here, IntelligenceEngine.kt:676). `store.appleDaily(deviceId:from:to:)` already exists.
+        let appleRows = (try? await store.appleDaily(deviceId: Repository.appleHealthSource,
+                                                     from: calOldest, to: newestDay)) ?? []
         var refStepsByDay: [String: Double] = [:]
-        for r in appleRows where (r.steps ?? 0) > 0 { refStepsByDay[r.day] = Double(r.steps!) }
+        for r in appleRows { if let s = r.steps, s > 0 { refStepsByDay[r.day] = Double(s) } }
         // Per-day motion volume over the calibration window, read from the owner-resolved strap streams.
         // (Owner resolution mirrors the scoring loop; one device installs resolve to `deviceId`.)
         var motionByDay: [String: Double] = [:]

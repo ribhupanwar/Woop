@@ -17,6 +17,20 @@ approximate; downloads are on the [Releases](https://github.com/NoopApp/noop/rel
 
 ---
 
+## 7.0.1 — fixes: sleep toggle, steps, manual workouts, HRV, scrolling, and the version display (all platforms)
+
+A fast follow-up to 7.0.0.
+
+- **The experimental sleep staging (V2) toggle now actually works.** It was only re-staging nights you had edited; flip it on and every detected night is re-staged from now on (#690).
+- **Step-estimate calibration unsticks.** WHOOP 4.0 step calibration sat on "need more days" forever because it read your phone steps from the wrong place; it now accumulates properly (#693).
+- **Manual workouts record on WHOOP 5/MG.** Starting a workout from the Workouts tab now holds the live heart-rate stream open, so it captures HR and saves instead of logging nothing (#681).
+- **No more nonsense HRV headline.** An imported HRV measured a different way (e.g. an Oura ring's SDNN vs your strap's RMSSD) no longer renders a wild "210% over baseline" line (#696).
+- **Scrolling no longer drifts sideways.** Vertical scrolling on Trends, Sleep, Data Sources and Stress could bounce left and right; that horizontal bounce is now locked off (#697).
+- **The version shown is correct.** The About screen reads the real app version (it was stuck on an old number), and the update check no longer tells you to download a version you already have.
+- **Plus fixes found while tightening our own tests:** Garmin "vívoactive" straps are recognised, a single bad GPS distance no longer drops a whole route, an iOS Shortcut import with Windows-style line endings no longer skips records, and an unstaged night is no longer flagged low-confidence.
+
+---
+
 ## 7.0.0 "Everything" — full redesign + hydration + auto workout detection + smarter sleep (all platforms)
 
 The biggest NOOP release yet.

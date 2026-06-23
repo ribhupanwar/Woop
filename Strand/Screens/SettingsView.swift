@@ -1472,6 +1472,14 @@ struct SettingsView: View {
 
     // MARK: - About
 
+    /// The real marketing version straight from the bundle (CFBundleShortVersionString, set from
+    /// project.yml MARKETING_VERSION), so the About pill can never go stale the way a hand-edited
+    /// Swift constant can. Mirrors how Android's pill reads BuildConfig.VERSION_NAME. Falls back to
+    /// the hand-maintained changelog version only if the Info.plist key is somehow missing.
+    private var bundleVersionString: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? AppChangelog.currentVersion
+    }
+
     private var aboutCard: some View {
         SettingsSection(
             icon: "info.circle.fill",
@@ -1483,7 +1491,7 @@ struct SettingsView: View {
                     Text("NOOP")
                         .font(StrandFont.title2)
                         .foregroundStyle(StrandPalette.textPrimary)
-                    StatePill("v\(AppChangelog.currentVersion)", tone: .neutral, showsDot: false)
+                    StatePill("v\(bundleVersionString)", tone: .neutral, showsDot: false)
                     Spacer()
                     NoopButton("What's new", systemImage: "sparkles", kind: .secondary) {
                         showWhatsNew = true
@@ -1592,7 +1600,10 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                     HStack(spacing: NoopMetrics.space2 + 2) {
                         Button {
-                            updateChecker.check(currentVersion: AppChangelog.currentVersion)
+                            // Compare the ACTUAL installed bundle version against GitHub's latest, not the
+                            // hand-maintained AppChangelog.currentVersion (which drifts stale and told v7
+                            // users they were behind, #697-adjacent). Mirrors Android's BuildConfig check.
+                            updateChecker.check(currentVersion: bundleVersionString)
                         } label: {
                             if updateChecker.state == .checking {
                                 HStack(spacing: NoopMetrics.space1 + 2) {
@@ -2008,13 +2019,6 @@ struct StepsCalibrationSheet: View {
     @State private var draftManual: Double = 0
     @State private var didLoad = false
 
-    /// #589: how many phone-counted days we've actually matched against strap motion so far. Set during
-    /// `loadIfNeeded()` from the SAME overlapping-days scan the accuracy table uses. Feeds the
-    /// "Need N more days…" countdown in `currentFitCard` so an un-calibrated user knows exactly how close
-    /// they are, not just "a few days". (If Lane D ships a richer post-heal steps-state API, swap this read
-    /// for it — see crossLaneNotes; the rendered headline already comes from StepsEstimateEngine.)
-    @State private var usableMatchedDays = 0
-
     /// The coefficient the slider's max anchors to — generous headroom over whatever the auto-fit found so
     /// a manual nudge in either direction is reachable. Floor keeps the slider usable before any fit.
     private var sliderMax: Double {
@@ -2156,8 +2160,14 @@ struct StepsCalibrationSheet: View {
                         .foregroundStyle(StrandPalette.textPrimary)
                     // #589: a concrete countdown instead of a vague "a few days". Headline comes straight
                     // from the engine's needsMoreDays state so the wording matches the Today steps tile.
+                    // #693: drive `have` off `profile.stepsCalibrationSampleDays` — the value the engine
+                    // persists for the not-yet-calibrated case (IntelligenceEngine.swift sets it to the
+                    // usable-day `have`, the SAME source the Today tile reads). `usableMatchedDays` can't be
+                    // used here: `loadIfNeeded` early-returns before computing it when coeff == 0 (no fit
+                    // yet), so it would always read 0 and the card was stuck on "Need 3 more days".
                     Text(StepsEstimateEngine.CalibrationStatus
-                        .needsMoreDays(have: usableMatchedDays, need: StepsEstimateEngine.minCalibrationDays)
+                        .needsMoreDays(have: profile.stepsCalibrationSampleDays,
+                                       need: StepsEstimateEngine.minCalibrationDays)
                         .headline)
                         .font(StrandFont.bodyNumber)
                         .foregroundStyle(StrandPalette.accent)
@@ -2335,9 +2345,11 @@ struct StepsCalibrationSheet: View {
             if rows.count >= 7 { break }
         }
         comparison = rows
-        // #589: the matched-day count drives the "Need N more days…" countdown. These are exactly the
-        // phone-counted days we could pair with strap motion (the engine's "usable overlapping days").
-        usableMatchedDays = rows.count
+        // #693: the "Need N more days…" countdown is now driven by `profile.stepsCalibrationSampleDays`
+        // (the engine-persisted usable-day count, read directly in the card) — NOT a local match count
+        // computed here. This scan reaches here ONLY when coeff > 0 (already calibrated), so a local count
+        // would never reflect the not-yet-calibrated state the countdown describes. The rows still feed the
+        // accuracy table (`comparison`) above.
 
         // Typical recent day's motion for the live preview = median of the motions we just measured.
         if !motions.isEmpty {

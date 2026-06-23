@@ -754,6 +754,12 @@ object SleepStager {
         // HR dip. Default empty keeps pure-function callers/tests free of it; IntelligenceEngine passes the
         // night window's persisted band state. It can only RESCUE a real-sleep block, never fabricate. Mirrors Swift.
         bandSleepState: List<Pair<Long, Int>> = emptyList(),
+        // V7 / #690: when true, each accepted night is staged by the experimental cardiorespiratory recipe
+        // [SleepStagerV2.stageSession] instead of V1's [stageSession]. DETECTION is unchanged (same accepted
+        // windows); only the per-epoch hypnogram differs. Default false keeps V1 the byte-identical default
+        // (frozen-golden tests stay green). The live call site threads the experimentalSleepV2 flag so the
+        // Settings toggle now affects normal detected nights, not just the self-heal restage path. Mirrors Swift.
+        useSleepStagerV2: Boolean = false,
     ): List<DetectedSleep> {
         val grav = gravity.sortedBy { it.ts }
         if (grav.size < 2) return emptyList()
@@ -825,8 +831,13 @@ object SleepStager {
                 !passesMorningStillnessGuard(p, resting, baseline, morningWakeEnd, bandSleepState) &&
                 !isNightTail
             ) continue
-            val stages = stageSession(start = p.start, end = p.end, grav = grav,
-                hr = hrS, rr = rrS, resp = respS)
+            val stages = if (useSleepStagerV2) {
+                SleepStagerV2.stageSession(start = p.start, end = p.end, grav = grav,
+                    hr = hrS, rr = rrS, resp = respS)
+            } else {
+                stageSession(start = p.start, end = p.end, grav = grav,
+                    hr = hrS, rr = rrS, resp = respS)
+            }
             val eff = efficiency(start = p.start, end = p.end, stages = stages)
             val avgHrv = sessionAvgHRV(start = p.start, end = p.end, rr = rrS)
             sessions.add(

@@ -235,12 +235,18 @@ public enum AnalyticsEngine {
                                   // "asleep" is kept even on a borderline HR dip (#531). Default empty keeps
                                   // pure-function callers/tests free of it; IntelligenceEngine threads the
                                   // night window's persisted band state. (#531 / H8 consume)
-                                  bandSleepState: [(ts: Int, state: Int)] = []) -> DayResult {
+                                  bandSleepState: [(ts: Int, state: Int)] = [],
+                                  // Opt-in experimental sleep staging (V2). When true, detected nights are
+                                  // staged by `SleepStagerV2` instead of V1. Default false keeps V1 the
+                                  // byte-identical default for pure-function callers/tests; IntelligenceEngine
+                                  // threads `PuffinExperiment.experimentalSleepV2Enabled`. (V7 / #690)
+                                  useSleepStagerV2: Bool = false) -> DayResult {
 
         // ── Sleep detection + staging ─────────────────────────────────────────
         let allSessions = SleepStager.detectSleep(hr: hr, rr: rr, resp: resp, gravity: gravity,
                                                   tzOffsetSeconds: tzOffsetSeconds, wristOff: wristOff,
-                                                  bandSleepState: bandSleepState)
+                                                  bandSleepState: bandSleepState,
+                                                  useSleepStagerV2: useSleepStagerV2)
         // Sessions attributed to `day` = those whose end falls on `day` (LOCAL day, #277). `day` is
         // the caller's local-day key; attribute by the same offset so the bucket and the key agree.
         let matched = allSessions.filter { dayString($0.end, offsetSec: tzOffsetSeconds) == day }

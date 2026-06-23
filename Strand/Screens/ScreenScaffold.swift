@@ -50,6 +50,12 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             #endif
         }
+        #if os(iOS)
+        // #697: stop a vertical scroll from drifting/bouncing the screen left-right. `.basedOnSize` only
+        // permits horizontal bounce when content genuinely overflows the width (it does not here, the column
+        // is width-capped), so the spurious horizontal rubber-band that caused the sideways drift is gone.
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        #endif
         // The flat canvas, plus an optional full-bleed TOP backdrop (Today's day-cycle scene) drawn behind
         // the scroll content — edge-to-edge under the status bar. The scene is CONFINED to the header+hero
         // band (see SceneScreenBackground.height) so it fades out ABOVE the dashboard cards, which then sit

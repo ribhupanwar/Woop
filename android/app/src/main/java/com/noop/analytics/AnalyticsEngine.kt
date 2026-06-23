@@ -196,12 +196,17 @@ object AnalyticsEngine {
         // empty keeps pure-function callers/tests free of it; IntelligenceEngine threads the night window's
         // persisted band state. Mirrors Swift. (#531 / H8 consume)
         bandSleepState: List<Pair<Long, Int>> = emptyList(),
+        // Opt-in experimental sleep staging (V2). When true, detected nights are staged by [SleepStagerV2]
+        // instead of V1. Default false keeps V1 the byte-identical default for pure-function callers/tests;
+        // IntelligenceEngine threads PuffinExperiment.from(context).experimentalSleepV2. Mirrors Swift. (V7 / #690)
+        useSleepStagerV2: Boolean = false,
     ): DayResult {
 
         // ── Sleep detection + staging ─────────────────────────────────────────
         val allSessions = SleepStager.detectSleep(
             hr = hr, rr = rr, resp = resp, gravity = gravity, tzOffsetSeconds = tzOffsetSeconds,
             wristOff = wristOff, bandSleepState = bandSleepState,
+            useSleepStagerV2 = useSleepStagerV2,
         )
         // Sessions attributed to `day` = those whose end falls on `day` (LOCAL day, #277). `day` is
         // the caller's local-day key; attribute by the same offset so the bucket and the key agree.

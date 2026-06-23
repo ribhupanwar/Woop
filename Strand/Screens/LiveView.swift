@@ -118,8 +118,13 @@ struct LiveView: View {
         }
         .onAppear { refreshLiveSession() }
         .onDisappear { model.stopRealtimeHR() }
-        .onChangeCompat(of: live.bonded) { _ in refreshLiveSession() }
-        .onChangeCompat(of: live.connected) { _ in refreshLiveSession() }
+        // A fresh bond/connection re-arms the BLE stream (Apple must re-send startRealtime on a new
+        // connection) WITHOUT bumping the ref-count — `refreshLiveSession`'s `startRealtimeHR` already
+        // counted this screen once on `.onAppear`, balanced by the single `stopRealtimeHR` above.
+        // Re-counting here (multiple bonded/connected events per appearance, one disappear) would leave
+        // the stream stuck armed after leaving Live (#681 ref-count balance).
+        .onChangeCompat(of: live.bonded) { _ in reconnectLiveSession() }
+        .onChangeCompat(of: live.connected) { _ in reconnectLiveSession() }
         .onChangeCompat(of: displayHR) { _ in
             // Reduce Motion: keep the ring at its resting scale — the HR number still
             // updates via its own .contentTransition(.numericText()), so live HR is
@@ -929,9 +934,20 @@ struct LiveView: View {
         .disabled(!live.connected)
     }
 
+    /// Live tab appeared: take a ref-count on the realtime stream (arms it on the 0→1 edge) and pull a
+    /// battery reading. Balanced by the single `stopRealtimeHR()` on `.onDisappear`.
     private func refreshLiveSession() {
         guard activeConnection else { return }
         model.startRealtimeHR()
+        model.getBattery()
+    }
+
+    /// A fresh bond/connection landed while the Live tab is up: re-arm the BLE stream (Apple re-sends
+    /// startRealtime on a new connection) and refresh battery — WITHOUT taking another ref-count, since
+    /// these events can fire several times per appearance against the single `.onDisappear` release.
+    private func reconnectLiveSession() {
+        guard activeConnection else { return }
+        model.rearmRealtimeIfWanted()
         model.getBattery()
     }
 

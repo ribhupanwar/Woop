@@ -642,9 +642,14 @@ struct SleepView: View {
                                        efficiency: Double) -> Bool {
         guard asleepMin > 0 else { return false }
         let restorativeMin = max(0, deepMin) + max(0, remMin)
+        // An UNSTAGED night (no deep+REM at all) has no staging split to doubt — its base Rest
+        // confidence already reads honestly as `.building` (NOT a downgrade), so it must never be
+        // flagged. Only a night that DID stage some sleep can be a suspicious "high efficiency yet
+        // implausibly little restorative" staging miss.
+        guard restorativeMin > 0 else { return false }
         let tier = ScoreConfidence.rest(
             hasSession: true,
-            hasStagedSleep: restorativeMin > 0,
+            hasStagedSleep: true,
             asleepSeconds: asleepMin * 60.0,
             restorativeSeconds: restorativeMin * 60.0,
             efficiency: efficiency)

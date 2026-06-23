@@ -654,16 +654,44 @@ final class AppModel: ObservableObject {
         if makeActive { registry.setActive(device.id) }
     }
 
-    /// Enable the realtime stream + mark it wanted so the keep-alive re-arms it (can't lapse).
-    /// Blanks the stale smoothing window first (#46): on Live-tab entry / resume we don't want the
-    /// pre-gap median republished, so the hero shows "—" until a fresh sample lands. The keep-alive
-    /// re-arm goes through `ble.startRealtime()` directly, NOT here, so steady-state is untouched.
+    /// How many on-screen surfaces currently want the realtime HR stream (the Live tab and the
+    /// in-exercise LiveWorkoutView, which can be open at the same time — the workout sheet sits over
+    /// Live, or is reached straight from the Workouts tab without Live ever appearing). The stream
+    /// stays armed while ANY of them is visible, so a second surface arming it never disarms it out
+    /// from under the first (#681 — a WHOOP 5/MG manual workout started without first opening Live got
+    /// no live HR, so every sample was dropped and the session was silently discarded). Ref-counted to
+    /// match Android's `realtimeWanters` (AppViewModel.requestRealtimeHr/releaseRealtimeHr).
+    private var realtimeWanters = 0
+
+    /// A surface that shows live HR appeared. Arms the realtime stream on the 0→1 edge — and ONLY on
+    /// that edge blanks the stale smoothing window (#46) so a resume shows "—" until a fresh sample
+    /// lands, never re-clearing an already-live window when a second concurrent HR surface opens. The
+    /// keep-alive re-arm goes through `ble.startRealtime()` directly, NOT here, so steady-state is
+    /// untouched. Each surface must balance this with exactly one `stopRealtimeHR()` on disappear.
     func startRealtimeHR() {
-        resetSmoothing()
+        if realtimeWanters == 0 {
+            resetSmoothing()
+            ble.startRealtime()
+        }
+        realtimeWanters += 1
+    }
+    /// A live-HR surface went away. Stops the realtime stream only when the last one leaves (1→0 edge);
+    /// the lightweight 0x2A37 HR keeps recording regardless. Clamped at 0 so an unbalanced extra stop
+    /// can't drive the count negative and wedge the stream off.
+    func stopRealtimeHR() {
+        realtimeWanters = max(0, realtimeWanters - 1)
+        if realtimeWanters == 0 { ble.stopRealtime() }
+    }
+
+    /// Re-issue the BLE realtime arm WITHOUT touching the ref-count — used when a fresh
+    /// connection/bond lands while a surface is already showing live HR (Apple's `ble.startRealtime()`
+    /// must be re-sent on a new connection). A no-op when nothing wants the stream, so a stray
+    /// connection event can't arm it behind a closed Live tab. Mirrors that Android re-arms via its
+    /// own keep-alive rather than re-calling `requestRealtimeHr` on reconnect.
+    func rearmRealtimeIfWanted() {
+        guard realtimeWanters > 0 else { return }
         ble.startRealtime()
     }
-    /// Stop the realtime stream (the lightweight 0x2A37 HR keeps recording regardless).
-    func stopRealtimeHR() { ble.stopRealtime() }
     /// Ask the strap for a fresh battery reading.
     func getBattery() { ble.refreshBattery() }
 

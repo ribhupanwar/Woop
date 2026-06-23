@@ -665,13 +665,20 @@ public enum SleepStager {
     /// re-onset (#531): a daytime block the strap itself scored predominantly "asleep" is KEPT even on a
     /// borderline HR dip. Default empty keeps pure-function callers/tests free of it; IntelligenceEngine
     /// passes the night window's persisted band state. It can only RESCUE a real-sleep block, never fabricate.
+    /// `useSleepStagerV2` (V7 / #690): when true, each accepted night is staged by the experimental
+    /// cardiorespiratory recipe `SleepStagerV2.stageSession` instead of V1's `stageSession`. DETECTION is
+    /// unchanged (same accepted windows); only the per-epoch hypnogram differs. Default false keeps V1 the
+    /// byte-identical default (the frozen-golden tests stay green). The live call site threads
+    /// `PuffinExperiment.experimentalSleepV2Enabled` so the Settings toggle now affects normal detected
+    /// nights, not just the self-heal restage path.
     public static func detectSleep(hr: [HRSample] = [],
                                    rr: [RRInterval] = [],
                                    resp: [RespSample] = [],
                                    gravity: [GravitySample],
                                    tzOffsetSeconds: Int = 0,
                                    wristOff: [(start: Int, end: Int)] = [],
-                                   bandSleepState: [(ts: Int, state: Int)] = []) -> [SleepSession] {
+                                   bandSleepState: [(ts: Int, state: Int)] = [],
+                                   useSleepStagerV2: Bool = false) -> [SleepSession] {
         let grav = gravity.sorted { $0.ts < $1.ts }
         if grav.count < 2 { return [] }
 
@@ -743,8 +750,11 @@ public enum SleepStager {
                                             morningWakeEnd: morningWakeEnd,
                                             bandSleepState: bandSleepState),
                !isNightTail { continue }
-            let stages = stageSession(start: p.start, end: p.end, grav: grav,
-                                      hr: hrS, rr: rrS, resp: respS)
+            let stages = useSleepStagerV2
+                ? SleepStagerV2.stageSession(start: p.start, end: p.end, grav: grav,
+                                             hr: hrS, rr: rrS, resp: respS)
+                : stageSession(start: p.start, end: p.end, grav: grav,
+                               hr: hrS, rr: rrS, resp: respS)
             let eff = efficiency(start: p.start, end: p.end, stages: stages)
             let avgHrv = sessionAvgHRV(start: p.start, end: p.end, rr: rrS)
             sessions.append(SleepSession(start: p.start, end: p.end, efficiency: eff,
