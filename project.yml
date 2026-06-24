@@ -260,6 +260,11 @@ targets:
       - package: MarkdownUI
       - package: ZIPFoundation
       - target: NOOPiOSWidgets
+      # Embed the watchOS app so the iPhone app carries it (NOOP.app/Watch/NOOPWatch.app). A watch app
+      # installs by riding inside its iOS companion; without this it would never reach a paired watch.
+      # Build-from-source delivers it for certain; sideload install of the embedded watch app under a free
+      # Apple ID is unproven (an Apple limitation), so the docs steer watch users to a source build for now.
+      - target: NOOPWatch
 
   # WidgetKit + Live Activity extension — the iOS analogue of the macOS menu-bar
   # extra. Reads a tiny snapshot the app publishes into the shared App Group.
@@ -346,7 +351,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.noopapp.noop.watch
-        PRODUCT_NAME: NOOP
+        # The bundle FILE is NOOPWatch.app so it doesn't collide with the iPhone app's NOOP.app when it is
+        # embedded at NOOP.app/Watch/NOOPWatch.app. The user still sees "NOOP" on the wrist via the
+        # CFBundleName / CFBundleDisplayName above.
+        PRODUCT_NAME: NOOPWatch
         GENERATE_INFOPLIST_FILE: NO
         # The watch app icon (NOOPWatch/Assets.xcassets/AppIcon.appiconset — the NOOP mark, watchOS single-size).
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
