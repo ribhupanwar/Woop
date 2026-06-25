@@ -7,7 +7,7 @@ enum AppChangelog {
 
     /// Bump this when you add a release below. The "What's New" sheet shows automatically when the
     /// stored last-seen version is behind this. (Decoupled from the bundle version on purpose.)
-    static let currentVersion = "7.2.2"
+    static let currentVersion = "7.2.3"
 
     struct Release: Identifiable {
         let version: String
@@ -19,6 +19,15 @@ enum AppChangelog {
 
     /// Newest first.
     static let releases: [Release] = [
+        Release(
+            version: "7.2.3",
+            title: "A smoother dashboard on big histories, and a clearer Smart Alarm",
+            date: "June 2026",
+            items: [
+                "**The dashboard stays responsive while your strap syncs (iPhone and Mac).** If you've imported a large history (a WHOOP export plus Apple Health), the Today screen could freeze for several seconds when you opened it or returned to the tab, and stutter when you scrolled, all while the strap was offloading its history in the background. NOOP now paints the day's data instantly and runs the heavy history reads without fighting the sync, so it stays smooth. (#755)",
+                "**\"Smart Alarm\" is no longer two different things sharing one name.** It showed up twice in Settings. The strap's silent wake alarm keeps the name Smart Alarm; the evening reminder is now \"Wind-Down\" (iPhone and Mac), and the phone-based smart wake is now \"Wake Window\" (Android). (#730)",
+                "**What's New is up to date again.** The changelog had quietly stopped updating after 7.0.1, so this screen was showing old notes even on the latest build. Fixed, you're reading the proof.",
+            ]),
         Release(
             version: "7.2.2",
             title: "Two quick fixes: the Blue Titanium icon, and Mac \"Your Cards\"",
