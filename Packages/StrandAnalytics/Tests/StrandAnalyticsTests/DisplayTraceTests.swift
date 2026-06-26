@@ -52,7 +52,10 @@ final class DisplayTraceTests: XCTestCase {
     }
 
     func testMemoryHighWaterLineShape() {
-        XCTAssertEqual(DisplayTrace.memoryHighWaterLine(peakMB: 187.45),
+        // 187.46 is unambiguously above .45 in IEEE 754 (187.45 stores as 187.4499... and rounds DOWN),
+        // so %.1f gives 187.5 identically on Swift and Kotlin. The input is chosen to exercise round-up at
+        // the second decimal without depending on round-half-even of a non-representable .45.
+        XCTAssertEqual(DisplayTrace.memoryHighWaterLine(peakMB: 187.46),
                        "memoryHighWater peak=187.5MB")
     }
 

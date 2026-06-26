@@ -63,7 +63,10 @@ class DisplayTraceTest {
 
     @Test
     fun memoryHighWaterLineShape() {
-        assertEquals("memoryHighWater peak=187.5MB", DisplayTrace.memoryHighWaterLine(187.45))
+        // 187.46 is unambiguously above .45 in IEEE 754 (187.45 stores as 187.4499... and rounds DOWN),
+        // so %.1f gives 187.5 identically on Kotlin and Swift. The input exercises round-up at the second
+        // decimal without depending on round-half-even of a non-representable .45.
+        assertEquals("memoryHighWater peak=187.5MB", DisplayTrace.memoryHighWaterLine(187.46))
     }
 
     @Test

@@ -130,8 +130,12 @@ object DisplayPerformanceMonitor {
         if (durationsMs.isEmpty()) return 0.0 to 0.0
         val mean = durationsMs.sum() / durationsMs.size
         val sorted = durationsMs.sorted()
-        val rank = Math.ceil(0.95 * sorted.size).toInt() - 1
-        val p95 = sorted[minOf(maxOf(0, rank), sorted.size - 1)]
+        // Nearest-rank p95 as a 0-based index: idx = ceil(0.95 * n), clamped to the last element. This
+        // counts the values that fall BELOW the percentile, so at least 95% of frames are at or below the
+        // returned value. For a hitch trace that matters: a window of 20 frames with one 5%-tail hitch
+        // lands p95 ON the hitch (idx = ceil(0.95 * 20) = 19 = the worst of 20). Mirrors the Swift twin.
+        val idx = Math.ceil(0.95 * sorted.size).toInt()
+        val p95 = sorted[minOf(idx, sorted.size - 1)]
         return mean to p95
     }
 
