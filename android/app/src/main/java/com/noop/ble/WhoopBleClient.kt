@@ -1050,6 +1050,11 @@ class WhoopBleClient(
             }
         },
         log = { s -> log(s) },
+        // Connection & Sync test mode (Test Centre): the cheap gate + tagged sink the Backfiller checks
+        // before building any .connection diagnostic line. The gate is one SharedPreferences bool; nothing
+        // is emitted (or built) when the mode is off. Twin of the macOS Backfiller wiring.
+        connectionActive = { testCentre.active(com.noop.testcentre.TestDomain.CONNECTION) },
+        connectionLog = { s -> log(s, com.noop.testcentre.TestDomain.CONNECTION) },
     )
 
     /**
@@ -1180,6 +1185,19 @@ class WhoopBleClient(
      *  measure how soon a drop follows the bond (the #617 bond-loop tell). null until bonded; cleared on
      *  disconnect after the detector reads it. Twin of macOS BLEManager.bondedAt. */
     private var bondedAtMs: Long? = null
+    // Connection & Sync test mode (Test Centre) - diagnostic-only counters, twins of the macOS
+    // BLEManager fields. They change NO connect / bond / offload behaviour; every emit site that reads
+    // them is gated behind testCentre.active(CONNECTION) BEFORE any string is built.
+    /** Wall time (ms) the current connect attempt began, to measure connect latency at onConnectionStateChange
+     *  CONNECTED. null between attempts; set when connect() kicks the radio. */
+    private var connectAttemptStartedAtMs: Long? = null
+    /** Count of INVOLUNTARY reconnects this run, surfaced as the reconnect-churn count. Reset by an
+     *  intentional disconnect. */
+    private var connReconnectCount = 0
+    /** The last live frame TYPE name seen, so the Connection test mode emits one frame-timing line per
+     *  genuine type transition (never per frame - the raw flood repeats one type). Diagnostic only; the
+     *  Swift side guards on LiveState.lastFrameType, which Android does not track, so this mirrors it. */
+    private var connLastFrameType: String? = null
     /** #580: tracks CONSECUTIVE empty 5/MG offloads so a 5/MG whose firmware serves no history (but streams
      *  live HR fine) reads as "history sync experimental on 5.0" instead of a sync error, and the 120s
      *  bounce loop backs off while live HR is flowing. Reset on connect / a banking offload. Twin of macOS. */
@@ -1319,6 +1337,9 @@ class WhoopBleClient(
     @SuppressLint("MissingPermission")
     fun connect(model: WhoopModel = WhoopModel.WHOOP4) {
         intentionalDisconnect = false
+        // Connection test mode: stamp when this connect attempt began so onConnectionStateChange can report
+        // the connect latency. A plain timestamp, no behaviour change; only read behind the CONNECTION gate.
+        connectAttemptStartedAtMs = System.currentTimeMillis()
         // PR #588: an explicit user-driven Connect is never an out-of-range retry — clear the involuntary-
         // reconnect streak so this scan (and any reconnects it spawns) starts back at the snappy
         // LOW_LATENCY scan mode + the 3s backoff base, never inheriting a backed-off lower-power scan.
@@ -2453,6 +2474,15 @@ class WhoopBleClient(
                     // of macOS BLEManager.connectedPeripheralUUID (set in didConnect). Decoupled from the
                     // registry — the coordinator observes this; the connect flow below is unchanged.
                     _connectedPeripheralAddress.value = g.device.address
+                    // Connection test mode: report the connect latency + the uptime-start marker the readout
+                    // reads. Gated zero-cost (the CONNECTION bool is read before any string is built).
+                    // Behaviour-neutral diagnostics only - the connect flow below is unchanged. Twin of macOS.
+                    if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                        val nowUnix = System.currentTimeMillis() / 1000L
+                        val latencyMs = connectAttemptStartedAtMs?.let { System.currentTimeMillis() - it }
+                        log("connect up gen=$connectGeneration latencyMs=${latencyMs ?: "?"} uptimeStart=$nowUnix",
+                            com.noop.testcentre.TestDomain.CONNECTION)
+                    }
                     serviceDiscoveryKicked.set(false)
                     // Capture link signal strength (logged via onReadRemoteRssi) — the scan
                     // "Discovered … (rssi …)" line never fires on a direct/auto-reconnect, so a weak-link
@@ -2600,6 +2630,19 @@ class WhoopBleClient(
                 // bonded to the official WHOOP app keeps refusing the just-works bond; after two refusals
                 // we surface concrete pairing-mode guidance. Independent of the pin recovery above.
                 noteBondRefusalForPairingHint(status)
+                // Connection test mode: surface the failed-encrypt / "held by another central" hint as an
+                // upfront tagged line. INSUFFICIENT_AUTHENTICATION (5) / INSUFFICIENT_ENCRYPTION (15) ==
+                // the strap is still bonded to the official WHOOP app or a stale OS pairing. Gated
+                // zero-cost; diagnostic only. Twin of the macOS didWriteValueFor emit.
+                if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                    val insufficient = status == 5 || status == 15
+                    log(
+                        if (insufficient)
+                            "otherCentral bondWrite refused=insufficient (strap likely held by the WHOOP app or a stale pairing; cannot start a fresh encrypted bond)"
+                        else "otherCentral bondWrite failed=status$status",
+                        com.noop.testcentre.TestDomain.CONNECTION,
+                    )
+                }
             } else if (!didBond && connectedFamily == DeviceFamily.WHOOP5) {
                 // EXPERIMENTAL (issue #17): the CLIENT_HELLO is now a confirmed write, so this ACK means
                 // just-works bonding completed. Now subscribe the puffin notify chars (realtime HR rides
@@ -2613,6 +2656,7 @@ class WhoopBleClient(
                 staleDirectFailures = 0       // genuine bond — clear the wiped-bond counter (#84 parity)
                 _state.value = _state.value.copy(bonded = true, encryptedBond = true)   // genuine bond (#69)
                 bondedAtMs = System.currentTimeMillis()   // #617: stamp the bond so handleDisconnect can spot a bond-then-quick-timeout loop
+                emitConnectionBondState("encryptedBond family=whoop5 (CLIENT_HELLO acked)")
                 log("WHOOP 5/MG: CLIENT_HELLO acked — link established; subscribing notify chars (experimental).")
                 g.getService(WHOOP5_SERVICE)?.let { svc ->
                     for (u in WHOOP5_NOTIFY_CHARS) svc.getCharacteristic(u)?.let { cccdQueue.add(it) }
@@ -2632,6 +2676,7 @@ class WhoopBleClient(
                 clearPairingHint()            // #78: a genuine bond means the pairing guidance no longer applies
                 _state.value = _state.value.copy(bonded = true, encryptedBond = true)   // WHOOP4 bond is genuine (#69)
                 bondedAtMs = System.currentTimeMillis()   // #617: stamp the bond so handleDisconnect can spot a bond-then-quick-timeout loop
+                emitConnectionBondState("encryptedBond family=whoop4 (confirmed write acked)")
                 log("BONDED (confirmed write acknowledged) — custom channels should now flow")
             }
 
@@ -2770,13 +2815,24 @@ class WhoopBleClient(
                             log("Strap newest banked record: ${fmt.format(java.util.Date(it * 1000L))} (from data range)")
                             // Also surface the OLDEST banked record → the full backlog SPAN, i.e. the depth a
                             // deep oldest-first drain must cover before recent nights land (#364). Mirrors Swift.
-                            dataRangeOldestUnix(frame)?.let { oldest ->
-                                if (oldest < it) {
-                                    backfiller.sessionOldestUnix = oldest   // #547: closes the session window
-                                    val spanDays = (it - oldest) / 86_400L
-                                    log("Strap banked history span: ${fmt.format(java.util.Date(oldest * 1000L))} → newest " +
-                                        "(~$spanDays day${if (spanDays == 1L) "" else "s"} of backlog, drained oldest-first)")
-                                }
+                            val oldestUnix = dataRangeOldestUnix(frame)
+                            if (oldestUnix != null && oldestUnix < it) {
+                                backfiller.sessionOldestUnix = oldestUnix   // #547: closes the session window
+                                val spanDays = (it - oldestUnix) / 86_400L
+                                log("Strap banked history span: ${fmt.format(java.util.Date(oldestUnix * 1000L))} → newest " +
+                                    "(~$spanDays day${if (spanDays == 1L) "" else "s"} of backlog, drained oldest-first)")
+                            }
+                            // Connection test mode: promote the CLOCK-DRIFT picture from the buried raw frames
+                            // to one upfront tagged line - the strap-reported [oldest, newest] window vs wall
+                            // clock with a FUTURE-DATE flag (#767 / #754 cluster). Gated zero-cost; pure
+                            // formatter, no behaviour change. Twin of the macOS data-range emit.
+                            if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                                val line = com.noop.analytics.ConnectionTrace.clockDriftLine(
+                                    oldestUnix = if (oldestUnix != null && oldestUnix < it) oldestUnix else null,
+                                    newestUnix = it,
+                                    wallNowUnix = System.currentTimeMillis() / 1000L,
+                                )
+                                log(line, com.noop.testcentre.TestDomain.CONNECTION)
                             }
                         }
                     }
@@ -2874,6 +2930,18 @@ class WhoopBleClient(
         if (!parsed.ok) return
         // Reject frames that failed their checksum — never let bad bytes drive state.
         if (parsed.crcOk == false) return
+
+        // Connection test mode: one tagged line per genuine frame-TYPE transition (not per frame - the raw
+        // flood repeats one type, so the transition guard naturally throttles it). Gated zero-cost: the
+        // CONNECTION bool is read before any string is built. We track the last type only while the mode is
+        // on so the non-test path stays byte-identical. Twin of the macOS FrameRouter emit.
+        if (parsed.typeName != connLastFrameType) {
+            if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                log("frameTiming type=${parsed.typeName} t=${System.currentTimeMillis() / 1000L}s",
+                    com.noop.testcentre.TestDomain.CONNECTION)
+            }
+            connLastFrameType = parsed.typeName
+        }
 
         when (parsed.typeName) {
             "REALTIME_DATA" -> {
@@ -3975,6 +4043,21 @@ class WhoopBleClient(
             backfiller.sessionNights,
         )?.let { log(it) }
 
+        // Connection test mode: the offload OUTCOME the readout's lastOffloadResult id binds. Gated
+        // zero-cost (the CONNECTION bool is read before any string is built). Diagnostic only - it reads
+        // the same per-session tallies the summary above does. A timeout/idle-cap exit is a STALL; a
+        // HISTORY_COMPLETE with rows is a clean complete; with none it is an empty cycle. Twin of macOS.
+        if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+            val rows = backfiller.sessionRowsPersisted
+            val result = when {
+                reason == "timeout" -> "stalled (idle timeout, rows=$rows so far)"
+                reason == "HISTORY_COMPLETE" && rows > 0 -> "complete rows=$rows nights=${backfiller.sessionNights}"
+                reason == "HISTORY_COMPLETE" -> "empty (console only, no sensor records)"
+                else -> "$reason rows=$rows"
+            }
+            log("offload result=$result", com.noop.testcentre.TestDomain.CONNECTION)
+        }
+
         // #547 RE-POLLUTION: this session's ingest gate dropped bad-clock records, so the strap has a
         // wandering clock and may have banked similar garbage on an OLDER build whose gate was weaker. Arm a
         // heal re-run so the next analyze tick purges any such pollution — not gated behind the one-shot done
@@ -4211,6 +4294,15 @@ class WhoopBleClient(
         cmdCharacteristic = null
 
         if (!intentionalDisconnect) {
+            // Connection test mode: count + describe the involuntary reconnect churn, and mark the link
+            // down for the uptime readout. Gated zero-cost (the CONNECTION bool is read before any string
+            // is built). Diagnostic only - the reconnect logic below is unchanged. Twin of macOS.
+            connReconnectCount += 1
+            if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                val reason = if (status == GATT_CONN_TIMEOUT) "connectionTimeout" else "status$status"
+                log("connect down (uptime ends)", com.noop.testcentre.TestDomain.CONNECTION)
+                log("reconnect n=$connReconnectCount reason=$reason", com.noop.testcentre.TestDomain.CONNECTION)
+            }
             if (staleDirectBond) {
                 staleDirectFailures++
                 log("Disconnected (status=$status) before the bonded fast-path reached a session — stale OS bond (attempt $staleDirectFailures); falling back to a scan")
@@ -4264,6 +4356,12 @@ class WhoopBleClient(
             }
         } else {
             log("Disconnected (intentional)")
+            // A user-initiated teardown ends the churn count for the run and marks the link down so the
+            // uptime readout reads "not connected" rather than a stale uptime. Gated zero-cost. Twin of macOS.
+            connReconnectCount = 0
+            if (testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) {
+                log("connect down (intentional)", com.noop.testcentre.TestDomain.CONNECTION)
+            }
         }
     }
 
@@ -4481,6 +4579,14 @@ class WhoopBleClient(
      * one log the user copies for a bug report. (Issue #421 — the generic-HR path used to be invisible.)
      */
     fun externalLog(s: String, domain: com.noop.testcentre.TestDomain? = null) { log(s, domain) }
+
+    /** Emit one Connection & Sync test-mode bond-state line, gated zero-cost behind testCentre.active(CONNECTION).
+     *  The gate (one SharedPreferences bool) is read BEFORE the tagged string is built, so this is a no-op when
+     *  the mode is off. Diagnostic only - it never changes the bond path. Twin of macOS emitConnectionBondState. */
+    private fun emitConnectionBondState(detail: String) {
+        if (!testCentre.active(com.noop.testcentre.TestDomain.CONNECTION)) return
+        log("bondState $detail", com.noop.testcentre.TestDomain.CONNECTION)
+    }
 
     /** Snapshot of the recent strap log, newest last, for the "Share strap log" diagnostics export. */
     fun exportLogText(): String = synchronized(logBuffer) { logBuffer.joinToString("\n") }

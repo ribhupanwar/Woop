@@ -97,7 +97,27 @@ class Backfiller(
      * correct wall time. Settable by [WhoopBleClient] if a real correlation lands.
      */
     var clockRef: ClockRef = ClockRef.identityNow(),
+    /**
+     * Connection & Sync test mode (Test Centre): the cheap gate + tagged sink for the .connection
+     * diagnostic lines (offload progress / firmware layout / trim sentinel). [connectionActive] is one
+     * SharedPreferences bool read; it is ALWAYS checked BEFORE building any connection line, so the
+     * Backfiller pays nothing when the mode is off. [connectionLog] appends the already-built line tagged
+     * .connection. Both default inert (always-off / no-op) so tests get the byte-identical untraced path.
+     * Mirrors the Swift Backfiller's connectionActive / connectionLog.
+     */
+    private val connectionActive: () -> Boolean = { false },
+    private val connectionLog: (String) -> Unit = {},
 ) {
+
+    /**
+     * Emit one Connection & Sync test-mode line iff the mode is on. The cheap [connectionActive] gate is
+     * checked BEFORE [build] runs, so the line string is never constructed when the mode is off. Diagnostic
+     * only - it never changes the offload path. Mirrors the Swift Backfiller.emitConnection.
+     */
+    private inline fun emitConnection(build: () -> String) {
+        if (!connectionActive()) return
+        connectionLog(build())
+    }
 
     /**
      * #547 SESSION-RELATIVE gate: the strap's own GET_DATA_RANGE oldest/newest banked-record markers for
@@ -278,6 +298,8 @@ class Backfiller(
                     "offload. This is a clock/charge state on the strap, not a decode problem; fully charge " +
                     "it and reconnect so it starts banking.",
             )
+            // Connection test mode: the no-cursor sentinel as a compact tagged line (gated zero-cost).
+            emitConnection { com.noop.analytics.ConnectionTrace.noCursorLine() }
         }
 
         val frames = synchronized(chunkLock) {
@@ -298,7 +320,22 @@ class Backfiller(
             // v18/v26 (5/MG). Sample the chunk's first genuine record (null ⇒ console/CRC-fail); log
             // each distinct layout once per session.
             frames.firstNotNullOfOrNull { decodeHistorical(it, family)?.get("hist_version") as? Int }
-                ?.let { if (loggedLayoutVersions.add(it)) log("Backfill: historical records use layout v$it") }
+                ?.let { v ->
+                    if (loggedLayoutVersions.add(v)) {
+                        log("Backfill: historical records use layout v$v")
+                        // Connection test mode: the firmware layout as a compact tagged line. A layout that
+                        // decoded a signature field (heart_rate / gravity_x / ppg_waveform) is decodable.
+                        // Gated zero-cost. Twin of the Swift Backfiller emit.
+                        emitConnection {
+                            val decodable = frames.any {
+                                val d = decodeHistorical(it, family)
+                                d != null && (d.containsKey("heart_rate") || d.containsKey("gravity_x") ||
+                                    d.containsKey("ppg_waveform"))
+                            }
+                            com.noop.analytics.ConnectionTrace.firmwareLine(v, decodable)
+                        }
+                    }
+                }
             // #547: the strap is emitting records with implausible timestamps (a bad clock/flash —
             // far-past, a year-2027 spike, or future-dated `unix`). The ingest gate dropped them so they
             // can't pollute the day-windowed analytics; surface it ONCE per session so a bad-clock strap
@@ -355,6 +392,12 @@ class Backfiller(
                 sessionMotionRows += motion
                 sessionSkinTempRows += counts.skinTemp
                 sessionNightKeys.addAll(nights)
+                // Connection test mode: per-chunk offload PROGRESS (running session totals). Gated zero-cost.
+                // Twin of the Swift Backfiller emit.
+                emitConnection {
+                    "offload progress trim=$trim chunkRows=$rows " +
+                        "sessionRows=$sessionRowsPersisted sessionMotion=$sessionMotionRows nights=$sessionNights"
+                }
             } catch (t: Throwable) {
                 return // do NOT advance/ack — chunk was never durably committed
             }
