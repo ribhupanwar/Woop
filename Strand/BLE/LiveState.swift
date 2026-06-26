@@ -300,8 +300,12 @@ public final class LiveState: ObservableObject {
     /// unbounded. Drives the Live log card AND the shareable `exportableLogText()`.
     static let maxLogLines = 5_000
 
-    public func append(log line: String) {
-        log.append(Self.redactPii(line))
+    public func append(log line: String, domain: TestDomain? = nil) {
+        // Tag inert when nil (today's behaviour, byte-identical). When tagged, prefix a compact,
+        // parseable marker the export filters on. Redaction is STILL the only scrub point
+        // (redactPii below); tagging happens BEFORE redaction so the scrub covers the whole line.
+        let tagged = domain.map { "[\($0.id)] " + line } ?? line
+        log.append(Self.redactPii(tagged))
         if log.count > Self.maxLogLines { log.removeFirst(log.count - Self.maxLogLines) }
         Self.persistTail(log)
     }
