@@ -44,6 +44,17 @@ object LogExport {
     fun rawCaptureFilename(nowMs: Long = System.currentTimeMillis()) = "noop-straplog-${exportStamp(nowMs)}.bin"
 
     /**
+     * Profile-tagged, self-describing bundle filename: `noop-<profile>-<platform>-v<version>-<yyMMdd-HHmm>.zip`
+     * (spec section 5.1). Twin of the Swift `FileExport.bundleName`. Self-describing so a maintainer knows
+     * the profile, platform and version before opening the zip. Uses the same minute-precision [timestamp]
+     * the interactive shares use. Injectable epoch purely for the unit test.
+     */
+    fun bundleName(profile: String, platform: String, version: String, nowMs: Long = System.currentTimeMillis()): String {
+        val stamp = java.text.SimpleDateFormat("yyMMdd-HHmm", java.util.Locale.US).format(nowMs)
+        return "noop-$profile-$platform-v$version-$stamp.zip"
+    }
+
+    /**
      * Mirror the latest strap-log tail into the durable [StrapLogBuffer] (#510). Called from the same UI
      * actions that ship a log interactively, AND on demand by [DebugExportScheduler] before a scheduled
      * write, so the 24h rolling buffer that the background worker reads is kept current even though the
