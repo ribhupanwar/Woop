@@ -55,8 +55,11 @@ public struct TestMode: Sendable, Identifiable {
 /// TestModeRegistry.kt, byte-aligned (same ids, titles, captures), verified by a parity test.
 public enum TestModeRegistry {
 
-    /// Phase 1 ships exactly these two; later phases append.
-    public static let all: [TestMode] = [sleep, battery]
+    /// Phase 1 shipped sleep + battery; Phase 2 appends the 🔴 high-pain domains plus the scoring chain
+    /// (connection, workouts, display, import, steps, recovery, hrv). Order is screen priority order.
+    public static let all: [TestMode] = [
+        sleep, connection, workouts, display, dataImport, steps, battery, recovery, hrv,
+    ]
 
     public static func mode(_ d: TestDomain) -> TestMode? { all.first { $0.domain == d } }
 
@@ -78,6 +81,70 @@ public enum TestModeRegistry {
         capture: .guided(unit: .nights, defaultCount: 3),
         includesScreenshot: false, requires5MG: false)
 
+    static let connection = TestMode(
+        domain: .connection, title: "Connection & Sync",
+        blurb: "Turn this on if the strap keeps dropping or won't finish a sync.",
+        icon: "antenna.radiowaves.left.and.right", priority: .high,
+        captures: ["connectTiming", "bondState", "frameTiming", "reconnectChurn", "offloadProgress",
+                   "offloadStalls", "firmwareDecode", "clockDrift", "otherCentral"],
+        questionnaire: [
+            Question(id: "otherDevicePaired", prompt: "Is another phone or the WHOOP app paired to the strap right now?", kind: .yesNo),
+        ],
+        liveReadout: ["connectionUptime", "reconnectCount", "lastOffloadResult"],
+        capture: .toggle,
+        includesScreenshot: false, requires5MG: false)
+
+    static let workouts = TestMode(
+        domain: .workouts, title: "Workouts & GPS",
+        blurb: "Turn this on if a workout went missing or auto-detect didn't fire.",
+        icon: "figure.run", priority: .high,
+        captures: ["sessionLifecycle", "hrSamples", "gpsFixes", "autoDetectThresholds",
+                   "autoDetectWhy", "crossSourceDedup"],
+        questionnaire: [
+            Question(id: "startMethod", prompt: "Did you start it manually or expect auto-detect?", kind: .text),
+        ],
+        liveReadout: ["lastSessionSummary"],
+        capture: .toggle,
+        includesScreenshot: false, requires5MG: false)
+
+    static let display = TestMode(
+        domain: .display, title: "Display & Performance",
+        blurb: "Turn this on if a screen looks wrong or feels laggy, then grab a shot.",
+        icon: "paintbrush.fill", priority: .high,
+        captures: ["screenshot", "deviceMetrics", "frameTimeTrace", "memoryHighWater"],
+        questionnaire: [
+            Question(id: "screenAndIssue", prompt: "What screen, and what looked or felt wrong (laggy/clipped)?", kind: .text),
+        ],
+        liveReadout: ["deviceMetricsNow"],
+        capture: .toggle,
+        includesScreenshot: true, requires5MG: false)
+
+    static let dataImport = TestMode(
+        domain: .dataImport, title: "Import & Data Ingest",
+        blurb: "Turn this on if a file import dropped rows or came in wrong.",
+        icon: "square.and.arrow.down", priority: .high,
+        captures: ["parserVersion", "fileMeta", "perStageRows", "rejectCounts", "firstFailingRow",
+                   "dedupMerge", "dayDeltas", "failingFileSample"],
+        questionnaire: [
+            Question(id: "appFormatExpected", prompt: "Which app/format, and what did you expect to import?", kind: .text),
+        ],
+        liveReadout: ["lastImportSummary"],
+        capture: .toggle,
+        includesScreenshot: false, requires5MG: false)
+
+    static let steps = TestMode(
+        domain: .steps, title: "Steps",
+        blurb: "Turn this on if your step count looks off versus your phone.",
+        icon: "shoeprints.fill", priority: .high,
+        captures: ["motionVolume", "stepCalibration", "phoneReferenceCount", "rawStepCounter",
+                   "wrapAwareDeltas", "droppedDeltas"],
+        questionnaire: [
+            Question(id: "otherTrackerSteps", prompt: "What did your phone or another tracker report for the same day?", kind: .text),
+        ],
+        liveReadout: ["stepsToday", "calibrationState"],
+        capture: .toggle,
+        includesScreenshot: false, requires5MG: false)
+
     static let battery = TestMode(
         domain: .battery, title: "Battery & Charging",
         blurb: "Wear it a few days so we can fit your real discharge slope.",
@@ -92,5 +159,31 @@ public enum TestModeRegistry {
         ],
         liveReadout: ["currentSoc", "estimateDaysLeft", "slopeSource"],
         capture: .guided(unit: .days, defaultCount: 3),
+        includesScreenshot: false, requires5MG: false)
+
+    static let recovery = TestMode(
+        domain: .recovery, title: "Recovery (Charge)",
+        blurb: "Turn this on if Charge looks wrong, to see which term moved it.",
+        icon: "heart.text.square.fill", priority: .med,
+        captures: ["chargeTermBreakdown", "baselinesPerNight", "termZScores", "nilTerm",
+                   "forecastInputs"],
+        questionnaire: [
+            Question(id: "recalHealthHrv", prompt: "Recent recalibration? Is Apple Health / Health Connect feeding HRV?", kind: .text),
+        ],
+        liveReadout: ["lastChargeBreakdown"],
+        capture: .toggle,
+        includesScreenshot: false, requires5MG: false)
+
+    static let hrv = TestMode(
+        domain: .hrv, title: "HRV & Autonomic",
+        blurb: "Turn this on if HRV reads nil or looks off, to see the clean beats.",
+        icon: "waveform.path.ecg", priority: .med,
+        captures: ["rawRR", "nInputCleanRejected", "rmssdSdnn", "minBeatsCleared",
+                   "spotVsContinuous", "respRsa"],
+        questionnaire: [
+            Question(id: "otherAppHrv", prompt: "Is another app feeding HRV to Apple Health / Health Connect?", kind: .yesNo),
+        ],
+        liveReadout: ["lastHrvComputation"],
+        capture: .toggle,
         includesScreenshot: false, requires5MG: false)
 }
