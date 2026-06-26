@@ -62,7 +62,7 @@ data class TestBundleMeta(
                 val entries = value.entries.associate { it.key.toString() to it.value }
                 if (entries.isEmpty()) "{}"
                 else entries.keys.sorted().joinToString(",\n", "{\n", "\n$pad}") { k ->
-                    "$padIn${JSONObject.quote(k)}: ${emit(entries[k], indent + 1)}"
+                    "$padIn${JSONObject.quote(k)} : ${emit(entries[k], indent + 1)}"
                 }
             }
             is List<*> ->
