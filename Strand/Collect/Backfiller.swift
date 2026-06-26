@@ -1,6 +1,7 @@
 import Foundation
 import WhoopProtocol
 import WhoopStore
+import StrandAnalytics
 
 // MARK: - BackfillStoreWriting protocol
 
