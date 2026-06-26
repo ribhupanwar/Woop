@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.noop.BuildConfig
 import com.noop.analytics.Baselines
 import com.noop.ble.PuffinExperiment
@@ -56,10 +57,13 @@ fun TestCentreScreen(vm: AppViewModel) {
     val testCentre = remember { TestCentre.from(context) }
 
     // The strap model the Settings #22 gate reads, mirrored here so the 5/MG block shows for a 5/MG only.
+    val live by vm.live.collectAsStateWithLifecycle()
     val selectedModelName = remember {
         NoopPrefs.of(context).getString("noop.selectedWhoopModel", null)
     }
-    val is5MG = selectedModelName == WhoopModel.WHOOP5_MG.name
+    // Match the Settings `showFiveMGControls` gate exactly: pref OR a live-detected 5/MG this session, so a
+    // 5/MG connected before its pref is written still sees the experimental block. (SettingsScreen.kt:346.)
+    val is5MG = selectedModelName == WhoopModel.WHOOP5_MG.name || live.whoop5Detected
 
     // A report awaiting the mandatory review-before-share gate (spec section 12). Non-null shows the
     // review dialog; confirming runs TestReportFlow.run.
