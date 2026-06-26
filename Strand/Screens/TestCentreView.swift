@@ -362,6 +362,12 @@ private struct TestModeRow: View {
             if on, mode.domain == .battery {
                 BatteryReadoutPanel(live: live)
             }
+            if on, mode.domain == .recovery {
+                RecoveryReadoutPanel(live: live)
+            }
+            if on, mode.domain == .hrv {
+                HrvReadoutPanel(live: live)
+            }
             HStack {
                 Spacer()
                 Button("Report") { report.start(mode: mode, live: live) }
@@ -412,7 +418,40 @@ private struct BatteryReadoutPanel: View {
     }
 }
 
-/// A compact key/value readout row for the Test Centre live panels (Group E/F). Mono value so the
+/// The Recovery (Charge) live-readout panel (Group G): the last Charge term-breakdown from the
+/// `.recovery`-tagged log tail (the score + band, or the nil reason when a night could not be scored).
+/// Bound from the pure `TestReadout.lastChargeBreakdown`, parsed from the SAME tagged lines the Recovery
+/// emitter writes, so the panel never diverges from the headline Charge number. No hardcoded colours;
+/// uses the same ReadoutRow tokens as the Sleep / Battery panels. No em-dash in any string here.
+private struct RecoveryReadoutPanel: View {
+    @ObservedObject var live: LiveState
+
+    var body: some View {
+        let last = TestReadout.lastChargeBreakdown(taggedTail: live.taggedTail(domain: .recovery))
+        VStack(alignment: .leading, spacing: 4) {
+            ReadoutRow(label: "Last Charge breakdown", value: last ?? "no night scored yet")
+        }
+        .padding(.top, 2)
+    }
+}
+
+/// The HRV & Autonomic live-readout panel (Group G): the last HRV computation from the `.hrv`-tagged log
+/// tail (RMSSD / SDNN, or "no reading" when the cleaning gates filtered the capture out). Bound from the
+/// pure `TestReadout.lastHrvComputation`, parsed from the SAME tagged lines the HRV emitter writes, so the
+/// panel reads the same outcome the snapshot screen showed. No hardcoded colours. No em-dash here.
+private struct HrvReadoutPanel: View {
+    @ObservedObject var live: LiveState
+
+    var body: some View {
+        let last = TestReadout.lastHrvComputation(taggedTail: live.taggedTail(domain: .hrv))
+        VStack(alignment: .leading, spacing: 4) {
+            ReadoutRow(label: "Last HRV reading", value: last ?? "no reading yet")
+        }
+        .padding(.top, 2)
+    }
+}
+
+/// A compact key/value readout row for the Test Centre live panels (Group E/F/G). Mono value so the
 /// counts line up; secondary/tertiary tokens so it reads as a diagnostic, not a headline.
 private struct ReadoutRow: View {
     let label: String

@@ -579,10 +579,22 @@ final class IntelligenceEngine: ObservableObject {
             .sorted { $0.day < $1.day }
         let appleHealthDays = Set(appleRows.map { $0.day })
 
+        // Recovery (Charge) test mode (Group G): read the zero-cost gate ONCE here (a single Bool) before
+        // the scoring loop. When false (the default), no Charge term-breakdown trace is built and the score
+        // path is byte-identical. When true, each scored night emits its Charge breakdown tagged `.recovery`
+        // via `recoveryTrace`, which returns the SAME score `recomputeRecovery` computes (it reuses
+        // RecoveryScorer.recovery verbatim), so the headline Charge number is unaffected.
+        let recoveryTraceActive = TestCentre.active(.recovery)
         for night in scoredNights {
             let daily = sleepEditedDaily(night.daily, detected: night.cachedSleep, editsByStart: editsByStart,
                                          habitualMidsleepSec: habitualMidsleepSec)
             let recovery = recomputeRecovery(daily, baselines2)
+            // Charge term-breakdown trace (Group G): only when the Recovery test mode is on. Emits which
+            // term moved Charge and which was nil and forced the renorm, tagged `.recovery`. The trace's
+            // score is RecoveryScorer.recovery verbatim, so the `recovery` written above is unchanged.
+            if recoveryTraceActive {
+                for line in recoveryTraceLines(daily, baselines2) { diagnosticSink?(line, .recovery) }
+            }
             let skinDev = recomputeSkinTempDev(night.nightlySkin, baselines2.skinTemp)
             let source = DaySource.classify(day: daily.day, importedWhoopDays: importedWhoopDays,
                                             appleHealthDays: appleHealthDays)
@@ -968,6 +980,32 @@ final class IntelligenceEngine: ObservableObject {
                                        hrvBaseline: hrvBase, rhrBaseline: baselines.restingHR,
                                        respBaseline: baselines.resp, sleepPerf: restQuality,
                                        skinTempDev: daily.skinTempDevC)
+    }
+
+    /// The Charge term-breakdown trace lines for one day (Recovery test mode, Group G). Pure: it feeds the
+    /// SAME inputs `recomputeRecovery` does (the SAME `restQuality` derivation) into RecoveryScorer's
+    /// side-effect-free `recoveryTrace`, whose returned score IS `RecoveryScorer.recovery` verbatim, so the
+    /// trace can never diverge from the Charge number written for the day. Empty when a hard input
+    /// (HRV / RHR / HRV-baseline) is missing, mirroring `recomputeRecovery`'s own early-nil. Only CALLED
+    /// when `TestCentre.active(.recovery)` is true, so it costs nothing when the mode is off.
+    private func recoveryTraceLines(_ daily: DailyMetric, _ baselines: AnalyticsEngine.ProfileBaselines) -> [String] {
+        guard let hrvVal = daily.avgHrv, let rhrVal = daily.restingHr, let hrvBase = baselines.hrv else {
+            return ["charge day=\(daily.day) nilScore reason=missingInput "
+                + "(hrv/rhr/hrvBaseline required)"]
+        }
+        let restQuality = AnalyticsEngine.Rest.composite(daily: daily).map { $0 / 100.0 } ?? daily.efficiency
+        let (_, trace) = RecoveryScorer.recoveryTrace(
+            hrv: hrvVal, rhr: Double(rhrVal), resp: daily.respRateBpm,
+            hrvBaseline: hrvBase, rhrBaseline: baselines.restingHR,
+            respBaseline: baselines.resp, sleepPerf: restQuality,
+            skinTempDev: daily.skinTempDevC)
+        // Prefix each line with the day key so a multi-night export stays parseable, matching the sleep
+        // trace's per-day shape. Strip ONLY the leading "charge " token the trace builder writes (every
+        // line starts with it), then re-emit as "charge day=<day> ...".
+        return trace.map { line in
+            let body = line.hasPrefix("charge ") ? String(line.dropFirst("charge ".count)) : line
+            return "charge day=\(daily.day) " + body
+        }
     }
 
     /// One day's watch-derived recovery output, keyed by day.
