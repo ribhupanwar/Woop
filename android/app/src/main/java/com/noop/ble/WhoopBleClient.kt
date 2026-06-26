@@ -41,6 +41,7 @@ import com.noop.protocol.Streams
 import com.noop.protocol.Whoop5Config
 import com.noop.protocol.extractStreams
 import com.noop.analytics.Baselines
+import com.noop.analytics.BatterySocLine
 import com.noop.analytics.IntelligenceEngine
 import com.noop.analytics.NapDetector
 import com.noop.analytics.NapPrefs
@@ -3043,9 +3044,21 @@ class WhoopBleClient(
         ingestStandardHr(hr, rr, (System.currentTimeMillis() / 1000L))
     }
 
+    /** The Test Centre gate, bound once to the app's single "noop_testcentre" prefs file. Lazily built so
+     *  the zero-cost gate below is one SharedPreferences.getBoolean read, never a fresh prefs open per
+     *  reading (#713, Test Centre). */
+    private val testCentre by lazy { com.noop.testcentre.TestCentre.from(context) }
+
     /** Single funnel for battery readings (port of LiveState.setBattery). */
     private fun setBattery(pct: Double) {
         _state.value = _state.value.copy(batteryPct = pct)
+        // Battery test mode: one tagged (t, soc) line per reading, gated zero-cost when off (the gate is a
+        // single SharedPreferences bool read; the formatter below only runs when the mode is on). Rides the
+        // redacting log() sink; the Room battery series is the readout + trace source (#713, Test Centre).
+        if (testCentre.active(com.noop.testcentre.TestDomain.BATTERY)) {
+            log(BatterySocLine.format(pct, System.currentTimeMillis() / 1000L),
+                com.noop.testcentre.TestDomain.BATTERY)
+        }
     }
 
     // ====================================================================================
