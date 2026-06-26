@@ -130,10 +130,16 @@ object IntelligenceEngine {
         // self-heal, which re-stages with SleepStagerV2 when true. Default false → V1 (the default, untouched
         // path), so existing callers / tests are unaffected. (V7 Pillar 3b)
         useExperimentalSleepV2: Boolean = false,
+        // Sleep & Rest test-mode trace sink (Test Centre E5). The analytics layer is Context-free, so the
+        // Context-aware caller (AppViewModel / WhoopBleClient) reads TestCentre.active(SLEEP) and passes a
+        // non-null sink ONLY when the mode is on, routing each line to the .sleep-tagged strap log. null (the
+        // default) = byte-identical default path — analyzeDay then runs its untraced staging. Mirrors the
+        // Swift sleepTraceActive wiring in IntelligenceEngine.swift.
+        sleepTraceSink: ((String) -> Unit)? = null,
     ): List<Computed> = withContext(Dispatchers.Default) {
         analyzeRecentOnCpu(repo, profile, maxDays, importedDeviceId, maxHROverride, nowSeconds,
             ownerSource, manualStepCoefficient, persistStepsCalibration, baselineEpoch, recoveryEpoch, diag,
-            useExperimentalSleepV2)
+            useExperimentalSleepV2, sleepTraceSink)
     }
 
     /** History span for the one-shot Effort rescore — large enough to cover any real wear history,
@@ -193,6 +199,10 @@ object IntelligenceEngine {
         diag: (String) -> Unit = {},
         // Opt-in experimental staging (V2), threaded down to the sleep self-heal. Default false → V1. (3b)
         useExperimentalSleepV2: Boolean = false,
+        // Sleep & Rest test-mode trace sink (Test Centre E5). null = byte-identical default; when non-null
+        // each scored day threads it into AnalyticsEngine.analyzeDay so detectSleep's gate trace + the Rest
+        // sub-score line forward line-by-line to the .sleep-tagged strap log. Mirrors Swift.
+        sleepTraceSink: ((String) -> Unit)? = null,
     ): List<Computed> {
         val hrvCfg = Baselines.metricCfg["hrv"] ?: return emptyList()
         val rhrCfg = Baselines.metricCfg["resting_hr"] ?: return emptyList()
@@ -360,6 +370,11 @@ object IntelligenceEngine {
                 // The Context-aware caller (AppViewModel/WhoopBleClient) supplied it from
                 // PuffinExperiment.from(context).experimentalSleepV2.
                 useSleepStagerV2 = useExperimentalSleepV2,
+                // Sleep & Rest test mode (Test Centre E5): thread the trace sink straight through. null (the
+                // default) keeps analyzeDay's byte-identical untraced path; when the caller passed a non-null
+                // sink (mode on), detectSleep's gate trace + the Rest sub-score line route to the .sleep-tagged
+                // strap log. The sink is already the routing closure, so there is no per-day collect/replay.
+                traceSink = sleepTraceSink,
             )
 
             // Harvest the baseline-independent nightly aggregates (a day with no detected

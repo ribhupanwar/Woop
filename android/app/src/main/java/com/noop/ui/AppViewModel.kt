@@ -634,6 +634,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         // Opt-in experimental sleep staging (V2) — read off SharedPreferences here (the
                         // analytics layer is Context-free) and thread it into the sleep self-heal. (V7 3b)
                         useExperimentalSleepV2 = PuffinExperiment.from(appContext).experimentalSleepV2,
+                        // Sleep & Rest test mode (Test Centre E5): when the SLEEP domain is on, route the
+                        // per-day sleep gate trace into the SAME shareable strap log, tagged .sleep so it
+                        // lands under the profile in the export. Zero-cost when off: the gate is one
+                        // SharedPreferences bool read here and the sink stays null, so analyzeDay runs its
+                        // byte-identical untraced path. Mirrors the macOS sleepTraceActive wiring.
+                        sleepTraceSink =
+                            if (com.noop.testcentre.TestCentre.from(appContext)
+                                    .active(com.noop.testcentre.TestDomain.SLEEP))
+                                { line -> ble.externalLog(line, com.noop.testcentre.TestDomain.SLEEP) }
+                            else null,
                     )
                     // analyzeRecent now hops to Dispatchers.Default; a scope cancellation surfaces as a
                     // CancellationException that runCatching would otherwise swallow, breaking the loop's

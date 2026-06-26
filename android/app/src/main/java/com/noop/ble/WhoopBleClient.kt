@@ -1105,6 +1105,15 @@ class WhoopBleClient(
                         // engine the user chose in Settings, read off SharedPreferences here (the analytics
                         // layer is Context-free). Default off → V1. (V7 Pillar 3b)
                         useExperimentalSleepV2 = PuffinExperiment.from(context).experimentalSleepV2,
+                        // Sleep & Rest test mode (Test Centre E5): when the SLEEP domain is on, route this
+                        // post-backfill pass's per-day sleep gate trace into the .sleep-tagged strap log, so a
+                        // shared report carries the staging proof from THIS scoring pass too, not only the UI
+                        // 15-min loop. Zero-cost when off (the gate is one SharedPreferences bool read and the
+                        // sink stays null → analyzeDay's byte-identical untraced path). log() PII-scrubs.
+                        sleepTraceSink =
+                            if (testCentre.active(com.noop.testcentre.TestDomain.SLEEP))
+                                { s -> log(s, com.noop.testcentre.TestDomain.SLEEP) }
+                            else null,
                     )
                 }.onSuccess {
                     log("Backfill: post-sync scoring pass done")
