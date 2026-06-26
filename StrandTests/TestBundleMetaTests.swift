@@ -49,6 +49,6 @@ final class TestBundleMetaTests: XCTestCase {
         let a = String(data: sample().encoded(), encoding: .utf8)!
         let b = String(data: sample().encoded(), encoding: .utf8)!
         XCTAssertEqual(a, b)
-        XCTAssertLess(a.range(of: "\"app_version\"")!.lowerBound, a.range(of: "\"platform\"")!.lowerBound)
+        XCTAssertLessThan(a.range(of: "\"app_version\"")!.lowerBound, a.range(of: "\"platform\"")!.lowerBound)
     }
 }

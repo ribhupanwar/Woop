@@ -366,7 +366,7 @@ public final class LiveState: ObservableObject {
     /// service base (…-8d6d-82b8-614a-1c8cb0f8dcc6) — those are public, identical on every strap, and
     /// are exactly the GATT diagnostics a shared log needs to be useful (#421). Thanks @ujix (#447) for
     /// catching the peripheral-UUID leak; this is a targeted form so we don't redact the service UUIDs.
-    static func redactPii(_ s: String) -> String {
+    nonisolated static func redactPii(_ s: String) -> String {
         var out = s
         out = out.replacingOccurrences(
             of: "([0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:([0-9A-Fa-f]{2})",

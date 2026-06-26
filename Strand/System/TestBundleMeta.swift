@@ -24,7 +24,13 @@ struct TestBundleMeta: Codable {
     struct Build: Codable { let channel: String; let signed: Bool }
 
     /// db_bytes plus per-table row counts plus the raw-capture footprint (#590 asked us to surface this).
-    struct Storage: Codable { let dbBytes: Int; let rows: [String: Int]; let rawCaptureBytes: Int }
+    struct Storage: Codable {
+        let dbBytes: Int; let rows: [String: Int]; let rawCaptureBytes: Int
+        enum CodingKeys: String, CodingKey {
+            case rows
+            case dbBytes = "db_bytes", rawCaptureBytes = "raw_capture_bytes"
+        }
+    }
 
     enum CodingKeys: String, CodingKey {
         case schema, platform, source, questionnaire, build, storage, redaction, truncated

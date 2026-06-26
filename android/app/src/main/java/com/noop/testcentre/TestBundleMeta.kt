@@ -26,34 +26,49 @@ data class TestBundleMeta(
     data class Build(val channel: String, val signed: Boolean)
     data class Storage(val dbBytes: Int, val rows: Map<String, Int>, val rawCaptureBytes: Int)
 
-    /** Pretty, sorted JSON matching the Swift encoder. JSONObject sorts nothing for us, so we build the
-     *  map then emit sorted entries. */
+    /** Pretty, sorted JSON. We do NOT rely on JSONObject key ordering (the org.json on the unit-test
+     *  classpath is HashMap-backed and does not preserve insertion order), so we emit keys in explicit
+     *  alphabetical order ourselves, matching the Swift JSONEncoder .sortedKeys output the parity test
+     *  asserts. Only JSONObject.quote (a pure static escaper) is used, so this is backend-independent. */
     fun encoded(): String {
-        fun sortedObject(pairs: Map<String, Any?>): JSONObject {
-            val o = JSONObject()
-            for (k in pairs.keys.sorted()) o.put(k, pairs[k])
-            return o
-        }
-        val buildObj = sortedObject(mapOf("channel" to build.channel, "signed" to build.signed))
-        val storageObj = sortedObject(mapOf(
-            "db_bytes" to storage.dbBytes,
-            "raw_capture_bytes" to storage.rawCaptureBytes,
-            "rows" to sortedObject(storage.rows)))
-        val questObj = sortedObject(questionnaire)
-        val root = sortedObject(mapOf(
+        val root = mapOf<String, Any?>(
             "app_version" to appVersion,
-            "build" to buildObj,
+            "build" to mapOf("channel" to build.channel, "signed" to build.signed),
             "os_version" to osVersion,
             "platform" to platform,
-            "profile_started_at" to (profileStartedAt ?: JSONObject.NULL),
-            "questionnaire" to questObj,
+            "profile_started_at" to profileStartedAt,
+            "questionnaire" to questionnaire,
             "redaction" to redaction,
             "schema" to schema,
-            "source" to org.json.JSONArray(source),
-            "storage" to storageObj,
-            "strap_model" to (strapModel ?: JSONObject.NULL),
+            "source" to source,
+            "storage" to mapOf(
+                "db_bytes" to storage.dbBytes,
+                "raw_capture_bytes" to storage.rawCaptureBytes,
+                "rows" to storage.rows),
+            "strap_model" to strapModel,
             "test_profile" to testProfile,
-            "truncated" to truncated))
-        return root.toString(2)
+            "truncated" to truncated)
+        return emit(root, 0)
+    }
+
+    private fun emit(value: Any?, indent: Int): String {
+        val pad = "  ".repeat(indent)
+        val padIn = "  ".repeat(indent + 1)
+        return when (value) {
+            null -> "null"
+            is String -> JSONObject.quote(value)
+            is Boolean, is Int, is Long, is Double -> value.toString()
+            is Map<*, *> -> {
+                val entries = value.entries.associate { it.key.toString() to it.value }
+                if (entries.isEmpty()) "{}"
+                else entries.keys.sorted().joinToString(",\n", "{\n", "\n$pad}") { k ->
+                    "$padIn${JSONObject.quote(k)}: ${emit(entries[k], indent + 1)}"
+                }
+            }
+            is List<*> ->
+                if (value.isEmpty()) "[]"
+                else value.joinToString(",\n", "[\n", "\n$pad]") { "$padIn${emit(it, indent + 1)}" }
+            else -> JSONObject.quote(value.toString())
+        }
     }
 }
