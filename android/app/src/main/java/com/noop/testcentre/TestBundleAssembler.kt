@@ -102,24 +102,26 @@ object TestBundleAssembler {
             entries.add("last-crash.txt" to crash.toByteArray())
         }
 
-        // 2. Redact every gathered file, then cap (only raw-capture can exceed; report.txt is bounded).
-        val redacted = redactEntries(entries)
-        val (capped, truncated) = capEntries(redacted)
-        val out = ArrayList(capped)
-
-        // 2b. Display & Performance: capture a screenshot for the DISPLAY profile (or any mode that
-        //     declares includesScreenshot) and add it as screenshot.png AFTER the redact + cap pass, so
-        //     the binary PNG never runs through the text scrub (redaction scrubs identifiers, not pixels).
-        //     The screenshot is still covered by the mandatory review-before-share gate, which names the
-        //     attachment. A capture only happens for the gated profile, so a non-display report never
-        //     grabs a shot. Mirrors the Swift assembler.
+        // 1b. Display & Performance: capture a screenshot for the DISPLAY profile (or any mode that declares
+        //     includesScreenshot) as screenshot.png. The binary PNG is kept OUT of the redact pass (redaction
+        //     scrubs text identifiers, not pixels). The screenshot is still covered by the mandatory
+        //     review-before-share gate, which names the attachment. A capture only happens for the gated
+        //     profile, so a non-display report never grabs a shot. Mirrors the Swift assembler.
         val wantsShot = profile == TestDomain.DISPLAY ||
             (TestModeRegistry.mode(profile)?.includesScreenshot == true)
-        if (wantsShot) {
-            DisplayScreenshot.capturePNG(context)?.let { png ->
-                out += DisplayScreenshot.BUNDLE_NAME to png
-            }
+        val shot: Pair<String, ByteArray>? = if (wantsShot) {
+            DisplayScreenshot.capturePNG(context)?.let { png -> DisplayScreenshot.BUNDLE_NAME to png }
+        } else {
+            null
         }
+
+        // 2. Redact every gathered TEXT file, then cap. The screenshot is included in the cap input (NOT the
+        //    redact input) so its bytes COUNT against the 20 MB cap: capEntries budgets raw-capture as
+        //    capBytes - (everything else), so a large/retina PNG shrinks the raw-capture tail rather than
+        //    breaching the cap. Only raw-capture is trimmed; report.txt is bounded and the PNG is kept whole.
+        val redacted = redactEntries(entries)
+        val (capped, truncated) = capEntries(redacted + listOfNotNull(shot))
+        val out = ArrayList(capped)
 
         // 3. meta.json: the machine-readable tie. Answers + startedAt come off the single TestCentre
         //    surface. Storage is left zeroed in Phase 1 (the DB-size probe is a later wire-up); we never

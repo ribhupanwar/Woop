@@ -85,27 +85,30 @@ enum TestBundleAssembler {
 
         // 1. report.txt: the same exportable strap log the strap-log card shares. Already redacted by the
         //    append(log:) sink, but the whole-bundle redactEntries pass below re-scrubs it anyway (5.3).
-        var entries: [FileExport.BundleEntry] = [
+        let textEntries: [FileExport.BundleEntry] = [
             FileExport.BundleEntry(name: "report.txt", data: Data(live.exportableLogText().utf8)),
         ]
 
-        // 2. Redact the gathered files, then cap (only raw-capture can exceed; report.txt is bounded).
-        let redacted = redactEntries(entries)
-        let (capped, truncated) = capEntries(redacted)
-        entries = capped
-
-        // 2b. Display & Performance: capture a screenshot for the .display profile (or any mode that
-        //     declares includesScreenshot) and add it as screenshot.png. The PNG is BINARY image bytes,
-        //     not text, so it is added AFTER the redactEntries pass on purpose: redaction scrubs text
-        //     identifiers, never pixels (running raw PNG bytes through a UTF-8 decode/scrub would corrupt
-        //     them). The screenshot is still covered by the mandatory review-before-share gate (nothing
-        //     ships until the user taps Share), which the gate's note calls out. A capture only happens
-        //     for the gated profile, so a non-display report never grabs a shot.
+        // 1b. Display & Performance: capture a screenshot for the .display profile (or any mode that
+        //     declares includesScreenshot) as screenshot.png. The PNG is BINARY image bytes, not text, so it
+        //     is kept OUT of the redactEntries pass on purpose: redaction scrubs text identifiers, never
+        //     pixels (running raw PNG bytes through a UTF-8 decode/scrub would corrupt them). The screenshot
+        //     is still covered by the mandatory review-before-share gate (nothing ships until the user taps
+        //     Share), which the gate's note calls out. A capture only happens for the gated profile, so a
+        //     non-display report never grabs a shot.
         let wantsShot = profile == .display
             || (TestModeRegistry.mode(profile)?.includesScreenshot ?? false)
-        if wantsShot, let png = DisplayScreenshot.capturePNG() {
-            entries.append(FileExport.BundleEntry(name: DisplayScreenshot.bundleName, data: png))
-        }
+        let shot: FileExport.BundleEntry? = wantsShot
+            ? DisplayScreenshot.capturePNG().map { FileExport.BundleEntry(name: DisplayScreenshot.bundleName, data: $0) }
+            : nil
+
+        // 2. Redact the TEXT files, then cap. The screenshot is included in the cap input (NOT the redact
+        //    input) so its bytes COUNT against the 20 MB cap: capEntries budgets raw-capture as
+        //    capBytes - (everything else), so a large/retina PNG shrinks the raw-capture tail rather than
+        //    breaching the cap. Only raw-capture is trimmed; report.txt is bounded and the PNG is kept whole.
+        let redacted = redactEntries(textEntries)
+        let (capped, truncated) = capEntries(redacted + (shot.map { [$0] } ?? []))
+        var entries = capped
 
         // 3. meta.json: the machine-readable tie. The questionnaire answers are whatever the tester saved
         //    for this profile; profileStartedAt is ISO8601 from TestCentre. Storage is left zeroed in
