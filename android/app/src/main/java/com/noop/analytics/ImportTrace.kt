@@ -43,6 +43,21 @@ object ImportTrace {
     fun rejectLine(droppedRows: Int, skippedSpans: Int): String =
         "import rejects droppedRows=$droppedRows skippedSpans=$skippedSpans"
 
+    /** Honest per-stage line for the Android seam, where Room's @Upsert reports no store-write count (it is
+     *  fire-and-forget at this layer, unlike the Swift store which returns the summed SQLite changes). It
+     *  emits the rows handed to the store ([rowsIn]) but marks rowsOut UNVERIFIED rather than claiming
+     *  "(all written)" - so the line never asserts a save it cannot confirm. The "rowsOut=?" marker keeps
+     *  the line honest for the #601/#749/#754 "didn't save" cluster: an unverified write is shown as
+     *  unverified, not as success. No Swift twin (Swift always has the real count). */
+    fun stageLineUnverified(category: String, rowsIn: Int): String =
+        "import stage=$category rowsIn=$rowsIn rowsOut=? (store-write not verified on Android)"
+
+    /** Honest day-delta line for the Android seam: the distinct days MAPPED, with daysPersisted marked
+     *  UNVERIFIED rather than claiming "(all days persisted)", because Room does not report the persisted
+     *  count at this layer. Mirror of [stageLineUnverified] for the day-owner-collision tell. */
+    fun dayDeltaLineUnverified(category: String, daysMapped: Int): String =
+        "import dayDelta stage=$category daysMapped=$daysMapped daysPersisted=? (store-write not verified on Android)"
+
     /** The day-delta line: distinct local days MAPPED vs days the store PERSISTED; a gap is the
      *  day-owner-collision / "didn't save" tell. Mirrors the Swift formatter. */
     fun dayDeltaLine(category: String, daysMapped: Int, daysPersisted: Int): String {
@@ -124,6 +139,33 @@ object ImportTrace {
     fun safeExt(ext: String): String {
         val t = ext.lowercase().filter { it.isLetter() || it.isDigit() }
         return if (t.isEmpty()) "none" else t.take(8)
+    }
+
+    /** Map an Android importer's raw Room-table count key (ImportSummary.counts key, e.g. "dailyMetric",
+     *  "sleepSession", "workout") to the Swift import-trace CATEGORY vocabulary, so a cross-platform report
+     *  keys every per-stage line off the SAME stage= name. The mapping is source-aware because the same Room
+     *  table means different Swift categories per importer: WHOOP's dailyMetric IS the cycle-derived daily
+     *  (Swift "cycles") and its sleepSession IS Swift "sleeps", whereas Apple Health keeps its own
+     *  appleDaily/dailyMetric split. Keys with no Swift twin (journal, metricSeries) and the reject key
+     *  (skippedSpans, never a stage) pass through unchanged. Pure; no IO; no em-dashes. */
+    fun categoryWire(source: String, rawKey: String): String = when (source) {
+        // WHOOP export (WhoopCsvImporter SOURCE_LABEL "WHOOP"): align with WhoopImporter.swift categories.
+        "WHOOP" -> when (rawKey) {
+            "dailyMetric" -> "cycles"
+            "sleepSession" -> "sleeps"
+            "workout" -> "workouts"
+            else -> rawKey   // journal, metricSeries: no Swift category, keep the raw key
+        }
+        // Apple Health (AppleHealthImporter SOURCE_LABEL): align with AppleHealthImport.swift categories.
+        "Apple Health" -> when (rawKey) {
+            "workout" -> "workouts"
+            else -> rawKey   // appleDaily, dailyMetric, metricSeries already match Swift / have no twin
+        }
+        // Any other source: only normalise the singular table name to the Swift plural where it exists.
+        else -> when (rawKey) {
+            "workout" -> "workouts"
+            else -> rawKey
+        }
     }
 
     /** Map an Android importer's human source label (ImportSummary.source) to the Swift DataSourceKind wire

@@ -48,6 +48,46 @@ class ImportTraceTest {
         )
     }
 
+    @Test fun stageLineUnverifiedNeverClaimsWritten() {
+        // The Android seam has no Room store-write count, so the line must mark rowsOut UNVERIFIED rather
+        // than claim "(all written)" - the honesty fix for the #601/#749/#754 "didn't save" cluster.
+        val line = ImportTrace.stageLineUnverified("cycles", rowsIn = 30)
+        assertEquals(
+            "import stage=cycles rowsIn=30 rowsOut=? (store-write not verified on Android)",
+            line,
+        )
+        assertFalse(line.contains("(all written)"))
+    }
+
+    @Test fun dayDeltaLineUnverifiedNeverClaimsPersisted() {
+        val line = ImportTrace.dayDeltaLineUnverified("appleDaily", daysMapped = 14)
+        assertEquals(
+            "import dayDelta stage=appleDaily daysMapped=14 daysPersisted=? (store-write not verified on Android)",
+            line,
+        )
+        assertFalse(line.contains("(all days persisted)"))
+    }
+
+    // M1 parity: the Android raw Room-table count keys map to the SAME Swift import-trace category vocabulary
+    // (WhoopImporter.swift: cycles/sleeps/workouts; AppleHealthImport.swift: appleDaily/dailyMetric/workouts),
+    // so a cross-platform report keys every stage= line off identical names.
+    @Test fun categoryWireMapsWhoopTableKeysToSwiftCategories() {
+        assertEquals("cycles", ImportTrace.categoryWire("WHOOP", "dailyMetric"))
+        assertEquals("sleeps", ImportTrace.categoryWire("WHOOP", "sleepSession"))
+        assertEquals("workouts", ImportTrace.categoryWire("WHOOP", "workout"))
+        // No Swift category for these: keep the raw key (still a stable, non-free-text id).
+        assertEquals("journal", ImportTrace.categoryWire("WHOOP", "journal"))
+        assertEquals("metricSeries", ImportTrace.categoryWire("WHOOP", "metricSeries"))
+    }
+
+    @Test fun categoryWireMapsAppleTableKeysToSwiftCategories() {
+        // Apple keeps its own appleDaily/dailyMetric split (already matches Swift); only workout -> workouts.
+        assertEquals("appleDaily", ImportTrace.categoryWire("Apple Health", "appleDaily"))
+        assertEquals("dailyMetric", ImportTrace.categoryWire("Apple Health", "dailyMetric"))
+        assertEquals("workouts", ImportTrace.categoryWire("Apple Health", "workout"))
+        assertEquals("metricSeries", ImportTrace.categoryWire("Apple Health", "metricSeries"))
+    }
+
     @Test fun dayDeltaLineNotesUnpersistedGap() {
         assertEquals(
             "import dayDelta stage=cycles daysMapped=30 daysPersisted=30 (all days persisted)",
