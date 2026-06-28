@@ -284,6 +284,14 @@ struct AddDeviceWizard: View {
                     experimentalTierNote
                 }
 
+                // A6 , the one-phone-at-a-time WHOOP warning, surfaced as an amber card BEFORE the user
+                // scans so the most common pairing failure (the official app still holding the link) is
+                // pre-empted, not discovered after a failed scan. WHOOP-only: the single-link constraint
+                // is specific to the WHOOP band's bonding, not the generic HR / FTMS paths.
+                if type.isWhoop {
+                    singleConnectionWarning
+                }
+
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(prepInstructions(type).enumerated()), id: \.offset) { _, line in
                         HStack(alignment: .top, spacing: 10) {
@@ -668,6 +676,35 @@ struct AddDeviceWizard: View {
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
+    /// A6 , the amber "one phone at a time" warning shown before a WHOOP scan. A failed pairing is most
+    /// often the official WHOOP app still holding the band's single BLE link; saying so up front (with the
+    /// concrete fix) is the honest, frustration-saving move. Amber `statusWarning` matches the existing
+    /// experimental-note treatment so it reads as "heads-up", not "error".
+    private var singleConnectionWarning: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(StrandPalette.statusWarning)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your WHOOP only talks to one phone at a time.")
+                    .font(StrandFont.subhead)
+                    .foregroundStyle(StrandPalette.statusWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Force-quit the official WHOOP app first, or pairing may fail.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.statusWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(StrandPalette.statusWarning.opacity(0.10),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Heads-up. Your WHOOP only talks to one phone at a time. Force-quit the official WHOOP app first, or pairing may fail.")
+    }
+
     private var whoopFirstNote: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "info.circle")
@@ -709,7 +746,7 @@ private struct WhoopPickList: View {
             ScanStatusBar(searching: true, onRescan: onRescan)
             let found = ble.discoveredWhoops.sorted { $0.rssi > $1.rssi }
             if found.isEmpty {
-                SearchingCard()
+                SearchingCard(whoopHint: true)
             } else {
                 ForEach(found, id: \.uuid) { strap in
                     DiscoveredRow(name: strap.name.isEmpty ? "WHOOP" : strap.name,
@@ -872,6 +909,10 @@ private struct ScanStatusBar: View {
 }
 
 private struct SearchingCard: View {
+    /// A6 , honest phase copy. WHOOP scans add the single-link reminder under the generic line, since a
+    /// stuck scan there is almost always the official app still holding the band. Defaults off so the HR /
+    /// FTMS / Huami / Oura pick lists keep their existing copy unchanged.
+    var whoopHint: Bool = false
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ProgressView().tint(StrandPalette.accent)
@@ -882,6 +923,12 @@ private struct SearchingCard: View {
                 .font(StrandFont.subhead)
                 .foregroundStyle(StrandPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if whoopHint {
+                Text("Not showing up? The official WHOOP app may still be holding it. Force-quit that app, then tap Rescan.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.statusWarning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)

@@ -94,11 +94,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import android.app.DatePickerDialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.noop.analytics.BaselineState
 import com.noop.analytics.Baselines
 import com.noop.analytics.BatteryEstimator
+import com.noop.analytics.ChargeDriver
 import com.noop.analytics.HydrationGoal
 import com.noop.analytics.HydrationStore
 import com.noop.analytics.ReadinessEngine
+import com.noop.analytics.RecoveryDrivers
+import com.noop.analytics.RecoveryScorer
+import com.noop.analytics.RestScorer
 import com.noop.analytics.ScoreConfidence
 import com.noop.analytics.StepsEstimateEngine
 import com.noop.analytics.StrainScorer
@@ -1015,6 +1020,12 @@ fun TodayScreen(
             HeroMetricRows(day = displayMetric, carriedDay = lastScoredRecoveryDay)
         }
         }
+
+        // WHAT SHAPED IT: the engine-computed Charge driver breakdown (one signed-points row per real
+        // term, value vs personal baseline, plus the surfaced confidence dot + tier). Sits directly under
+        // the Charge ring, above the typical-range Contributors bars. Hidden when the day can't score.
+        // Carries the last scored day at the rollover so it matches the carried ring (#543).
+        item { RecoveryDriversSection(days = days, displayDay = displayMetric, carriedDay = lastScoredRecoveryDay) }
 
         // CONTRIBUTORS (README screen #5, recovery detail) — what drove today's Charge, as labelled
         // progress bars (HRV / Resting HR / Sleep / Respiratory) in the shared stage/zone bar style.
@@ -2472,6 +2483,116 @@ private fun DashboardCardsEditorDialog(
 /** One row's working state in the dashboard editor: the card + whether it's currently enabled. */
 private data class EditableDashboardCard(val card: DashboardCard, val enabled: Boolean)
 
+// MARK: - "What shaped it" the engine-computed Charge driver breakdown
+//
+// The SHARED-CONTRACT driver rows under the Charge ring: one row per REAL term the recovery scorer used,
+// each carrying its signed point contribution (deltaPoints), the night's value, the personal baseline it
+// was scored against, and a short plain-English verdict. Computed by RecoveryDrivers.chargeDrivers from
+// the SAME inputs the Charge ring reads, so a row can never describe a term the score did not use; a
+// missing input yields NO row (never a faked zero). The confidence dot + tier tag SURFACE the existing
+// ScoreConfidence.forCharge: they are read, not recomputed. Hidden entirely when the day can't score
+// (cold-start / no drivers). Byte-aligned with the iOS "What shaped it" section. No em-dashes.
+
+@Composable
+private fun RecoveryDriversSection(
+    days: List<DailyMetric>,
+    displayDay: DailyMetric?,
+    carriedDay: DailyMetric? = null,
+) {
+    // Read the row the Charge ring itself reads: today's own when scored, else the carried last-scored
+    // day (#543) so the breakdown matches the carried ring instead of vanishing at the rollover.
+    val readDay = carriedDay ?: displayDay
+    val drivers = remember(days, readDay) { recoveryChargeDrivers(days, readDay) }
+    if (drivers.isEmpty()) return
+
+    val tier = remember(days, readDay) { chargeConfidenceTier(days, readDay) }
+    val overline = carriedDay?.let { "Charge · ${carriedCaption(it.day)}" } ?: "Charge"
+
+    Column(verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+        // Header row: section title + the SURFACED confidence pill (dot + tier tag) on the right.
+        Row(verticalAlignment = Alignment.Top) {
+            Box(modifier = Modifier.weight(1f)) {
+                SectionHeader("What shaped it", overline = overline, trailing = "vs your baseline")
+            }
+            ChargeConfidencePill(tier)
+        }
+        NoopCard {
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.space16)) {
+                drivers.forEach { DriverRow(it) }
+                Text(
+                    "Each line is how many points that signal moved Charge versus sitting at your " +
+                        "on-device baseline. Approximate, not medical advice.",
+                    style = NoopType.footnote,
+                    color = Palette.textTertiary,
+                )
+            }
+        }
+    }
+}
+
+/** The SURFACED Charge confidence pill (dot + tier tag). Reads the existing ScoreConfidence, never
+ *  recomputes it. SOLID = gold/accent, BUILDING = the blue warning tone, CALIBRATING = neutral slate. */
+@Composable
+private fun ChargeConfidencePill(tier: ScoreConfidence) {
+    val (label, tone) = when (tier) {
+        ScoreConfidence.SOLID -> "SOLID" to StrandTone.Accent
+        ScoreConfidence.BUILDING -> "BUILDING" to StrandTone.Warning
+        ScoreConfidence.CALIBRATING -> "CALIBRATING" to StrandTone.Neutral
+    }
+    StatePill(title = label, tone = tone)
+}
+
+/** One "What shaped it" driver row: an up/down delta chip (signed points, green up / red down),
+ *  the label + verdict, and the value over its baseline. Mirrors the iOS driver row layout. */
+@Composable
+private fun DriverRow(driver: ChargeDriver) {
+    val positive = driver.deltaPoints >= 0
+    // A zero delta reads neutral (no green/red), not a misleading "good".
+    val tone = when {
+        driver.deltaPoints > 0 -> Palette.statusPositive
+        driver.deltaPoints < 0 -> Palette.statusCritical
+        else -> Palette.textTertiary
+    }
+    val signed = if (driver.deltaPoints > 0) "+${driver.deltaPoints}" else "${driver.deltaPoints}"
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.semantics {
+            contentDescription =
+                "${driver.label}, ${driver.valueText}, ${driver.baselineText}, " +
+                    "$signed points, ${driver.verdict}"
+        },
+    ) {
+        // Signed-point delta chip with a direction glyph.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier
+                .clip(RoundedCornerShape(Metrics.cornerPill))
+                .background(tone.copy(alpha = 0.12f))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            if (driver.deltaPoints != 0) {
+                Icon(
+                    if (positive) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = tone,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+            Text("$signed pts", style = NoopType.captionNumber, color = tone)
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(driver.label, style = NoopType.headline, color = Palette.textPrimary)
+            Text(driver.verdict, style = NoopType.footnote, color = Palette.textSecondary)
+        }
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(driver.valueText, style = NoopType.captionNumber, color = Palette.textPrimary)
+            Text(driver.baselineText, style = NoopType.footnote, color = Palette.textTertiary)
+        }
+    }
+}
+
 // MARK: - Recovery contributors (README screen #5) — labelled progress bars
 //
 // "CONTRIBUTORS" — what drove today's Charge, each as a labelled progress bar in the shared stage/zone
@@ -2584,6 +2705,62 @@ internal fun recoveryCalibrationNights(
     // bare "No data" that looks broken (#335). Caller gates past days to null; >= seed → null.
     return days.count { val v = it.avgHrv; v != null && v in cfg.minVal..cfg.maxVal }
         .takeIf { it in 0 until seed }
+}
+
+/**
+ * The ordered "What shaped it" Charge driver rows for [displayDay], rebuilt PURELY from the visible
+ * [days] history (the same in-memory rows the dashboard already shows, imports win field-by-field in
+ * the merge), so no engine round-trip is needed and the bars match the Charge ring's own inputs. Folds
+ * the whole history (oldest first) into the four-plus-one personal baselines with [Baselines.foldHistory]
+ * (byte-identical to the engine's whole-history fold when no manual Recalibrate epoch is set, the common
+ * case), then defers to [RecoveryDrivers.chargeDrivers], which scores each row against the SAME inputs
+ * [RecoveryScorer.recovery] reads. Empty when the displayed day can't score (cold-start / missing input),
+ * so the section hides rather than faking rows. Mirrors the iOS chargeDrivers wiring.
+ */
+internal fun recoveryChargeDrivers(
+    days: List<DailyMetric>,
+    displayDay: DailyMetric?,
+): List<ChargeDriver> {
+    val day = displayDay ?: return emptyList()
+    val hrv = day.avgHrv ?: return emptyList()
+    val rhr = day.restingHr?.toDouble() ?: return emptyList()
+
+    // Whole-history fold (oldest first), exactly as the engine seeds baselines2.
+    val ordered = days.sortedBy { it.day }
+    val hrvBase = Baselines.foldHistory(ordered.map { it.avgHrv }, Baselines.hrvCfg)
+    if (!hrvBase.usable) return emptyList()
+    val rhrBase = Baselines.foldHistory(ordered.map { it.restingHr?.toDouble() }, Baselines.restingHRCfg)
+    val respBase = Baselines.foldHistory(ordered.map { it.respRateBpm }, Baselines.respCfg).takeIf { it.usable }
+
+    // sleepPerf: the Rest COMPOSITE (÷100) when stages exist, else raw efficiency, the SAME derivation
+    // recomputeRecovery uses, so the Sleep driver scores against the headline's own input.
+    val sleepPerf = RestScorer.restFromDaily(day)?.let { it / 100.0 } ?: day.efficiency
+
+    return RecoveryDrivers.chargeDrivers(
+        hrv = hrv,
+        rhr = rhr,
+        resp = day.respRateBpm,
+        hrvBaseline = hrvBase,
+        rhrBaseline = rhrBase,
+        respBaseline = respBase,
+        sleepPerf = sleepPerf,
+        skinTempDev = day.skinTempDevC,
+    )
+}
+
+/**
+ * The Charge (recovery) [ScoreConfidence] tier for [displayDay] against the HRV baseline folded from
+ * [days], surfaced as the confidence dot + tier tag under the "What shaped it" rows. SURFACED, never
+ * recomputed differently: it calls [ScoreConfidence.forCharge] with the SAME folded HRV baseline the
+ * drivers scored against. Mirrors the iOS surfacing of the existing ScoreConfidence on the recovery screen.
+ */
+internal fun chargeConfidenceTier(
+    days: List<DailyMetric>,
+    displayDay: DailyMetric?,
+): ScoreConfidence {
+    val hrvBase: BaselineState =
+        Baselines.foldHistory(days.sortedBy { it.day }.map { it.avgHrv }, Baselines.hrvCfg)
+    return ScoreConfidence.forCharge(displayDay?.recovery, hrvBase)
 }
 
 /**

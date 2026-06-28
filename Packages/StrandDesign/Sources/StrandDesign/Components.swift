@@ -536,7 +536,7 @@ public extension ButtonStyle where Self == NoopGhostButtonStyle {
 // untouched. This is the score-lifecycle chip the new design calls for: SOLID = gold
 // fill, BUILDING = blue, CALIBRATING = slate, LIVE = gold dot with a pulsing halo.
 
-public enum ScoreState: Sendable {
+public enum ScoreState: Sendable, Equatable {
     case solid        // a settled, trustworthy score
     case building     // accruing nights, not yet settled
     case calibrating  // baseline still forming

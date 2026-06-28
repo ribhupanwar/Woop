@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.PhonelinkErase
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.AlertDialog
@@ -513,6 +514,46 @@ private fun WhoopFirstNote() {
     }
 }
 
+/**
+ * The one-phone pairing warning shown before pairing a WHOOP strap. A WHOOP band bonds to a single
+ * device/app at a time, so connecting it to NOOP means it won't stream to the official WHOOP app at the
+ * same time (and vice versa). Honest + reversible: re-pairing in the other app hands the strap back. No
+ * em-dashes. Mirrors the iOS one-phone warning card so all platforms say the same thing.
+ */
+@Composable
+private fun OnePhoneWarningCard() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Palette.statusWarning.copy(alpha = 0.10f))
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            Icons.Filled.PhonelinkErase,
+            contentDescription = null,
+            tint = Palette.statusWarning,
+            modifier = Modifier.size(18.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "One phone at a time",
+                style = NoopType.headline,
+                color = Palette.statusWarning,
+            )
+            Text(
+                "A WHOOP strap bonds to a single device. While it's connected to NOOP it won't stream " +
+                    "to the official WHOOP app, and the other way round. It's reversible: pair it in the " +
+                    "other app whenever you want it back.",
+                style = NoopType.footnote,
+                color = Palette.statusWarning,
+            )
+        }
+    }
+}
+
 // MARK: - Step 2 — type-specific prep + guidance
 
 @Composable
@@ -553,6 +594,13 @@ private fun PrepStep(type: DeviceType, onScan: () -> Unit) {
             }
         } else if (type.isExperimental) {
             ExperimentalTierNote()
+        }
+
+        // A WHOOP strap bonds to ONE phone/app at a time. Make the trade-off explicit BEFORE pairing so it
+        // isn't a surprise, with the honest reassurance that it is reversible. Mirrors the iOS one-phone
+        // pairing warning card. Shown for both WHOOP models (the constraint is the strap's, not the app's).
+        if (type.isWhoop) {
+            OnePhoneWarningCard()
         }
 
         Column(

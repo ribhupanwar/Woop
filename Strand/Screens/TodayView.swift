@@ -1380,7 +1380,52 @@ struct TodayView: View {
                 explainedScoreNote(chargeScoreState)
             }
 
+            // A4 , while the Charge baseline is still building, a clear "N nights to go" countdown +
+            // "more overnight wear to unlock your Charge baseline" sits under the rings, in place of an
+            // empty/zero Charge. Uses the EXISTING calibrating-nights value (no recompute) and only on
+            // TODAY (a past day with no Charge is missing data, not mid-calibration).
+            if selectedDayOffset == 0, let banked = recoveryCalibration {
+                chargeCalibrationCountdown(banked: banked)
+            }
         }
+    }
+
+    /// A4 , the Charge calibrating countdown callout. `banked` is the existing `recoveryCalibration`
+    /// (nights gathered so far); the nights-to-go and progress copy come from the pure
+    /// `ChargeBreakdownFormat` helpers so they read identically here and in tests. Near-black Charge card,
+    /// slate confidence tier, no fabricated number.
+    @ViewBuilder
+    private func chargeCalibrationCountdown(banked: Int) -> some View {
+        let remaining = max(1, Baselines.minNightsSeed - banked)
+        let countdown = ChargeBreakdownFormat.calibrationCountdown(nightsRemaining: remaining)
+        let unlock = ChargeBreakdownFormat.calibrationUnlockCopy(scoreName: "Charge")
+        let progress = ChargeBreakdownFormat.calibrationProgress(banked: banked, seed: Baselines.minNightsSeed)
+        NoopCard(padding: 14, tint: StrandPalette.chargeColor) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "gauge.with.dots.needle.bottom.50percent")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(StrandPalette.chargeColor)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(countdown)
+                            .font(StrandFont.headline)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                        Spacer(minLength: 0)
+                        ConfidenceTierChip(confidence: .calibrating)
+                    }
+                    Text(unlock)
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(progress)
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Charge baseline calibrating. \(countdown), \(unlock). \(progress).")
     }
 
     /// Design Reset: the greeting + gold Synthesis read-out + vitals, lifted OUT of the hero so Today

@@ -116,6 +116,15 @@ final class IntelligenceEngine: ObservableObject {
         /// already gates on the HRV baseline being usable); the Apple-Watch fold below sets this to the
         /// `WatchRecovery` confidence so a watch-only recovery reads "calibrating" until it has enough nights.
         var confidence: ScoreConfidence = .solid
+        /// SHARED CONTRACT (engine <-> UI): the ordered "what shaped it" Charge driver list, biggest mover
+        /// first. One row per term that actually fed the score (`RecoveryScorer.chargeDrivers`); empty when
+        /// there is no score (cold-start) or for a non-strap row whose drivers we don't recompute. The UI
+        /// renders one row per driver under the Charge ring and gates gracefully when this is empty.
+        var drivers: [ChargeDriver] = []
+        /// The night's skin temperature expressed as a RELATIVE deviation from the personal baseline
+        /// (`RecoveryScorer.skinTempRelative`), or nil when no deviation is available. Surfaced as
+        /// "+0.3 C vs your normal" with a relative tier tag; never a fake clinical absolute.
+        var skinTempRel: SkinTempRelative? = nil
         var id: String { day }
     }
 
@@ -656,9 +665,19 @@ final class IntelligenceEngine: ObservableObject {
             let skinDev = recomputeSkinTempDev(night.nightlySkin, baselines2.skinTemp)
             let source = DaySource.classify(day: daily.day, importedWhoopDays: importedWhoopDays,
                                             appleHealthDays: appleHealthDays)
+            // SHARED CONTRACT enrichment: the ordered Charge driver list + the relative skin-temp marker,
+            // built from the SAME inputs `recomputeRecovery` reads so the rows can never disagree with the
+            // headline. Both are empty/nil pre-baseline (cold-start), matching the score's own null-honesty.
+            let drivers = recomputeChargeDrivers(daily, baselines2)
+            let skinRel = RecoveryScorer.skinTempRelative(deviationC: skinDev)
+            // Honest per-day Charge confidence (A3): the strap night reads `.solid`/`.building`/`.calibrating`
+            // off the HRV baseline state rather than a blanket `.solid`, so a thin/provisional baseline shows
+            // EST. not REL. Pure presentation upstream of the UI; the score itself is unchanged.
+            let chargeConf = ScoreConfidence.charge(recovery: recovery, hrvBaseline: baselines2.hrv)
             out.append(Computed(day: daily.day, recovery: recovery, strain: night.strain,
                                 sleepMin: daily.totalSleepMin, hrv: daily.avgHrv,
-                                rhr: daily.restingHr, source: source))
+                                rhr: daily.restingHr, source: source, confidence: chargeConf,
+                                drivers: drivers, skinTempRel: skinRel))
             // ── Per-day scoring diagnostic (Sleep overhaul §2.5) ─────────────────────────────────────
             // ONE concise, privacy-safe line per scored day into the shareable strap log: the day key, the
             // FINAL computed total-sleep minutes (after any edit substitution), how many sleep blocks the
@@ -1095,6 +1114,24 @@ final class IntelligenceEngine: ObservableObject {
                                        hrvBaseline: hrvBase, rhrBaseline: baselines.restingHR,
                                        respBaseline: baselines.resp, sleepPerf: restQuality,
                                        skinTempDev: daily.skinTempDevC)
+    }
+
+    /// The ordered "what shaped it" Charge driver list for one day (SHARED CONTRACT). Pure: it feeds the
+    /// SAME inputs `recomputeRecovery` reads (the SAME `restQuality` derivation) into
+    /// `RecoveryScorer.chargeDrivers`, whose per-term deltas come from `RecoveryScorer.recovery` verbatim, so
+    /// the rows can never diverge from the Charge number written for the day. Empty when a hard input
+    /// (HRV / RHR / HRV-baseline) is missing or the baseline isn't usable yet, mirroring `recomputeRecovery`'s
+    /// own early-nil so a cold-start night shows the calibrating state rather than fabricated rows.
+    private func recomputeChargeDrivers(_ daily: DailyMetric,
+                                        _ baselines: AnalyticsEngine.ProfileBaselines) -> [ChargeDriver] {
+        guard let hrvVal = daily.avgHrv, let rhrVal = daily.restingHr, let hrvBase = baselines.hrv else {
+            return []
+        }
+        let restQuality = AnalyticsEngine.Rest.composite(daily: daily).map { $0 / 100.0 } ?? daily.efficiency
+        return RecoveryScorer.chargeDrivers(hrv: hrvVal, rhr: Double(rhrVal), resp: daily.respRateBpm,
+                                            hrvBaseline: hrvBase, rhrBaseline: baselines.restingHR,
+                                            respBaseline: baselines.resp, sleepPerf: restQuality,
+                                            skinTempDev: daily.skinTempDevC)
     }
 
     /// The Charge term-breakdown trace lines for one day (Recovery test mode, Group G). Pure: it feeds the

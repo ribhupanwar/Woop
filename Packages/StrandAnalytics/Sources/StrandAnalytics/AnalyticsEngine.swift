@@ -67,6 +67,14 @@ public enum AnalyticsEngine {
         public let workouts: [ExerciseSession]
         /// Recovery / "Charge" score [0,100] or nil (cold-start / no HRV baseline).
         public let recovery: Double?
+        /// Ordered Charge driver breakdown (one row per real term that fed the score, biggest
+        /// mover first). Empty when there is no score (cold-start) or no driver computed. The UI
+        /// renders one row per driver under the Charge ring; it never recomputes the score.
+        public let chargeDrivers: [ChargeDriver]
+        /// A5: skin temperature as a RELATIVE deviation-from-baseline marker (a trend, never a
+        /// clinical absolute), or nil when no deviation is available. Carries the signed °C
+        /// deviation + the relative tier (cooler / typical / warmer) for the UI to present.
+        public let skinTempRelative: SkinTempRelative?
         /// Day strain / "Effort" [0,100] or nil (insufficient HR samples / invalid HRR).
         public let strain: Double?
         /// Rest composite [0,100] or nil (no in-bed data). This is the value the
@@ -98,10 +106,14 @@ public enum AnalyticsEngine {
                     chargeConfidence: ScoreConfidence = .calibrating,
                     effortConfidence: ScoreConfidence = .calibrating,
                     restConfidence: ScoreConfidence = .calibrating,
-                    sessionMotionByStart: [Int: [Double]] = [:]) {
+                    sessionMotionByStart: [Int: [Double]] = [:],
+                    chargeDrivers: [ChargeDriver] = [],
+                    skinTempRelative: SkinTempRelative? = nil) {
             self.daily = daily; self.sleepSessions = sleepSessions
             self.cachedSleep = cachedSleep; self.workouts = workouts
             self.recovery = recovery; self.strain = strain
+            self.chargeDrivers = chargeDrivers
+            self.skinTempRelative = skinTempRelative
             self.nightlySkinTempC = nightlySkinTempC
             self.restScore = restScore
             self.chargeConfidence = chargeConfidence
@@ -401,6 +413,9 @@ public enum AnalyticsEngine {
 
         // ── Recovery / "Charge" ───────────────────────────────────────────────
         var recovery: Double? = nil
+        // Ordered "why is Charge what it is" rows, built from the SAME inputs as the score
+        // (empty when there is no score / cold-start). Surfaced on DayResult for the UI.
+        var chargeDrivers: [ChargeDriver] = []
         if let hrvVal = avgHRVDaily, let rhrVal = restingHRDaily, let hrvBase = baselines.hrv {
             // Rest-quality term = the Rest composite ÷100 (replaces raw efficiency).
             let sleepPerf = restScore.map { $0 / 100.0 }
@@ -413,7 +428,20 @@ public enum AnalyticsEngine {
                 respBaseline: baselines.resp,
                 sleepPerf: sleepPerf,
                 skinTempDev: skinTempDevC)  // symmetric penalty; drops + renormalizes when nil
+            // Driver breakdown from the identical inputs; omits any missing term, never faked.
+            chargeDrivers = RecoveryScorer.chargeDrivers(
+                hrv: hrvVal,
+                rhr: Double(rhrVal),
+                resp: respRateDaily,
+                hrvBaseline: hrvBase,
+                rhrBaseline: baselines.restingHR,
+                respBaseline: baselines.resp,
+                sleepPerf: sleepPerf,
+                skinTempDev: skinTempDevC)
         }
+        // A5: skin temp as a RELATIVE deviation marker (trend, not a clinical absolute). nil
+        // when no deviation is available (no baseline yet / not worn) so the UI shows nothing.
+        let skinTempRelative = RecoveryScorer.skinTempRelative(deviationC: skinTempDevC)
 
         // ── Strain / "Effort" (cardiovascular load over the full CALENDAR day) ──
         // Integrate dayHr ([localMidnight, localMidnight+24h), clamped to `now` for today) when the
@@ -548,7 +576,9 @@ public enum AnalyticsEngine {
                          chargeConfidence: chargeConfidence,
                          effortConfidence: effortConfidence,
                          restConfidence: restConfidence,
-                         sessionMotionByStart: sessionMotionByStart)
+                         sessionMotionByStart: sessionMotionByStart,
+                         chargeDrivers: chargeDrivers,
+                         skinTempRelative: skinTempRelative)
     }
 
     // MARK: - Rest composite (Charge/Effort/Rest)
