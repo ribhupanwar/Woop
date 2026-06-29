@@ -4328,7 +4328,13 @@ class WhoopBleClient(
                 timedOut = connTimedOut,
             )
         ) {
-            log("Bond-loop (#617): ${postBondLoop.consecutiveBondTimeouts} bond-then-timeout cycles — surfacing the re-pair guide")
+            log("Bond-loop (#617): ${postBondLoop.consecutiveBondTimeouts} bond-then-timeout cycles — surfacing the re-pair guide and pausing auto-reconnect")
+            // #844 — the loop is bond → drop → rescan → bond → drop, forever, draining the battery. Surfacing
+            // the guide alone left the involuntary-drop rescan running. Pause auto-reconnect too (the disconnect
+            // rescan already skips while this is set); a user Connect or a genuine bond re-arms it. We do NOT
+            // touch the bond/parse path — the bond is real; the stale OS pairing is the problem. Mirrors the
+            // Swift BLEManager #844 fix.
+            autoReconnectPausedForBondLoop = true
             if (_state.value.reconnectGuide == null) {
                 _state.value = _state.value.copy(
                     reconnectGuide = """

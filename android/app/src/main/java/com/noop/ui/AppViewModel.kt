@@ -607,7 +607,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         NoopPrefs.setTsHealPending(appContext, false)
                     }
                 }.onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
-                runCatching {
+                // #836 parity (Android): the 15-min tick is a backstop, not a data-driven refresh. Every real
+                // update (sync, import, edit, recalibrate, the #547 heal above) rescores via its own path and
+                // moves the raw-HR fingerprint, so skip the heavy 21-day rescore when the HR stream is unchanged
+                // since the last COMPLETED run. Mirrors the Swift analyzeRecent(force:false) gate; the watermark
+                // advances only on success (below), so an interrupted run can never hide unscored data.
+                val analyzeFp = repository.hrFingerprint()
+                if (analyzeFp != NoopPrefs.analyzeWatermark(appContext)) runCatching {
                     IntelligenceEngine.analyzeRecent(
                         repo = repository,
                         profile = currentProfile(),
@@ -687,7 +693,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     // analyzeRecent now hops to Dispatchers.Default; a scope cancellation surfaces as a
                     // CancellationException that runCatching would otherwise swallow, breaking the loop's
                     // own cancellation — rethrow it so onCleared() actually stops the loop. (#125)
-                }.onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
+                }.onSuccess { NoopPrefs.setAnalyzeWatermark(appContext, analyzeFp) }
+                    .onFailure { if (it is kotlin.coroutines.cancellation.CancellationException) throw it }
                 // Opt-in writeback: push the freshly computed nights into Health Connect so other
                 // apps see them. Idempotent (clientRecordId per metric+day), so re-running every
                 // cycle just upserts. Never let an HC hiccup (perm revoked mid-flight, provider

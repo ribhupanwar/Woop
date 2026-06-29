@@ -535,6 +535,9 @@ interface WhoopDao : DeviceRegistryDao {
     suspend fun latestHrSampleTs(deviceId: String): Long?
 
     @Query("SELECT COUNT(*) FROM hrSample") suspend fun countHr(): Int
+    // #836: max raw-HR timestamp across all devices. Paired with countHr() as a cheap whole-history change
+    // fingerprint so the 15-min idle rescore can skip when nothing new has landed (COALESCE → 0 when empty).
+    @Query("SELECT COALESCE(MAX(ts), 0) FROM hrSample") suspend fun maxHrTs(): Long
     @Query("SELECT COUNT(*) FROM rrInterval") suspend fun countRr(): Int
     @Query("SELECT COUNT(*) FROM event") suspend fun countEvents(): Int
     @Query("SELECT COUNT(*) FROM battery") suspend fun countBattery(): Int

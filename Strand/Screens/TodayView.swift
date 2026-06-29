@@ -825,6 +825,9 @@ struct TodayView: View {
             .popover(isPresented: $showDayPicker) {
                 DatePicker("", selection: dayPickerBinding, in: ...Date(), displayedComponents: [.date])
                     .datePickerStyle(.graphical).labelsHidden().padding(12)
+                    // #840 — give the graphical picker an explicit size so the iPad popover bubble doesn't
+                    // clip the calendar grid (anchored to a 13pt label it otherwise sizes too small).
+                    .frame(minWidth: 320, minHeight: 360)
             }
 
             Spacer(minLength: 8)
@@ -1889,11 +1892,11 @@ struct TodayView: View {
         case .sleep:
             return sleepValue(d)
         case .steps:
+            // #843/#813 — same-day real count only (strap @57 or same-day phone import); never the latest
+            // imported row or the sparkline tail (both went stale). Else fall through to the estimate.
             let appleStepsForDay = appleDays.last(where: { $0.day == selectedDayKey })?.steps
-                ?? (selectedDayOffset == 0 ? appleDays.last?.steps : nil)
             let real = (d?.steps).map { intString(Double($0)) }
                 ?? appleStepsForDay.map { intString(Double($0)) }
-                ?? sparks["steps"]?.last.map { intString($0) }
             let est = stepsEstByDay[selectedDayKey].map { intString(Double($0)) }
             return real ?? est ?? "—"
         case .calories:
@@ -2863,11 +2866,13 @@ struct TodayView: View {
             // sparkline tail as a last-resort recent value. Only when a day has NONE of those real sources
             // do we fall back to the on-device ESTIMATE (steps_est) a WHOOP 4.0 user gets — flagged "est."
             // so it's never mistaken for a measured count. Mirrors Android (#276/#150).
+            // #843/#813 — a day shows a REAL count only from the strap (@57) or a SAME-DAY phone import.
+            // Never the latest imported Apple-Health row (it can be days stale) or the sparkline tail (that
+            // is the most-recent value, not this day's): both froze the tile on an old import. Otherwise
+            // fall through to the on-device estimate ("est."). Mirrors Android stepsForDay (#276/#150).
             let appleStepsForDay = appleDays.last(where: { $0.day == selectedDayKey })?.steps
-                ?? (selectedDayOffset == 0 ? aLatest?.steps : nil)
             let realSteps: String? = (d?.steps).map { intString(Double($0)) }
                 ?? appleStepsForDay.map { intString(Double($0)) }
-                ?? (sparks["steps"]?.last).map { intString($0) }
             let estSteps = stepsEstByDay[selectedDayKey]
             // H6 — only an ESTIMATED day (no real strap/phone count, so the on-device estimate filled in)
             // gets the calibration entry; a real measured count needs no calibration.

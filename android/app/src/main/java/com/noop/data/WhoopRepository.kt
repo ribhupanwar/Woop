@@ -195,6 +195,11 @@ class WhoopRepository(private val dao: WhoopDao) {
         )
     }
 
+    /** #836 — cheap whole-history raw-HR change fingerprint `"count:maxTs"`. The idle 15-min rescore (the
+     *  AppViewModel backstop) skips when this is unchanged since the last completed run. Any HR insert/delete
+     *  moves it (count or maxTs), so a real change always rescores; mirrors Swift WhoopStore.hrFingerprint. */
+    suspend fun hrFingerprint(): String = "${dao.countHr()}:${dao.maxHrTs()}"
+
     // MARK: - Server-derived caches (latest value wins on conflict)
 
     suspend fun upsertDailyMetrics(days: List<DailyMetric>) = dao.upsertDailyMetrics(days)
@@ -1248,10 +1253,14 @@ class WhoopRepository(private val dao: WhoopDao) {
                 val offsetSec = (java.util.TimeZone.getDefault().getOffset(s.endTs * 1000) / 1000).toLong()
                 return com.noop.analytics.AnalyticsEngine.dayString(s.endTs, offsetSec)
             }
-            val byDay = LinkedHashMap<String, SleepSession>()
-            for (s in computed) byDay[endDay(s)] = s
-            for (s in imported) byDay[endDay(s)] = s
-            return byDay.values.sortedBy { it.startTs }
+            // #715 — preserve EVERY session (a day with a main night + a nap must keep both); imported
+            // still wins per end-day. The old LinkedHashMap<String, SleepSession> overwrote on collision
+            // and silently dropped a second same-day session. Mirrors WhoopStore.SleepMerge (SleepMergeTests).
+            val importedDays = imported.mapTo(HashSet()) { endDay(it) }
+            val out = ArrayList<SleepSession>(imported.size + computed.size)
+            out.addAll(imported)
+            for (s in computed) if (endDay(s) !in importedDays) out.add(s)
+            return out.sortedBy { it.startTs }
         }
     }
 }

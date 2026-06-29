@@ -644,10 +644,10 @@ final class Repository: ObservableObject {
             let offsetSec = TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: TimeInterval(s.endTs)))
             return AnalyticsEngine.dayString(s.endTs, offsetSec: offsetSec)
         }
-        var byDay: [String: CachedSleepSession] = [:]
-        for s in computed { byDay[endDay(s)] = s }
-        for s in imported { byDay[endDay(s)] = s }
-        return byDay.values.sorted { $0.startTs < $1.startTs }
+        // #715 — preserve EVERY session (a day with a main night + a nap must keep both); imported still
+        // wins per end-day. Shared, unit-tested grouping (WhoopStore.SleepMerge / SleepMergeTests) replaces
+        // the old per-day dictionary that silently dropped a second same-day session.
+        return SleepMerge.merge(imported: imported, computed: computed, endDay: endDay)
     }
 
     // MARK: - Detail passthroughs

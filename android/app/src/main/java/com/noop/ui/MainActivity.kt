@@ -190,8 +190,20 @@ object NoopPrefs {
      *  via [AppViewModel]. Distinct from the WHOOP strap's own "broadcast HR" firmware config. */
     const val KEY_HR_BROADCAST = "noop.hrBroadcast"
 
+    const val KEY_ANALYZE_WATERMARK = "noop.analyzeWatermark"
+
     fun of(context: Context): SharedPreferences =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
+
+    /** #836 — the raw-HR fingerprint ("count:maxTs") the last COMPLETED idle rescore scored against. The
+     *  15-min backstop tick skips when the current fingerprint equals this; cleared implicitly by any HR
+     *  insert/delete (the fingerprint moves). Mirrors the Swift `analyzeWatermark` UserDefaults key. */
+    fun analyzeWatermark(context: Context): String? =
+        of(context).getString(KEY_ANALYZE_WATERMARK, null)
+
+    fun setAnalyzeWatermark(context: Context, fingerprint: String) {
+        of(context).edit().putString(KEY_ANALYZE_WATERMARK, fingerprint).apply()
+    }
 
     /** Whether NOOP should hold the strap connection open via a foreground service. Default true. */
     fun backgroundConnection(context: Context): Boolean =

@@ -2412,7 +2412,16 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
         if postBondLoop.connectionEnded(wasBonded: bondedAt != nil,
                                         secondsSinceBond: sinceBond,
                                         timedOut: connTimedOut && !intentionalDisconnect) {
-            log("Bond-loop (#617): \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles — surfacing the re-pair guide")
+            log("Bond-loop (#617): \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles — surfacing the re-pair guide and pausing auto-reconnect")
+            // #844 — the loop is bond → drop → 3s rescan → bond → drop, forever, draining the battery.
+            // Surfacing the guide alone left the involuntary-drop rescan (below) running. Pause auto-reconnect
+            // too: the disconnect rescan and didFailToConnect both already skip while this is set, and a user
+            // Connect (connect()) or a genuine bond re-arms it. We do NOT touch the bond/parse path — the bond
+            // is real; the stale OS pairing is the problem, which the guide tells the user how to clear.
+            autoReconnectPausedForBondLoop = true
+            if TestCentre.active(.connection) {
+                state.append(log: "reconnect paused=bondLoop (#617: \(postBondLoop.consecutiveBondTimeouts) bond-then-timeout cycles)", domain: .connection)
+            }
             if state.reconnectGuide == nil {
                 state.reconnectGuide = """
                 Your strap keeps connecting and then dropping a second later. This is almost always a stale Bluetooth pairing — usually after a WHOOP firmware update, or the official WHOOP app holding the strap. NOOP works fine once it's re-paired:

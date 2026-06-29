@@ -148,28 +148,20 @@ struct HydrationView: View {
             NoopCard(padding: 18) {
                 VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                     Text("Today's drinks").strandOverline()
-                    // A plain list inside the card so each row gets native swipe-to-delete. Sized to its
-                    // content and scroll-disabled so it lives inside the page scroll, not a nested scroller.
-                    List {
-                        ForEach(entries) { entry in
+                    // #842 — render rows in a plain VStack inside the page ScrollView. The previous nested,
+                    // scroll-disabled List with a hardcoded `count * 44 + 8` height clipped every row past
+                    // the third (real rows are taller than 44pt) and couldn't be scrolled to. Tap a row to
+                    // edit; the trailing trash deletes (a VStack row can't host native swipe-to-delete).
+                    VStack(spacing: 0) {
+                        ForEach(Array(entries.enumerated()), id: \.element.id) { idx, entry in
                             entryRow(entry)
-                                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        Task { await deleteEntry(entry) }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
+                                .padding(.vertical, 6)
+                            if idx < entries.count - 1 {
+                                Divider().opacity(0.4)
+                            }
                         }
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .scrollDisabled(true)
-                    .frame(height: CGFloat(entries.count) * 44 + 8)
-                    Text("Swipe a drink to delete it, or tap to edit the amount.")
+                    Text("Tap a drink to edit it, or use the trash to delete.")
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -177,32 +169,41 @@ struct HydrationView: View {
         }
     }
 
-    /// One logged-drink row: the time it was logged + its amount, tappable to edit.
+    /// One logged-drink row: the time it was logged + its amount (tap to edit) with a trailing trash.
     private func entryRow(_ entry: HydrationEntry) -> some View {
-        Button { editingEntry = entry } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "drop.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(StrandPalette.accent)
-                    .accessibilityHidden(true)
-                Text(Self.entryTimeFmt.string(from: entry.loggedAt))
-                    .font(StrandFont.subhead)
-                    .foregroundStyle(StrandPalette.textSecondary)
-                Spacer(minLength: 8)
-                Text("\(entry.amountMl) ml")
-                    .font(StrandFont.subhead.weight(.semibold))
-                    .foregroundStyle(StrandPalette.textPrimary)
-                    .monospacedDigit()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .accessibilityHidden(true)
+        HStack(spacing: 10) {
+            Button { editingEntry = entry } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "drop.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(StrandPalette.accent)
+                        .accessibilityHidden(true)
+                    Text(Self.entryTimeFmt.string(from: entry.loggedAt))
+                        .font(StrandFont.subhead)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                    Spacer(minLength: 8)
+                    Text("\(entry.amountMl) ml")
+                        .font(StrandFont.subhead.weight(.semibold))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .monospacedDigit()
+                }
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .accessibilityLabel("Logged \(entry.amountMl) millilitres at \(Self.entryTimeFmt.string(from: entry.loggedAt))")
+            .accessibilityHint("Tap to edit the amount")
+            Button(role: .destructive) {
+                Task { await deleteEntry(entry) }
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Delete the \(entry.amountMl) millilitre drink logged at \(Self.entryTimeFmt.string(from: entry.loggedAt))")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Logged \(entry.amountMl) millilitres at \(Self.entryTimeFmt.string(from: entry.loggedAt))")
-        .accessibilityHint("Tap to edit, swipe to delete")
     }
 
     private static let entryTimeFmt: DateFormatter = {
