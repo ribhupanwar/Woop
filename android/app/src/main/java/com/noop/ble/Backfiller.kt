@@ -296,21 +296,6 @@ class Backfiller(
     private suspend fun finishChunk(unix: Long, trim: Long, endFrame: ByteArray) {
         val endData = endData(endFrame, family) ?: return
 
-        // #150 / #783: trim=0xFFFFFFFF is the strap's "no valid flash cursor" sentinel. Its MEANING depends
-        // on whether this run already banked anything. On the FIRST end of a fresh offload it means "no
-        // banked history" (a clock/charge state). But the auto-continuation (#364) re-kicks SEND_HISTORICAL
-        // after a run that DID persist rows, and the very next end then carries 0xFFFFFFFF to mean "you are
-        // caught up, nothing left past the last trim", NOT "no history". Emitting the scary
-        // "fully charge it" line there was wrong and alarmed users whose strap had just synced fine (#783).
-        // So gate the message on `sessionRowsPersisted == 0`: if rows landed this run, log a neutral
-        // caught-up line instead. Either way it logs once per session (loggedNoCursor) and the ack proceeds.
-        if (trim == 0xFFFFFFFFL && !loggedNoCursor) {
-            loggedNoCursor = true
-            log(noCursorLine(sessionRowsPersisted))
-            // Connection test mode: the no-cursor sentinel as a compact tagged line (gated zero-cost).
-            emitConnection { com.noop.analytics.ConnectionTrace.noCursorLine() }
-        }
-
         // #773: corrupt future-RTC detection. A HISTORY_END carries the strap's own clock; a genuine offload
         // is always PAST-dated (it's banked history), so an end dated days into the future can only be a
         // corrupt strap RTC. Surface it ONCE per session with a recovery hint so the cause (the strap clock,
@@ -422,8 +407,32 @@ class Backfiller(
                         "sessionRows=$sessionRowsPersisted sessionMotion=$sessionMotionRows nights=$sessionNights"
                 }
             } catch (t: Throwable) {
-                return // do NOT advance/ack — chunk was never durably committed
+                // Diag (#601 / #13): the decoded rows couldn't be written, the "history stalls but live HR
+                // works" class. We return WITHOUT acking so the strap keeps this chunk and re-sends it next
+                // session (no data loss), but a silent return left a strap log with no trace of the stall.
+                // Mirrors the Swift twin's log so a write-stall is falsifiable here too.
+                log("Backfill: failed to persist decoded rows (trim=$trim): $t, holding ack so the strap re-sends this chunk; history won't advance until the write succeeds.")
+                return // do NOT advance/ack, chunk was never durably committed
             }
+        }
+
+        // #150 / #783 / #1: trim=0xFFFFFFFF is the strap's "no valid flash cursor" sentinel. Its MEANING
+        // depends on whether this run already banked anything. On the FIRST end of a fresh offload it means
+        // "no banked history" (a clock/charge state). But the auto-continuation (#364) re-kicks
+        // SEND_HISTORICAL after a run that DID persist rows, and the very next end then carries 0xFFFFFFFF
+        // to mean "you are caught up, nothing left past the last trim", NOT "no history". Emitting the scary
+        // "fully charge it" line there was wrong and alarmed users whose strap had just synced fine (#783).
+        // We gate this AFTER the persist block (#1): a bad-clock/flash strap can emit records on the SAME
+        // 0xFFFFFFFF END, so sessionRowsPersisted must already include THIS end's own rows before the pick,
+        // otherwise a records-bearing no-cursor END false-alarms "no banked history". So gate on
+        // sessionRowsPersisted == 0 HERE: if rows landed (this run or this END) log the neutral caught-up
+        // line; a genuinely empty session (0 rows) still gets the real no-history guidance. Logs once per
+        // session (loggedNoCursor) and the ack still proceeds below.
+        if (trim == 0xFFFFFFFFL && !loggedNoCursor) {
+            loggedNoCursor = true
+            log(noCursorLine(sessionRowsPersisted))
+            // Connection test mode: the no-cursor sentinel as a compact tagged line (gated zero-cost).
+            emitConnection { com.noop.analytics.ConnectionTrace.noCursorLine() }
         }
 
         // Persist the trim cursor BEFORE acking (so a crash between persist and ack still resumes
@@ -432,6 +441,12 @@ class Backfiller(
         try {
             cursorStore.set(STRAP_TRIM_CURSOR, trim)
         } catch (t: Throwable) {
+            // Diag (#601 / #13): decoded rows are durable but the strap_trim cursor write failed. We return
+            // WITHOUT acking, acking now would let the strap trim past records the cursor hasn't recorded, so
+            // on reconnect the offload could replay or skip. Holding the ack keeps it safe; the strap re-offers
+            // this chunk next session. A silent return here was a prime "history won't advance" suspect with
+            // nothing in the log to confirm it. Mirrors the Swift twin's log.
+            log("Backfill: failed to write strap_trim cursor (trim=$trim): $t, holding ack so the strap re-sends this chunk; history won't advance until the cursor write succeeds.")
             return
         }
 
