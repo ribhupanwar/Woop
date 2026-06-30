@@ -1103,13 +1103,17 @@ final class Repository: ObservableObject {
             // Both HR paths COALESCE measured + ppgHrSample (#156) , preserved by delegating to the
             // store reads rather than re-querying. Day scale → SQL-aggregated buckets; zoomed-in → raw.
             if isRaw {
-                var byTs: [Int: HRSample] = [:]
+                // Read each source's raw seconds (off the WhoopStore actor), then hand the union to the
+                // pure helper on a utility task so the dedup + sort + map (up to 200k 1 Hz rows) runs OFF
+                // the main actor and can't beach-ball a dense day. Mirrors `restageFromRaw`.
+                var perId: [[HRSample]] = []
                 for id in unionIds {
-                    for s in (try? await store.hrSamples(deviceId: id, from: from, to: to, limit: 200_000)) ?? [] where byTs[s.ts] == nil { byTs[s.ts] = s }
+                    perId.append((try? await store.hrSamples(deviceId: id, from: from, to: to, limit: 200_000)) ?? [])
                 }
-                return TimelineSeries(points: byTs.values.sorted { $0.ts < $1.ts }.map {
-                    TrendPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), value: Double($0.bpm))
-                }, isRaw: true, bucketSeconds: 1)
+                let points = await Task.detached(priority: .utility) {
+                    Self.dedupSortRawHr(perId)
+                }.value
+                return TimelineSeries(points: points, isRaw: true, bucketSeconds: 1)
             }
             var byStart: [Int: HRBucket] = [:]
             for id in unionIds {
@@ -1121,20 +1125,19 @@ final class Repository: ObservableObject {
         }
 
         // Non-HR streams: read raw rows (these tables are far sparser than 1 Hz HR, so a day's worth is
-        // safe to load) and, when zoomed out, downsample to the bucket grid in-process for a clean line.
-        var raw: [TrendPoint] = []
-        var seenTs = Set<Int>()
+        // safe to load) and, when zoomed out, downsample to the bucket grid for a clean line. The reads
+        // run here (each `timelineRawMetric` awaits the store actor); the dedup + sort + downsample over
+        // the union is handed to a utility task so it runs OFF the main actor on a dense window. Mirrors
+        // `restageFromRaw`.
+        var perId: [[TrendPoint]] = []
         for id in unionIds {
-            for p in await timelineRawMetric(metric: metric, store: store, source: id, from: from, to: to) {
-                let ts = Int(p.date.timeIntervalSince1970)
-                if seenTs.insert(ts).inserted { raw.append(p) }
-            }
+            perId.append(await timelineRawMetric(metric: metric, store: store, source: id, from: from, to: to))
         }
-        raw.sort { $0.date < $1.date }
-        guard !raw.isEmpty else { return TimelineSeries(points: [], isRaw: isRaw, bucketSeconds: bucket) }
-        if isRaw { return TimelineSeries(points: raw, isRaw: true, bucketSeconds: 1) }
-        return TimelineSeries(points: Self.downsampleToBuckets(raw, bucketSeconds: bucket),
-                              isRaw: false, bucketSeconds: bucket)
+        let points = await Task.detached(priority: .utility) {
+            Self.dedupSortDownsampleRaw(perId, isRaw: isRaw, bucketSeconds: bucket)
+        }.value
+        guard !points.isEmpty else { return TimelineSeries(points: [], isRaw: isRaw, bucketSeconds: bucket) }
+        return TimelineSeries(points: points, isRaw: isRaw, bucketSeconds: isRaw ? 1 : bucket)
     }
 
     /// Raw points for a non-HR timeline metric, mapped to display units (skin temp → °C via raw/100,
@@ -1193,6 +1196,43 @@ final class Repository: ObservableObject {
             return TrendPoint(date: Date(timeIntervalSince1970: TimeInterval(key)),
                               value: acc.sum / Double(acc.n))
         }
+    }
+
+    /// Pure off-main post-processing for the zoomed-in (raw) HR Deep-Timeline path. Takes the per-source
+    /// reads (`hrSamples` already ran off the WhoopStore actor) and does the heavy dedup + sort + map that
+    /// would otherwise run on `@MainActor` and beach-ball a dense day (up to 200k 1 Hz rows). Dedup is
+    /// "first id wins per ts" (active strap first in `unionIds`), then ascending by ts, then mapped to
+    /// `TrendPoint`. Identical semantics to the in-line version it replaced. `nonisolated static` so it's
+    /// callable from a `Task.detached` and unit-testable off the actor.
+    nonisolated static func dedupSortRawHr(_ perId: [[HRSample]]) -> [TrendPoint] {
+        var byTs: [Int: HRSample] = [:]
+        for samples in perId {
+            for s in samples where byTs[s.ts] == nil { byTs[s.ts] = s }
+        }
+        return byTs.values.sorted { $0.ts < $1.ts }.map {
+            TrendPoint(date: Date(timeIntervalSince1970: TimeInterval($0.ts)), value: Double($0.bpm))
+        }
+    }
+
+    /// Pure off-main post-processing for the non-HR raw Deep-Timeline path. Takes the per-source raw point
+    /// arrays (`timelineRawMetric` already ran its store reads), dedups by ts across the union (first id
+    /// wins, preserving each source's read order), sorts ascending, and either returns the raw points
+    /// (`isRaw`) or mean-bins them onto the `bucketSeconds` grid. Identical semantics to the in-line
+    /// version it replaced , moved off `@MainActor` so a dense multi-hour window can't freeze the UI.
+    /// `nonisolated static` so it's callable from a `Task.detached` and unit-testable off the actor.
+    nonisolated static func dedupSortDownsampleRaw(_ perId: [[TrendPoint]], isRaw: Bool,
+                                                   bucketSeconds: Int) -> [TrendPoint] {
+        var raw: [TrendPoint] = []
+        var seenTs = Set<Int>()
+        for points in perId {
+            for p in points {
+                let ts = Int(p.date.timeIntervalSince1970)
+                if seenTs.insert(ts).inserted { raw.append(p) }
+            }
+        }
+        raw.sort { $0.date < $1.date }
+        if isRaw { return raw }
+        return downsampleToBuckets(raw, bucketSeconds: bucketSeconds)
     }
 
     // MARK: - Cross-source resolver (PR#196)

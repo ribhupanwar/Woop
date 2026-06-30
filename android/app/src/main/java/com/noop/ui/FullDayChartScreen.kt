@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.noop.analytics.HrvAnalyzer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Locale
 
@@ -258,10 +260,15 @@ private suspend fun readTimeline(
     from: Long,
     to: Long,
     bucket: Long,
-): List<TimelinePoint> {
+): List<TimelinePoint> = withContext(Dispatchers.Default) {
+    // PERF parity with macOS Repository.timelineSeries: the Room reads already hop to Room's executor,
+    // but this function is called from a LaunchedEffect (Main), so the post-read mapping + downsample
+    // (up to 200k 1 Hz HR rows on a dense day) would otherwise run on the MAIN thread and beach-ball the
+    // UI. Run the whole assembly on Default; the suspend Room queries still execute off-main and only the
+    // CPU work moves off the UI thread. Output is unchanged.
     val repo = vm.repo
     if (metric == TimelineMetric.Hr) {
-        return if (bucket <= 1L) {
+        return@withContext if (bucket <= 1L) {
             runCatching { repo.hrSamples(deviceId, from, to, limit = 200_000) }.getOrDefault(emptyList())
                 .map { TimelinePoint(it.ts, it.bpm.toDouble()) }
         } else {
@@ -277,7 +284,7 @@ private suspend fun readTimeline(
             // applies the SAME Malik/range artifact filter the nightly RMSSD uses, then slides a 5-min
             // window. The result is already (ts, value); skip the in-process downsample below (the
             // windowing IS the smoothing) by returning here.
-            return runCatching { repo.rrIntervals(deviceId, from, to, 200_000) }.getOrDefault(emptyList())
+            return@withContext runCatching { repo.rrIntervals(deviceId, from, to, 200_000) }.getOrDefault(emptyList())
                 .let { HrvAnalyzer.rollingRmssd(it) }
                 .map { (ts, v) -> TimelinePoint(ts, v) }
         TimelineMetric.Spo2 ->
@@ -293,8 +300,8 @@ private suspend fun readTimeline(
             runCatching { repo.gravitySamples(deviceId, from, to, 200_000) }.getOrDefault(emptyList())
                 .map { TimelinePoint(it.ts, kotlin.math.sqrt(it.x * it.x + it.y * it.y + it.z * it.z)) }
     }
-    if (raw.isEmpty() || bucket <= 1L) return raw
-    return downsampleTimeline(raw, bucket)
+    if (raw.isEmpty() || bucket <= 1L) return@withContext raw
+    downsampleTimeline(raw, bucket)
 }
 
 /** Mean-bin raw timeline points onto a bucketSeconds grid (the in-process twin of the SQL hrBuckets),
