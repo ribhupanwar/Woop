@@ -286,4 +286,44 @@ class WorkoutEditingTest {
         val rebuilt = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 140)
         assertEquals(rebuilt, WorkoutEditing.preservingCaptured(rebuilt, null))
     }
+
+    // MARK: - avgHrEdited (#18 honest disclosure)
+
+    @Test
+    fun avgHrEdited_trueWhenAvgChangesOnCapturedStrainRow() {
+        // A recorded session carries captured strain; the user edits the Avg HR. The graph/zones/Effort
+        // stay from the recording, so the note must fire.
+        val old = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 130, strain = 13.5)
+        val built = WorkoutEditing.preservingCaptured(old.copy(avgHr = 150), old)
+        assertTrue(WorkoutEditing.avgHrEdited(built, old))
+    }
+
+    @Test
+    fun avgHrEdited_trueWhenAvgChangesOnCapturedZonesRow() {
+        // Captured zones (no strain) are enough to make the graph/zones stale on an avg edit.
+        val old = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 130).copy(zonesJSON = "{\"z1\":50}")
+        val built = WorkoutEditing.preservingCaptured(old.copy(avgHr = 145), old)
+        assertTrue(WorkoutEditing.avgHrEdited(built, old))
+    }
+
+    @Test
+    fun avgHrEdited_falseWhenAvgUnchanged() {
+        val old = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 130, strain = 13.5)
+        val built = WorkoutEditing.preservingCaptured(old.copy(sport = "Cycling"), old)
+        assertFalse(WorkoutEditing.avgHrEdited(built, old))
+    }
+
+    @Test
+    fun avgHrEdited_falseWhenNothingCaptured() {
+        // A thin manual row with no captured strain/zones has nothing to go stale, so no note.
+        val old = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 130)
+        val built = old.copy(avgHr = 160)
+        assertFalse(WorkoutEditing.avgHrEdited(built, old))
+    }
+
+    @Test
+    fun avgHrEdited_falseForFreshAdd() {
+        val built = row("my-whoop", 100, 3700, "Running", "manual", avgHr = 140)
+        assertFalse(WorkoutEditing.avgHrEdited(built, null))
+    }
 }

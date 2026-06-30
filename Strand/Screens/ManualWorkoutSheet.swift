@@ -86,6 +86,7 @@ struct ManualWorkoutSheet: View {
                 }
             }
             if let validationNote { noteRow(validationNote) }
+            if avgHrEditedNote { noteRow("Avg HR is shown as typed. The HR graph, zones and Effort stay from the recorded session.") }
             footer
         }
         .padding(NoopMetrics.space6)
@@ -268,6 +269,17 @@ struct ManualWorkoutSheet: View {
         else { return nil }
         // Carry over captured-but-unexposed fields when editing an existing strap session.
         return WorkoutSource.preservingCaptured(base, from: editing)
+    }
+
+    /// #18: true when this edit changes the Avg HR on a row that carries CAPTURED strain/zones from a
+    /// recorded session. preservingCaptured keeps the old strain/zonesJSON verbatim, so a typed Avg HR is
+    /// saved while the HR graph, zones and Effort stay from the recording. That mismatch is silent, so we
+    /// surface a one-line note. We do NOT re-score from a single number (that would fabricate a strain),
+    /// this is purely an honest disclosure. nil for a fresh add, or when nothing captured would go stale.
+    private var avgHrEditedNote: Bool {
+        guard let editing, let built = builtRow else { return false }
+        let captured = editing.strain != nil || editing.zonesJSON != nil
+        return captured && built.avgHr != editing.avgHr
     }
 
     private var validationNote: String? {

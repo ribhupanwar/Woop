@@ -872,6 +872,20 @@ private fun WorkoutDetailSheet(vm: AppViewModel, row: WorkoutRow, onDismiss: () 
                     MiniStat("Peak", (row.maxHr ?: hi).let { "$it bpm" }, Modifier.weight(1f))
                     MiniStat("Low", "$lo bpm", Modifier.weight(1f))
                 }
+                // #18: the Avg HR shown above can be EDITED on the manual sheet while the graph, zones and
+                // Effort stay from the recorded session (preservingCaptured keeps the captured strain/zones).
+                // When the typed average disagrees materially with this trace's own mean AND the row carries
+                // that captured strain/zones, say so plainly. We do NOT re-score from the typed number.
+                // Parity with macOS WorkoutDetailView.avgHrEditedDisclosure.
+                val traceMean = hrCurve.sum() / hrCurve.size
+                val captured = row.strain != null || !row.zonesJSON.isNullOrEmpty()
+                if (captured && row.avgHr != null && kotlin.math.abs(row.avgHr - traceMean) > 3.0) {
+                    Text(
+                        "The average above was edited. The graph, zones and Effort stay from the recorded session.",
+                        style = NoopType.footnote,
+                        color = Palette.textTertiary,
+                    )
+                }
             }
 
             // HR-zone split — imported percentages when present, else derived from strap HR (#410).
@@ -1146,6 +1160,16 @@ private fun ManualWorkoutDialog(
                 if (built == null) {
                     Text(
                         "Enter a sport, a positive duration (≤ 24h), and valid HR (25–250) / calories (0–20,000).",
+                        style = NoopType.footnote, color = Palette.statusWarning,
+                    )
+                }
+                // #18: editing the Avg HR on a row that carries CAPTURED strain/zones saves the typed
+                // average while the HR graph, zones and Effort stay from the recorded session
+                // (preservingCaptured keeps them verbatim). That mismatch is silent, so say so plainly.
+                // We do NOT re-score from one number. Parity with macOS ManualWorkoutSheet.avgHrEditedNote.
+                if (built != null && WorkoutEditing.avgHrEdited(built, editing)) {
+                    Text(
+                        "Avg HR is shown as typed. The HR graph, zones and Effort stay from the recorded session.",
                         style = NoopType.footnote, color = Palette.statusWarning,
                     )
                 }

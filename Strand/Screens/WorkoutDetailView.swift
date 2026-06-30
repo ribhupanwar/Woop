@@ -249,33 +249,54 @@ struct WorkoutDetailView: View {
             let values = hrPoints.map(\.value)
             let lo = max(0, (values.min() ?? 60) - 8)
             let hi = (values.max() ?? 180) + 8
-            ChartCard(
-                title: "HEART RATE",
-                subtitle: "Beats per minute across the session",
-                trailing: row.avgHr.map { "avg \($0)" },
-                tint: StrandPalette.effortColor
-            ) {
-                TrendChart(
-                    points: hrPoints,
-                    gradient: StrandPalette.effortGradient,
-                    valueRange: lo...hi,
-                    showsArea: true,
-                    valueFormat: { "\(Int($0.rounded())) bpm" },
-                    dateFormat: { Self.tooltipTime.string(from: $0) },
-                    accessibilityLabel: "Heart rate during \(WorkoutSource.displaySport(row.sport))"
-                )
-            } footer: {
-                ChartFooter([
-                    ("Avg", row.avgHr.map { "\($0) bpm" } ?? "–"),
-                    ("Peak", row.maxHr.map { "\($0) bpm" } ?? "\(Int((values.max() ?? 0).rounded())) bpm"),
-                    ("Low", "\(Int((values.min() ?? 0).rounded())) bpm"),
-                ])
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                ChartCard(
+                    title: "HEART RATE",
+                    subtitle: "Beats per minute across the session",
+                    trailing: row.avgHr.map { "avg \($0)" },
+                    tint: StrandPalette.effortColor
+                ) {
+                    TrendChart(
+                        points: hrPoints,
+                        gradient: StrandPalette.effortGradient,
+                        valueRange: lo...hi,
+                        showsArea: true,
+                        valueFormat: { "\(Int($0.rounded())) bpm" },
+                        dateFormat: { Self.tooltipTime.string(from: $0) },
+                        accessibilityLabel: "Heart rate during \(WorkoutSource.displaySport(row.sport))"
+                    )
+                } footer: {
+                    ChartFooter([
+                        ("Avg", row.avgHr.map { "\($0) bpm" } ?? "–"),
+                        ("Peak", row.maxHr.map { "\($0) bpm" } ?? "\(Int((values.max() ?? 0).rounded())) bpm"),
+                        ("Low", "\(Int((values.min() ?? 0).rounded())) bpm"),
+                    ])
+                }
+                // #18: the row's Avg HR can be EDITED on the manual sheet while the graph, zones and Effort
+                // stay from the recorded session (preservingCaptured keeps the captured strain/zones). When
+                // the typed average disagrees materially with this trace's own mean AND the row carries that
+                // captured strain/zones, say so plainly. We do NOT re-score from the typed number.
+                if avgHrEditedDisclosure(traceMean: values.reduce(0, +) / Double(values.count)) {
+                    Text("The average above was edited. The graph, zones and Effort stay from the recorded session.")
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         } else if loaded {
             NoopCard {
                 emptyNote("No heart-rate samples were recorded over this session's window.")
             }
         }
+    }
+
+    /// #18: whether the displayed Avg HR was edited away from what this HR trace implies. True only when the
+    /// row carries CAPTURED strain or zones (so the graph/zones/Effort are from a real recording, not the
+    /// typed value) AND the row's avgHr differs from the trace mean by more than a small tolerance. The
+    /// tolerance absorbs ordinary rounding/bucketing drift so an unedited session never trips the note.
+    private func avgHrEditedDisclosure(traceMean: Double) -> Bool {
+        guard let avg = row.avgHr, row.strain != nil || row.zonesJSON != nil else { return false }
+        return abs(Double(avg) - traceMean) > 3
     }
 
     // MARK: - HR zones

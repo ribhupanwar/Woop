@@ -252,6 +252,20 @@ object WorkoutEditing {
     }
 
     /**
+     * #18: true when an edit changes the Avg HR on a row that carries CAPTURED strain or zones. Those
+     * captured signals are preserved verbatim by [preservingCaptured], so the saved row shows a typed
+     * average while the HR graph, zones and Effort stay from the recorded session. That mismatch is
+     * silent, so the edit sheet surfaces a one-line note. We do NOT re-score from a single number (that
+     * would fabricate a strain); this is purely an honest disclosure. False for a fresh add (old == null).
+     * Pure mirror of macOS ManualWorkoutSheet.avgHrEditedNote.
+     */
+    fun avgHrEdited(built: WorkoutRow, old: WorkoutRow?): Boolean {
+        if (old == null) return false
+        val captured = old.strain != null || !old.zonesJSON.isNullOrEmpty()
+        return captured && built.avgHr != old.avgHr
+    }
+
+    /**
      * Build a retroactive manual workout (source "manual", written under the strap [deviceId] by the
      * caller — where live sessions land). Returns null when the input can't make an honest row.
      * strain/zones stay null: with no captured HR window an APPROXIMATE strain is never fabricated.
