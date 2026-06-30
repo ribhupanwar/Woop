@@ -157,10 +157,23 @@ struct SmartAlarmView: View {
                     .frame(minHeight: 42)
                     Divider().overlay(StrandPalette.hairline)
                     alarmWeekdayPicker
-                    Text("Armed on the strap itself, so it can buzz at your wake time even if your phone is asleep or NOOP is closed. We send the same alarm command the official app sends, but a strap-driven wake-up hasn't been confirmed on our side yet, so please keep a backup alarm for now.")
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // #864: a WHOOP 5/MG only arms its firmware alarm when Experimental is on (see
+                    // BLEManager.armStrapAlarm, which logs "not armed" and returns otherwise). Without this
+                    // branch the card claimed "Armed on the strap itself" to a 5/MG owner whose strap was
+                    // NOT armed, an honest-data violation (reporter: 5/MG, Experimental off, never buzzed).
+                    // Mirrors the Android SmartAlarmScreen StrapAlarmCard wording exactly. The WHOOP 4.0
+                    // path (the else) is unchanged.
+                    if model.whoop5Detected && !PuffinExperiment.isEnabled {
+                        Text("Your WHOOP 5/MG won't arm this until Experimental mode is on (Settings, Experimental). Right now your wake time is saved but the strap is NOT armed. Even with Experimental on, a 5/MG strap-driven wake is still unconfirmed on our side, so keep a backup alarm.")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.statusWarning)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text("Armed on the strap itself, so it can buzz at your wake time even if your phone is asleep or NOOP is closed. We send the same alarm command the official app sends, but a strap-driven wake-up hasn't been confirmed on our side yet, so please keep a backup alarm for now.")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
             .onChangeCompat(of: behavior.smartAlarmEnabled) { _ in model.applySmartAlarm() }

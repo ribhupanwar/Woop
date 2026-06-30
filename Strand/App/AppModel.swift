@@ -784,6 +784,13 @@ final class AppModel: ObservableObject {
     /// Empty until a present-scan has discovered something; refreshed in place as RSSI updates.
     var discoveredWhoops: [(uuid: String, name: String, rssi: Int)] { ble.discoveredWhoops }
 
+    /// True when the selected/connected strap is a WHOOP 5/MG. A thin window onto `BLEManager.isWhoop5`
+    /// (its `selectedModel` is private) so a view can branch on the strap generation without reaching into
+    /// the BLE layer. #864: the Smart-alarm card uses this to give a 5/MG owner the honest "saved but NOT
+    /// armed until Experimental is on" copy, instead of hardcoding WHOOP 4.0. Mirrors the Android
+    /// `LiveState.whoop5Detected` field the equivalent screen reads.
+    var whoop5Detected: Bool { ble.isWhoop5 }
+
     /// Point the WHOOP scan at a specific family, then present nearby straps WITHOUT auto-connecting.
     /// `prepareForModelSwitch()` first clears any sticky bond/connection so the engine is idle, then
     /// `connect(model:)` selects the family + installs its framing (it sets the engine's private

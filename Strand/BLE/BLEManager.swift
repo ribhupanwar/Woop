@@ -621,6 +621,13 @@ public final class BLEManager: NSObject, ObservableObject {
     private var selectedModel: WhoopModel = .persisted
     private var lastStandardHRLogAt: Date?
 
+    /// True when the selected/connected strap is a WHOOP 5/MG. Read-only window onto the private
+    /// `selectedModel` so a view can tell whether the firmware-alarm path is the experimental 5/MG one
+    /// (see `armStrapAlarm`, which only arms a 5/MG when Experimental is on). #864: the iOS Smart-alarm
+    /// UI needs this so it stops telling a 5/MG owner the strap is armed when, without Experimental, it
+    /// isn't. Mirrors the Android `LiveState.whoop5Detected` signal the equivalent screen reads.
+    var isWhoop5: Bool { selectedModel.deviceFamily == .whoop5 }
+
     /// Stable device id; matches the server's existing device for sync parity. Overridable.
     /// Seeded from the init argument, then refined once in bootstrapStore() to the device registry's
     /// active id (still "my-whoop" today) before any store writes use it — see bootstrapStore().
