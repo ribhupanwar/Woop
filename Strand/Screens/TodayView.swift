@@ -382,6 +382,19 @@ struct TodayView: View {
         return min(upper, max(0, current + delta))
     }
 
+    /// #16 - whole days-back offset for a date chosen in the day-nav picker, measured from the LOGICAL day
+    /// (not raw Date()). Pure + unit-testable so the 00:00-04:00 rollover case is locked: in that window the
+    /// logical day is the PREVIOUS calendar day, so anchoring the offset here (rather than on raw Date())
+    /// keeps the picked day in step with the visible date and the a11y label. Clamped at 0 so a future-
+    /// relative pick collapses to today. Both dates are reduced to their start-of-day before counting.
+    static func pickedDayOffset(pickedDate: Date, anchorLogicalDay: Date) -> Int {
+        let cal = Calendar.current
+        let days = cal.dateComponents([.day],
+                                      from: cal.startOfDay(for: pickedDate),
+                                      to: cal.startOfDay(for: anchorLogicalDay)).day ?? 0
+        return max(0, days)
+    }
+
     /// Whole days from today's logical day back to `earliestDayKey` (the oldest banked day across all
     /// sources). nil/unparseable earliest, or a key on/after today, both yield 0 - today is then the only
     /// navigable day. Both keys are "yyyy-MM-dd". Pure + unit-testable.
@@ -754,8 +767,10 @@ struct TodayView: View {
         case 0:  return "Today"
         case 1:  return "Yesterday"
         default:
-            let d = Calendar.current.date(byAdding: .day, value: -selectedDayOffset, to: Date()) ?? Date()
-            return Self.navDayFmt.string(from: d)
+            // Anchor to the LOGICAL day, not raw Date(), so the a11y date label agrees with the visible
+            // date and the picker highlight in the 00:00-04:00 window (a raw Date() reads a calendar day
+            // ahead there, mismatching at offset >= 2) (#16).
+            return Self.navDayFmt.string(from: selectedLogicalDay)
         }
     }
 
@@ -767,7 +782,15 @@ struct TodayView: View {
     /// top bar shows just this now, no "Today" / "Yesterday" word and no prev/next arrows. Day-change is by
     /// horizontal swipe or by tapping to open the picker, and the rotating hint below teaches both.
     private var dayNavDateText: String {
-        selectedLogicalDay.formatted(date: .numeric, time: .omitted)
+        // At offset 0 date off the row the resolver actually surfaces (`repo.today?.day`, same as
+        // `selectedDayKey`) so the top-bar date matches Android (which dates off `today?.day`) and the
+        // data on screen, including the pre-04:00 case where `repo.today` is still the logical day's row
+        // but raw `selectedLogicalDay` formatting could read a calendar day ahead (#15). Past offsets, and
+        // a not-yet-banked today, fall back to the logical day.
+        if selectedDayOffset == 0, let day = repo.today?.day, let date = Self.dayParser.date(from: day) {
+            return date.formatted(date: .numeric, time: .omitted)
+        }
+        return selectedLogicalDay.formatted(date: .numeric, time: .omitted)
     }
 
     /// Periodic one-word hint shown in place of the date for ~1.5s every ~10s (nil = show the date). With the
@@ -798,12 +821,14 @@ struct TodayView: View {
     /// Picker binding that converts a chosen date back to a whole-day offset (capped at today).
     private var dayPickerBinding: Binding<Date> {
         Binding(
-            get: { Calendar.current.date(byAdding: .day, value: -selectedDayOffset, to: Date()) ?? Date() },
+            // Pre-highlight the LOGICAL day for the current offset (not raw Date()), so in the 00:00-04:00
+            // window the calendar opens on the day actually shown rather than a calendar day ahead (#16).
+            get: { selectedLogicalDay },
             set: { newValue in
-                let cal = Calendar.current
-                let days = cal.dateComponents([.day], from: cal.startOfDay(for: newValue),
-                                              to: cal.startOfDay(for: Date())).day ?? 0
-                selectedDayOffset = max(0, days)
+                // Offset from today's logical day (pure helper, unit-tested), so a pick in the rollover
+                // window maps to the same offset the visible date and a11y label count back from (#16).
+                selectedDayOffset = Self.pickedDayOffset(pickedDate: newValue,
+                                                         anchorLogicalDay: Repository.logicalDay(Date()))
                 showDayPicker = false
             }
         )
@@ -832,7 +857,10 @@ struct TodayView: View {
             .layoutPriority(1)
             .accessibilityLabel("\(dayNavLabel). Swipe or tap to change day")
             .popover(isPresented: $showDayPicker) {
-                DatePicker("", selection: dayPickerBinding, in: ...Date(), displayedComponents: [.date])
+                // Cap at the LOGICAL day (not raw Date()) so the calendar never offers a day ahead of the
+                // data in the 00:00-04:00 window, matching the visible date + a11y label (#16).
+                DatePicker("", selection: dayPickerBinding, in: ...Repository.logicalDay(Date()),
+                           displayedComponents: [.date])
                     .datePickerStyle(.graphical).labelsHidden().padding(12)
                     // #840 — give the graphical picker an explicit size so the iPad popover bubble doesn't
                     // clip the calendar grid (anchored to a 13pt label it otherwise sizes too small).
@@ -992,8 +1020,11 @@ struct TodayView: View {
                 HealthAlertBanner()
                 #else
                 HealthAlertBanner()
-                // Browse past days — chevrons + a date jump capped at today (no future days).
-                DayNavBar(selectedOffset: selectedDayOffset) { selectedDayOffset = $0 }
+                // Browse past days: chevrons + a date jump capped at today (no future days). Anchored to
+                // the LOGICAL day (the same anchor `selectedLogicalDay` uses) so the full-date label tracks
+                // the data shown in the 00:00-04:00 window instead of jumping a calendar day ahead (#14).
+                DayNavBar(selectedOffset: selectedDayOffset,
+                          today: Repository.logicalDay(Date())) { selectedDayOffset = $0 }
                 #endif
                 // The "still building" and "new here?" prompts are about getting today's scores going,
                 // so they stay anchored to today rather than reappearing on every navigated past day.
