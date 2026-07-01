@@ -920,7 +920,9 @@ struct LiveView: View {
     private var buzzButton: some View {
         NoopButton("Buzz strap", systemImage: "waveform.path",
                    kind: .secondary, fullWidth: true) {
-            model.buzz()
+            // #921: the confirmed one-shot sequence (pattern + RUN_ALARM, acked). A bare pattern
+            // write here was the same silent no-buzz path the Siri shortcut hit on a WHOOP 4.0.
+            model.buzzStrapOnce()
         }
         .disabled(!activeConnection)
         .help("Fire a test haptic buzz on the strap (requires an active strap connection)")

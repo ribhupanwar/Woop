@@ -920,10 +920,19 @@ final class AppModel: ObservableObject {
     func getBattery() { ble.refreshBattery() }
 
     /// Fire a haptic buzz on the strap. patternId=2 is the graduated buzz confirmed on-device;
-    /// `loops` sets the length. Used by the in-app test button and (later) notification alerts.
+    /// `loops` sets the length. Used by scheduled cues (coach zones, moment marks, biofeedback).
     /// Requires a bonded connection , no-op otherwise (the command characteristic is gated on bond).
+    /// For a user-facing "buzz the strap now" action use `buzzStrapOnce()` instead (#921).
     func buzz(loops: UInt8 = 2) {
         ble.send(.runHapticsPattern, payload: [2, loops, 0, 0, 0])
+    }
+
+    /// One-shot user buzz (#921): the on-device-confirmed pattern (patternId=2, 3 loops) followed by
+    /// RUN_ALARM, both written acknowledged. A bare RUN_HAPTICS_PATTERN write can be silently ignored
+    /// (WHOOP 4.0 via the Siri shortcut) or dropped unacked on a busy link, so the Live "Buzz strap"
+    /// button and the Buzz Strap App Intent both route through this single sequence.
+    func buzzStrapOnce() {
+        ble.buzzStrapOnce()
     }
 
     /// Fire a specific preset haptic pattern (patternId 0–6 on Harvard; loops sets length).

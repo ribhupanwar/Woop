@@ -1820,8 +1820,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ble.armStrapAlarm(epochSec)
     }
 
-    /** Fire a haptic buzz on the strap (requires a bonded connection). */
+    /** Fire a haptic buzz on the strap (requires a bonded connection). Scheduled cues only; for a
+     *  user-facing "buzz the strap now" action use [buzzStrapOnce] instead (#921). */
     fun buzz(loops: Int = 2) = ble.buzz(loops)
+
+    /** One-shot user buzz (#921): the confirmed pattern + RUN_ALARM sequence, written acknowledged
+     *  (RUN_ALARM only where the family gate allows it). Drives the Live-screen Buzz button. */
+    fun buzzStrapOnce() = ble.buzzStrapOnce()
 
     /** Tell the strap to stop an in-progress haptic pattern (#769). Best-effort; no-op when not connected
      *  or on a 5/MG (cmd 122 isn't confirmed on its 0x13 path). Used by the Breathe session teardown. */

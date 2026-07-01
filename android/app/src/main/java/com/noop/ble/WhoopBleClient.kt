@@ -1797,14 +1797,40 @@ class WhoopBleClient(
 
     /**
      * Fire a preset haptic buzz on the strap.
-     * Port of `BLEManager.testAlarmBuzz()` / the contract's `buzz(loops:)`:
+     * Port of the Swift contract's `buzz(loops:)`:
      * RUN_HAPTICS_PATTERN(79) with payload `[patternId=2, loops, 0, 0, 0]`.
      * patternId=2 is the graduated alarm buzz the official WHOOP app uses.
+     * Used by scheduled cues (intervals, Breathe, notification mirrors); for a user-facing
+     * "buzz the strap now" action use [buzzStrapOnce] instead (#921).
      */
     fun buzz(loops: Int = 2) {
         val n = loops.coerceIn(0, 255)
         send(CommandNumber.RUN_HAPTICS_PATTERN, byteArrayOf(2, n.toByte(), 0, 0, 0))
         log("Buzz: patternId=2 loops=$n")
+    }
+
+    /**
+     * One-shot user buzz (#921): the on-device-confirmed "vibrate the strap now" sequence, the twin
+     * of Swift `BLEManager.buzzStrapOnce()`. RUN_HAPTICS_PATTERN(79) with `[patternId=2, loops=3,
+     * 0, 0, 0]` followed by RUN_ALARM(68) `[0x01]` as a belt-and-suspenders; a bare pattern write is
+     * exactly what a WHOOP 4.0 was reported ignoring on the iOS shortcut path, and the Live-screen
+     * Buzz button used the same bare write here.
+     *
+     * Both writes are ACKNOWLEDGED (withResponse = true): a busy link can silently drop a
+     * without-response write, which logs the command with no vibration.
+     *
+     * 5/MG: [send] remaps cmd 79 to the maverick 0x13 notify buzz (hardware-confirmed), but the
+     * Android 5/MG allow-list does NOT include RUN_ALARM, so the follow-up is WHOOP 4.0 only here.
+     * That gate is intentional and unchanged; the maverick buzz alone is the confirmed 5/MG one-shot.
+     */
+    fun buzzStrapOnce() {
+        send(CommandNumber.RUN_HAPTICS_PATTERN, byteArrayOf(2, 3, 0, 0, 0), withResponse = true)
+        if (connectedFamily == DeviceFamily.WHOOP5) {
+            log("Buzz: one-shot fired (5/MG maverick buzz, acked)")
+            return
+        }
+        send(CommandNumber.RUN_ALARM, byteArrayOf(0x01), withResponse = true)
+        log("Buzz: one-shot fired (patternId=2 loops=3 + RUN_ALARM, acked)")
     }
 
     /**
