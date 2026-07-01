@@ -422,29 +422,45 @@ final class Repository: ObservableObject {
         calendar.startOfDay(for: logicalDay(now, rolloverHour: rolloverHour))
     }
 
+    /// In-flight open, so concurrent first-callers share ONE open instead of each opening their own.
+    private var storeOpenTask: Task<WhoopStore?, Never>?
+
     private func ensureStore() async -> WhoopStore? {
         if let store { return store }
-        // Don't swallow the open failure with `try?` (#222): an import-time open failure (e.g. the iOS
-        // data-protected store while the device is locked) was previously invisible, surfacing only as a
-        // generic "Couldn't open the local store." Log the real error so the cause is diagnosable.
-        let path: String
-        do {
-            path = try StorePaths.defaultDatabasePath()
-        } catch {
-            NSLog("WhoopStore: ensureStore FAILED resolving DB path , \(error)")
-            return nil
+        // SINGLE-FLIGHT (measured 2026-07-01 on a 5M-row DB): several screens ask for the store at once
+        // on launch (RootView refresh, AppModel init, exploreSeries). ensureStore is async and `store`
+        // is not set until after the `await WhoopStore(path:)` below, so without this guard every caller
+        // races past the `if let store` check while the others are awaiting the open, and they ALL open a
+        // fresh connection and re-run quarantineIncompatibleDatabase (a thundering herd of DB opens on a
+        // large library at the worst moment). Cache the in-flight open Task so concurrent callers join it.
+        if let storeOpenTask { return await storeOpenTask.value }
+        let task = Task { [deviceId] () -> WhoopStore? in
+            // Don't swallow the open failure with `try?` (#222): an import-time open failure (e.g. the iOS
+            // data-protected store while the device is locked) was previously invisible, surfacing only as
+            // a generic "Couldn't open the local store." Log the real error so the cause is diagnosable.
+            let path: String
+            do {
+                path = try StorePaths.defaultDatabasePath()
+            } catch {
+                NSLog("WhoopStore: ensureStore FAILED resolving DB path: \(error)")
+                return nil
+            }
+            let s: WhoopStore
+            do {
+                s = try await WhoopStore(path: path)
+            } catch {
+                let ns = error as NSError
+                NSLog("WhoopStore: ensureStore FAILED opening store: \(ns.domain) code=\(ns.code): \(ns.localizedDescription)")
+                return nil
+            }
+            try? await s.upsertDevice(id: deviceId, mac: nil, name: "WHOOP")
+            return s
         }
-        let s: WhoopStore
-        do {
-            s = try await WhoopStore(path: path)
-        } catch {
-            let ns = error as NSError
-            NSLog("WhoopStore: ensureStore FAILED opening store , \(ns.domain) code=\(ns.code): \(ns.localizedDescription)")
-            return nil
-        }
-        try? await s.upsertDevice(id: deviceId, mac: nil, name: "WHOOP")
-        store = s
-        return s
+        storeOpenTask = task
+        let opened = await task.value
+        if let opened { store = opened }
+        storeOpenTask = nil
+        return opened
     }
 
     /// Expose the shared store handle (used by the importer to persist mapped rows).
