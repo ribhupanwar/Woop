@@ -948,11 +948,15 @@ struct TodayView: View {
     /// arrows gone the day-nav affordances are otherwise invisible, so this teaches them in the accent colour.
     @State private var dayNavHint: String? = nil
     private static let dayNavHints = ["Swipe", "Tap"]
+    #endif
 
     /// #829 follow-up: the named coordinate space the day-swipe drag and the HR-chart frame reader share,
     /// declared on the scaffold's content stack (the view the swipe gesture is attached to), so the mask's
     /// containment check compares like with like. Content-relative, so it is scroll-position independent.
+    /// OUTSIDE the iOS conditional: the `.coordinateSpace` modifier and the chart's frame reader compile
+    /// on macOS too (only iOS consults the mask), so the constant must exist on both platforms.
     private static let daySwipeSpace = "todayDaySwipeSpace"
+    #if os(iOS)
 
     /// #817 - the day-nav swipe. A horizontal drag flips the day: swipe right (toward today) to the newer
     /// day, swipe left to the older one. Gated so it only fires on a clearly-horizontal drag past a small
@@ -3792,11 +3796,11 @@ struct TodayView: View {
            let cached = repo.todayDayScopedCache,
            selectedDayOffset != 0 || Date().timeIntervalSince(cached.bankedAt) < Self.todayCacheMaxAge {
             restoreDayScoped(cached)
-            if selectedDayOffset == 0 {
+            if selectedDayOffset == 0, let axis = hrAxis {
                 let nowEnd = Date()
-                if nowEnd > hrAxis.upperBound {
-                    let extended = hrAxis.lowerBound ... nowEnd
-                    hrZoomDomain = Self.reclampHrZoom(hrZoomDomain, oldAxis: hrAxis, newAxis: extended)
+                if nowEnd > axis.upperBound {
+                    let extended = axis.lowerBound ... nowEnd
+                    hrZoomDomain = Self.reclampHrZoom(hrZoomDomain, oldAxis: axis, newAxis: extended)
                     hrAxis = extended
                 }
             }
