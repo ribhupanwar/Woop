@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Rowing
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.DownhillSkiing
 import androidx.compose.material.icons.filled.Snowboarding
+import androidx.compose.material.icons.filled.SportsBaseball
 import androidx.compose.material.icons.filled.SportsBasketball
 import androidx.compose.material.icons.filled.SportsGolf
 import androidx.compose.material.icons.filled.SportsGymnastics
@@ -1544,6 +1545,9 @@ internal fun sportIcon(sport: String): ImageVector {
         s.contains("tennis") || s.contains("padel") || s.contains("pickle") || s.contains("squash") || s.contains("racquet") || s.contains("badminton") -> Icons.Filled.SportsTennis
         s.contains("volleyball") -> Icons.Filled.SportsVolleyball
         s.contains("golf") -> Icons.Filled.SportsGolf
+        // No dedicated bowling icon in the Material set; the plain ball glyph is the closest match
+        // (iOS has figure.bowling). (D#850)
+        s.contains("bowl") -> Icons.Filled.SportsBaseball
         s.contains("climb") -> Icons.Filled.Terrain
         s.contains("soccer") || s.contains("football") -> Icons.Filled.SportsSoccer
         s.contains("basketball") -> Icons.Filled.SportsBasketball
