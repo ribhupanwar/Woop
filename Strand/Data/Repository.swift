@@ -579,10 +579,27 @@ final class Repository: ObservableObject {
     /// in-memory (no store queries) instead of re-running the heavy load. Not @Published.
     var appleHealthCache: AppleHealthLoadCache?
 
+    /// #849/#932 (Today day-scoped freeze): macOS cold-mounts the NavigationSplitView detail on every sidebar
+    /// switch, so `TodayView.loadDayScoped()` re-ran its full-day heavy read (the selected day's 5-minute
+    /// `hrBuckets` plus, on today, the raw per-sample `hrSamples` pass for the live Effort; 170k+ HR rows/day
+    /// on a big library) on every visit even when nothing changed. The exact twin of the trios above: this is
+    /// the `refreshSeq` value at which Today last ran its DAY-SCOPED load. Lives HERE on the long-lived
+    /// Repository so it SURVIVES the re-mount. `-1` = never loaded this launch, so the first load always runs.
+    /// Not @Published (pure load-bookkeeping, never drives the UI).
+    var todayDayScopedLoadedSeq = -1
+    /// #932: the day key the day-scoped set last loaded FOR (the VIEWED day, `TodayView.selectedDayKey`), so
+    /// day navigation can never serve another day's snapshot: swiping to a different day misses (its key
+    /// differs) and genuinely re-loads, and a day rollover re-loads even at an unchanged seq. Not @Published.
+    var todayDayScopedLoadedDayKey = ""
+    /// #932: the snapshot `loadDayScoped()` last built, so a same-(seq, day) re-mount RESTORES it in-memory
+    /// (no store queries, no hrBuckets/hrSamples reads) instead of re-running the heavy load. Not @Published.
+    var todayDayScopedCache: TodayDayScopedCache?
+
     #if DEBUG
-    /// v7.7.2 regression guard: DEBUG-only tally of how many times each per-source page actually ran its heavy
-    /// store load (keyed "appleHealth" / "xiaomi"). A same-state re-mount that restores from cache must NOT
-    /// increment this, so a test can assert the cold-mount short-circuit holds. DEBUG-only, never shipped.
+    /// v7.7.2 regression guard: DEBUG-only tally of how many times each cached heavy load actually ran its
+    /// store reads (keyed "appleHealth" / "xiaomi" / "todayDayScoped"). A same-state re-mount that restores
+    /// from cache must NOT increment this, so a test can assert the cold-mount short-circuit holds.
+    /// DEBUG-only, never shipped.
     var loadFireCounts: [String: Int] = [:]
     #endif
 
