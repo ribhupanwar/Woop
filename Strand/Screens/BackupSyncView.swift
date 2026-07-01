@@ -53,7 +53,10 @@ struct BackupSyncView: View {
             Button("Replace all data", role: .destructive) { runRestore(snap) }
             Button("Cancel", role: .cancel) { pendingRestore = nil }
         } message: { snap in
-            Text("Replace all current data with the backup from \(absoluteTime(snap.timeMs))? This cannot be undone.")
+            // A hand-named file with no resolved date (timeMs 0) confirms by NAME, not "1 Jan 1970".
+            Text(snap.timeMs > 0
+                ? "Replace all current data with the backup from \(absoluteTime(snap.timeMs))? This cannot be undone."
+                : "Replace all current data with the backup \(snap.name)? This cannot be undone.")
         }
     }
 
@@ -210,17 +213,22 @@ private struct RestorePickerSheet: View {
                 Button { onChoose(snap) } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(absoluteTime(snap.timeMs))
+                            // A hand-named file whose date lookup failed has timeMs 0; show its name as the
+                            // primary line rather than "1 Jan 1970". The filename subtitle then only repeats
+                            // when we DO have a real date to head the row.
+                            Text(primaryLabel(snap))
                                 .font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
-                            Text(snap.name)
-                                .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                            if snap.timeMs > 0 {
+                                Text(snap.name)
+                                    .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                            }
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                     }
                 }
-                .accessibilityLabel("Restore backup from \(absoluteTime(snap.timeMs))")
+                .accessibilityLabel(accessibilityLabel(snap))
             }
             .navigationTitle("Choose a backup")
             .toolbar {
@@ -229,6 +237,16 @@ private struct RestorePickerSheet: View {
                 }
             }
         }
+    }
+
+    /// The row's headline: a friendly date when we resolved one, else the filename (never the epoch date).
+    private func primaryLabel(_ snap: FolderBackup.Snapshot) -> String {
+        snap.timeMs > 0 ? absoluteTime(snap.timeMs) : snap.name
+    }
+
+    /// VoiceOver label: reads the resolved date when we have one, else the filename (no epoch date).
+    private func accessibilityLabel(_ snap: FolderBackup.Snapshot) -> String {
+        snap.timeMs > 0 ? "Restore backup from \(absoluteTime(snap.timeMs))" : "Restore backup \(snap.name)"
     }
 
     private func absoluteTime(_ ms: Int) -> String {
