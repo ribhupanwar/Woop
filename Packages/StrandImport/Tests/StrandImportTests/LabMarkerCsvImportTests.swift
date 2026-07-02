@@ -249,6 +249,26 @@ final class LabMarkerCsvImportTests: XCTestCase {
         XCTAssertNil(LabMarkerCsvImport.parseValue(""))
     }
 
+    /// Adversarial value grammar (the CSV-import edge finding). A zero-integer-part decimal comma with
+    /// exactly 3 decimals is a DECIMAL comma, never a thousands group ("0,500" is 0.5, not 500), and
+    /// non-finite tokens (NaN / Infinity spellings, 1e999 overflow) are REJECTED so nothing non-finite
+    /// reaches the store or the chart math.
+    func testParseValueRejectsThousandGroupForZeroLedDecimalComma() {
+        XCTAssertEqual(LabMarkerCsvImport.parseValue("0,500"), 0.5)        // was 500 (1000x too large)
+        XCTAssertEqual(LabMarkerCsvImport.parseValue("0,95"), 0.95)
+        XCTAssertEqual(LabMarkerCsvImport.parseValue("1,500"), 1500)      // genuine thousands group stays
+        XCTAssertEqual(LabMarkerCsvImport.parseValue("12,345"), 12345)    // 3-digit non-zero-led = thousands
+    }
+
+    func testParseValueRejectsNonFinite() {
+        XCTAssertNil(LabMarkerCsvImport.parseValue("nan"))
+        XCTAssertNil(LabMarkerCsvImport.parseValue("NaN"))
+        XCTAssertNil(LabMarkerCsvImport.parseValue("inf"))
+        XCTAssertNil(LabMarkerCsvImport.parseValue("Infinity"))
+        XCTAssertNil(LabMarkerCsvImport.parseValue("-Infinity"))
+        XCTAssertNil(LabMarkerCsvImport.parseValue("1e999"))              // overflows to +Inf
+    }
+
     func testCustomKeyMirrorsManualEditorSlug() {
         XCTAssertEqual(LabMarkerCsvImport.customKey("Magnesium"), "custom_magnesium")
         XCTAssertEqual(LabMarkerCsvImport.customKey("Apo B"), "custom_apo_b")

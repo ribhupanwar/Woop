@@ -251,6 +251,17 @@ private fun StrapAlarmCard(vm: AppViewModel) {
                             "Experimental). Right now your wake time is saved but the strap is NOT armed.",
                         style = NoopType.footnote, color = Palette.statusWarning,
                     )
+                } else if (live.whoop5Detected) {
+                    // 5/MG with Experimental ON: the strap IS armed (experimental rev-4 payload) but a
+                    // strap-driven wake has NEVER been captured on 5/MG, so the "confirmed on 4.0" copy must
+                    // NOT show here (#864 honesty). Byte-identical wording to the Swift SmartAlarmView twin.
+                    Text(
+                        if (live.bonded)
+                            "Armed on the strap itself with the experimental 5/MG command. A strap-driven wake is still unconfirmed on 5/MG on our side (confirmed only on WHOOP 4.0), so keep a backup alarm for anything you truly can't miss."
+                        else
+                            "Connect your strap to arm this; it's set on the strap's own firmware alarm. Confirmed working on WHOOP 4.0; still experimental on 5.0 and MG. Keep a backup alarm for anything you truly can't miss.",
+                        style = NoopType.footnote, color = Palette.textTertiary,
+                    )
                 } else {
                     Text(
                         if (live.bonded)

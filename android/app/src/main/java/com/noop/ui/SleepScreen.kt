@@ -407,6 +407,14 @@ fun SleepScreen(
                             }
                         }
                         scope.launch { vm.updateSleepSessionTimes(s, safeStart, safeEnd) }
+                    } else {
+                        // The clamp refused a future/inverted window. Never drop an edit silently (the nap
+                        // pickers used to do exactly that): tell the user why nothing changed. (#940)
+                        Toast.makeText(
+                            context,
+                            "That time can't be saved (it lands in the future or ends before it starts).",
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     }
                 },
                 onDeleteSession = { s ->
@@ -453,8 +461,18 @@ fun SleepScreen(
                 item { MetricGrid(m, onMetricClick = { detailMetricKey = it }) }
                 item { Spacer(Modifier.height(Metrics.selectorTopUp)) }
                 item { SleepDebtLedgerCard(m.sleepDebtLedger) }
-                item { Spacer(Modifier.height(Metrics.selectorTopUp)) }
-                item { StagesVsTypical(m) }
+                // StagesVsTypical describes ONE specific night's deep/REM/light minutes under the
+                // "Selected night" header, so it must read the SELECTED day's model, never the
+                // full-history fallback: when the selected day has no stage model (the phantom newest
+                // day), showing tilesModel here would label ANOTHER day's stages as this night (#940).
+                // Hide the card in that state (iOS shows the stub's honest zeros); MetricGrid/ledger/
+                // trends above/below stay on the full-history tilesModel exactly as before.
+                if (model != null) {
+                    // Bind a non-null local so the smart-cast carries into the item {} lambda.
+                    val selectedModel = model
+                    item { Spacer(Modifier.height(Metrics.selectorTopUp)) }
+                    item { StagesVsTypical(selectedModel) }
+                }
                 item { Spacer(Modifier.height(Metrics.selectorTopUp)) }
                 item { DurationTrend(m) }
                 item { Spacer(Modifier.height(Metrics.selectorTopUp)) }
@@ -937,7 +955,17 @@ private fun NapRow(
                         set(Calendar.HOUR_OF_DAY, h); set(Calendar.MINUTE, m)
                         set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
                     }
-                    pendingStart = cal.timeInMillis / 1000L
+                    // #940 guard 1: the time-only picker keeps the nap's own calendar day, so rolling the
+                    // start EARLIER across midnight (00:20 -> 23:50) lands it in the future. Snap the date
+                    // back a day for the previous evening, exactly like the Add-nap path (no wake rule:
+                    // a nap start after the night's wake is normal). Without this the future window was
+                    // clamped to null downstream and the whole edit was silently dropped.
+                    pendingStart = SleepEditGuard.autoCorrectedBed(
+                        previousBedTs = nap.effectiveStartTs,
+                        candidateBedTs = cal.timeInMillis / 1000L,
+                        originalWakeTs = null,
+                        nowTs = System.currentTimeMillis() / 1000L,
+                    )
                     editingStart = false
                     editingEnd = true
                 },

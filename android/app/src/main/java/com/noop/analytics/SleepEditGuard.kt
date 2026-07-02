@@ -20,15 +20,28 @@ import java.time.ZoneId
 object SleepEditGuard {
 
     /**
+     * The longest night span (seconds) the at/after-wake auto-correct will manufacture. A genuine
+     * evening-bed correction (bed 23:00, wake 05:00 next day) yields a ~6h span; a user moving a
+     * session LATER past its wake (nap 14:00-15:00 -> bed 16:00 same day) would yield a ~23h span if
+     * decremented, which is not a plausible night, so those candidates are left verbatim.
+     */
+    const val MAX_AUTO_CORRECT_NIGHT_SEC: Long = 16L * 3600L
+
+    /**
      * Rule 1: the cross-midnight bed auto-correct. [candidateBedTs] is what the picker just
      * produced, [previousBedTs] the value it held before this change (a DELIBERATE date change,
      * where the two sit on different calendar days, is always respected verbatim; the Android
      * picker is time-only, so this always holds there). When the change was time-only (same
-     * calendar day) and the candidate is impossible for a bed time (in the future, or at/after
-     * [originalWakeTs], the night's CURRENT wake), the user almost always meant the previous
-     * evening: return the candidate moved one day back, provided that lands in the past.
-     * [originalWakeTs] is null for the "Add a nap" picker, whose anchor deliberately sits after
-     * the night's wake, so only the future test applies there. All timestamps unix seconds.
+     * calendar day) and the candidate is impossible for a bed time, the user almost always meant the
+     * previous evening: return the candidate moved one day back, provided that lands in the past.
+     * Two impossibility cases:
+     *   - the candidate is in the FUTURE ([candidateBedTs] > [nowTs]) - always corrected (this is the
+     *     [originalWakeTs] == null "Add a nap" case too, whose anchor sits after the night's wake);
+     *   - the candidate is at/after [originalWakeTs] AND decrementing it forms a PLAUSIBLE night, i.e.
+     *     the decremented bed lands before the wake and within [MAX_AUTO_CORRECT_NIGHT_SEC] of it. This
+     *     guards a legitimate MOVE-LATER edit (a past bed rolled to just after its own wake on the same
+     *     day) from being silently shoved back a full day into a ~23h wrong-day window.
+     * All timestamps unix seconds.
      */
     fun autoCorrectedBed(
         previousBedTs: Long,
@@ -40,12 +53,15 @@ object SleepEditGuard {
         val prevDay = Instant.ofEpochSecond(previousBedTs).atZone(zone).toLocalDate()
         val candZoned = Instant.ofEpochSecond(candidateBedTs).atZone(zone)
         if (candZoned.toLocalDate() != prevDay) return candidateBedTs
-        val violates = candidateBedTs > nowTs ||
-            (originalWakeTs != null && candidateBedTs >= originalWakeTs)
-        if (!violates) return candidateBedTs
         // minusDays is DST-correct: "the same wall-clock time one calendar day earlier".
         val decremented = candZoned.minusDays(1).toEpochSecond()
-        return if (decremented <= nowTs) decremented else candidateBedTs
+        if (decremented > nowTs) return candidateBedTs
+        val futureViolation = candidateBedTs > nowTs
+        val wakeViolation = originalWakeTs != null && candidateBedTs >= originalWakeTs &&
+            decremented < originalWakeTs &&
+            (originalWakeTs - decremented) <= MAX_AUTO_CORRECT_NIGHT_SEC
+        if (!futureViolation && !wakeViolation) return candidateBedTs
+        return decremented
     }
 
     /**

@@ -82,14 +82,17 @@ public final class FrameRouter {
             // its payload; SET (cmd 77) carries only a result byte. The schema has no field decode for
             // either, so pull them straight from the frame bytes. The COMMAND_RESPONSE inner is
             // [type,seq,cmd,origin_seq,result,payload…] starting at offset 4, with crc32 at `length`.
+            // cmdName carries a "(rawValue)" suffix (Schema.enumName appends it, e.g.
+            // "GET_ALARM_TIME(67)"), so match by prefix like every other cmdName consumer in the
+            // codebase - never by equality, which is silently dead.
             if family == .whoop4, let cmd = parsed.cmdName {
-                if cmd == "GET_ADVERTISING_NAME_HARVARD" {
+                if cmd.hasPrefix("GET_ADVERTISING_NAME_HARVARD") {
                     if let name = Self.advertisingName(in: frame), !name.isEmpty {
                         state.advertisingName = name
                     }
-                } else if cmd == "SET_ADVERTISING_NAME_HARVARD" {
+                } else if cmd.hasPrefix("SET_ADVERTISING_NAME_HARVARD") {
                     state.renameStatus = Self.renameAck(for: Self.commandResultByte(in: frame))
-                } else if cmd == "GET_ALARM_TIME" {
+                } else if cmd.hasPrefix("GET_ALARM_TIME") {
                     // Arm-readback diagnostic (#401 close-out): armStrapAlarm follows every WHOOP 4.0 arm
                     // with GET_ALARM_TIME (67) so the log proves what the STRAP believes is armed, not
                     // just what we sent. LOG-ONLY, never gates behaviour: the 4.0 response layout is
@@ -241,7 +244,7 @@ public final class FrameRouter {
     /// 0 Failure, 1 Success, 2 Pending, 3 Unsupported).
     static func renameAck(for result: Int?) -> String {
         switch result {
-        case 1:  return "Renamed — your strap reboots to apply the new name."
+        case 1:  return "Renamed, your strap reboots to apply the new name."
         case 0:  return "The strap rejected the rename (failure)."
         case 2:  return "Rename pending…"
         case 3:  return "This strap firmware doesn't support renaming."

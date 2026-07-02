@@ -75,11 +75,16 @@ class VitalRangeGatingTest {
     }
 
     @Test fun largestUnlockedRangeIsTheCoercionTarget() {
-        // The screen coerces a locked selection DOWN to unlocked.last(); pin that it is the
-        // largest range with anything new to show.
-        assertEquals(VitalDetailRange.ALL, unlockedVitalRanges(3L).last())  // ALL is never gated (Swift parity)
-        assertEquals(listOf(VitalDetailRange.WEEK, VitalDetailRange.MONTH, VitalDetailRange.ALL), unlockedVitalRanges(10L))
-        assertEquals(VitalDetailRange.ALL, unlockedVitalRanges(400L).last())
+        // A locked selection coerces DOWN to the largest unlocked range with a real finite window
+        // that is <= the selection (never ALL), matching Swift's coercedSelection.
+        val wk1 = unlockedVitalRanges(3L)   // only WEEK + ALL unlocked
+        assertEquals(VitalDetailRange.WEEK, coercedVitalRange(VitalDetailRange.MONTH, wk1))
+        assertEquals(VitalDetailRange.WEEK, coercedVitalRange(VitalDetailRange.YEAR, wk1))
+        val span10 = unlockedVitalRanges(10L)  // WEEK + MONTH + ALL
+        assertEquals(VitalDetailRange.MONTH, coercedVitalRange(VitalDetailRange.YEAR, span10))
+        // An unlocked selection is kept verbatim; ALL is always selectable.
+        assertEquals(VitalDetailRange.WEEK, coercedVitalRange(VitalDetailRange.WEEK, wk1))
+        assertEquals(VitalDetailRange.ALL, coercedVitalRange(VitalDetailRange.ALL, wk1))
     }
 
     // ── the gating rule really is the identical-window dedup rule ───────────────

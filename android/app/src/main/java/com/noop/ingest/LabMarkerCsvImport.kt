@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 /**
@@ -446,21 +447,40 @@ object LabMarkerCsvImport {
         return numberToken(t.substring(0, i))
     }
 
+    /** A finite-only Double parse: NaN / +Inf / -Inf (from "NaN"/"Infinity"/"1e999") are REJECTED so a
+     *  hostile or typo'd cell skips-and-counts instead of storing a non-finite "reading" that reaches the
+     *  chart math (the importer's "nothing guessed" contract). Also rejects the Java-only "5f"/"5d" and
+     *  hex-float tokens java Double.parseDouble accepts but Swift Double() does not, so both platforms
+     *  import the same file byte-identically. */
+    private fun finiteDouble(s: String): Double? {
+        // toDoubleOrNull tolerates a trailing f/F/d/D suffix (a Java float/double literal) that Swift's
+        // Double() rejects; drop those so both platforms accept the SAME tokens. (Hex floats like 0x1p3
+        // parse on both, so they are left alone.)
+        if (s.any { it == 'f' || it == 'F' || it == 'd' || it == 'D' }) return null
+        val d = s.toDoubleOrNull() ?: return null
+        return if (d.isFinite()) d else null
+    }
+
     /** One bare numeric token with the comma rules — must be exactly a number. */
     private fun numberToken(t: String): Double? {
-        t.toDoubleOrNull()?.let { return it }
+        finiteDouble(t)?.let { return it }
         // One decimal comma ("5,2"; but 3 digits after a single comma reads as a
         // thousands group, anything else as a decimal comma).
         if (DECIMAL_COMMA.matches(t)) {
+            val intPart = t.substringBefore(',')
             val afterComma = t.substringAfter(',').length
-            return if (afterComma == 3) {
-                t.replace(",", "").toDoubleOrNull()
+            // A bare-zero (or leading-zero) integer part can only be a DECIMAL comma: "0,500" is 0.5, never
+            // a 500 thousands group (a real thousands number never starts with a lone 0). So the 3-digit
+            // thousands rule must NOT fire for those - it used to store "0,500" as 500 (1000x). Mirrors Swift.
+            val intIsZeroLed = intPart.startsWith("0") || intPart.startsWith("+0") || intPart.startsWith("-0")
+            return if (afterComma == 3 && !intIsZeroLed) {
+                finiteDouble(t.replace(",", ""))
             } else {
-                t.replace(",", ".").toDoubleOrNull()
+                finiteDouble(t.replace(",", "."))
             }
         }
         // Multi-group thousands ("1,234,567" or "1,234.5").
-        if (THOUSANDS.matches(t)) return t.replace(",", "").toDoubleOrNull()
+        if (THOUSANDS.matches(t)) return finiteDouble(t.replace(",", ""))
         return null
     }
 
@@ -528,10 +548,15 @@ object LabMarkerCsvImport {
 
     // MARK: - takenAt derivation (wrapper only, not part of the pure parse)
 
-    /** Epoch seconds of LOCAL noon on a "yyyy-MM-dd" day — a deterministic takenAt for
-     *  imported rows, so re-importing the same file upserts in place. */
+    /** Epoch seconds of UTC noon on a "yyyy-MM-dd" day — a deterministic, LOCATION-INDEPENDENT takenAt
+     *  for imported rows, so re-importing the same file (even after travelling to another zone) upserts
+     *  in place instead of minting a duplicate. Pinned to UTC on BOTH platforms so the natural key
+     *  (deviceId, markerKey, takenAt, source) never shifts with the device zone. History dates render
+     *  from the stored `day` string, not this takenAt. */
     private fun labNoonEpoch(day: String): Long {
-        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
         val base = try { fmt.parse(day)?.time ?: 0L } catch (_: Exception) { 0L }
         return base / 1000L + 12L * 3600L
     }

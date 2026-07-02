@@ -15,21 +15,36 @@ import Foundation
 ///      inverted window even if a client UI misbehaves.
 public enum SleepEditGuard {
 
+    /// The longest night span (seconds) the at/after-wake auto-correct will manufacture. A genuine
+    /// evening-bed correction (bed 23:00, wake 05:00 next day) yields a ~6h span; a user moving a
+    /// session LATER past its wake (nap 14:00-15:00 -> bed 16:00 same day) would yield a ~23h span if
+    /// decremented, which is not a plausible night - so we leave those candidates verbatim.
+    public static let maxAutoCorrectNightSec: TimeInterval = 16 * 3600
+
     /// Rule 1: the cross-midnight bed auto-correct. `candidateBed` is what the picker just produced,
     /// `previousBed` is the value it held before this change (so a DELIBERATE date change, where the
     /// two sit on different calendar days, is always respected verbatim). When the change was
-    /// time-only (same calendar day) and the candidate is impossible for a bed time (in the future,
-    /// or at/after `originalWake`, the night's CURRENT wake), the user almost always meant the
-    /// previous evening: return the candidate moved one day back, provided that lands in the past.
-    /// `originalWake` is nil for the "Add a nap" picker, whose seed deliberately sits after the
-    /// night's wake, so only the future test applies there.
+    /// time-only (same calendar day) and the candidate is impossible for a bed time, the user almost
+    /// always meant the previous evening: return the candidate moved one day back, provided that lands
+    /// in the past. Two impossibility cases:
+    ///   - the candidate is in the FUTURE (`candidateBed > now`) - always corrected (this is the
+    ///     `originalWake == nil` "Add a nap" case too, whose seed sits after the night's wake);
+    ///   - the candidate is at/after `originalWake` AND decrementing it forms a PLAUSIBLE night, i.e.
+    ///     the decremented bed lands before the wake and within `maxAutoCorrectNightSec` of it. This
+    ///     guards a legitimate MOVE-LATER edit (past bed rolled to just after its own wake on the same
+    ///     day) from being silently shoved back a full day into a ~23h wrong-day window.
     public static func autoCorrectedBed(previousBed: Date, candidateBed: Date, originalWake: Date?,
                                         now: Date, calendar: Calendar = .current) -> Date {
         guard calendar.isDate(candidateBed, inSameDayAs: previousBed) else { return candidateBed }
-        let violates = candidateBed > now || originalWake.map { candidateBed >= $0 } == true
-        guard violates,
-              let decremented = calendar.date(byAdding: .day, value: -1, to: candidateBed),
+        guard let decremented = calendar.date(byAdding: .day, value: -1, to: candidateBed),
               decremented <= now else { return candidateBed }
+        let futureViolation = candidateBed > now
+        let wakeViolation: Bool = {
+            guard let wake = originalWake, candidateBed >= wake else { return false }
+            // Only correct when the decremented bed forms a possible night for THIS wake.
+            return decremented < wake && wake.timeIntervalSince(decremented) <= maxAutoCorrectNightSec
+        }()
+        guard futureViolation || wakeViolation else { return candidateBed }
         return decremented
     }
 

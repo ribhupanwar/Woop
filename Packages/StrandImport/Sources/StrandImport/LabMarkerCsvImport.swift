@@ -367,22 +367,35 @@ public enum LabMarkerCsvImport {
         return numberToken(token)
     }
 
+    /// A finite-only Double parse: NaN / +Inf / -Inf (from "nan"/"inf"/"1e999" and friends) are
+    /// REJECTED so a hostile or typo'd cell falls into the skip-and-counted path instead of landing a
+    /// non-finite "reading" in the store and the chart math (the importer's "nothing guessed" contract).
+    private static func finiteDouble(_ s: String) -> Double? {
+        guard let d = Double(s), d.isFinite else { return nil }
+        return d
+    }
+
     /// Parse one bare numeric token with the comma rules — the token must be exactly
     /// a number, nothing more.
     private static func numberToken(_ t: String) -> Double? {
-        if let d = Double(t) { return d }
+        if let d = finiteDouble(t) { return d }
         // One decimal comma ("5,2" / "12,345" is ambiguous: 3 digits after a single
         // comma reads as a thousands group, anything else as a decimal comma).
         if matches(t, pattern: "^[+-]?[0-9]+,[0-9]+$") {
+            let intPart = t.split(separator: ",")[0]
             let afterComma = t.split(separator: ",")[1].count
-            if afterComma == 3 {
-                return Double(t.replacingOccurrences(of: ",", with: ""))
+            // A bare-zero (or leading-zero) integer part can only be a DECIMAL comma: "0,500" is 0.5,
+            // never a 500 thousands group (a real thousands number never starts with a lone 0). So the
+            // 3-digit thousands rule must NOT fire for those - it used to store "0,500" as 500 (1000x).
+            let intIsZeroLed = intPart.hasPrefix("0") || intPart.hasPrefix("+0") || intPart.hasPrefix("-0")
+            if afterComma == 3 && !intIsZeroLed {
+                return finiteDouble(t.replacingOccurrences(of: ",", with: ""))
             }
-            return Double(t.replacingOccurrences(of: ",", with: "."))
+            return finiteDouble(t.replacingOccurrences(of: ",", with: "."))
         }
         // Multi-group thousands ("1,234,567" or "1,234.5").
         if matches(t, pattern: "^[+-]?[0-9]{1,3}(,[0-9]{3})+(\\.[0-9]+)?$") {
-            return Double(t.replacingOccurrences(of: ",", with: ""))
+            return finiteDouble(t.replacingOccurrences(of: ",", with: ""))
         }
         return nil
     }

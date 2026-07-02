@@ -206,7 +206,7 @@ fun WeeklyDigestContent(digest: WeeklyDigest, compact: Boolean = false) {
                 }
                 Text(digest.balance.sentence, style = NoopType.footnote, color = Palette.textTertiary)
                 Text(
-                    "Informational only — not medical advice.",
+                    "Informational only, not medical advice.",
                     style = NoopType.footnote,
                     color = Palette.textTertiary,
                 )

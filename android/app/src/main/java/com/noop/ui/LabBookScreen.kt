@@ -579,7 +579,7 @@ private fun HistoryRow(markerKey: String, row: LabMarkerRow, onDelete: (String) 
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(valueLabel(markerKey, row), style = NoopType.number(16f), color = Palette.textPrimary)
-            Text(labDayLabel(row.takenAt), style = NoopType.footnote, color = Palette.textTertiary)
+            Text(labDayFromKey(row.day), style = NoopType.footnote, color = Palette.textTertiary)
             row.note?.takeIf { it.isNotEmpty() }?.let {
                 Text(it, style = NoopType.footnote, color = Palette.textSecondary)
             }
@@ -775,6 +775,18 @@ private fun pearson(xy: List<Pair<Double, Double>>): LabCorrelation? {
 
 private val labDayFmt = SimpleDateFormat("d MMM yyyy", Locale.US)
 private fun labDayLabel(epochSeconds: Long): String = labDayFmt.format(Date(epochSeconds * 1000L))
+
+/** "yyyy-MM-dd" parser + "d MMM yyyy" render, both pinned to UTC, so a stored day key renders the same
+ *  calendar date regardless of the device zone (the takenAt is UTC noon). Falls back to the raw key if it
+ *  doesn't parse. Mirrors Swift LabBookFormat.dayFromKey. */
+private val labDayKeyParser = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+    timeZone = java.util.TimeZone.getTimeZone("UTC")
+}
+private val labDayKeyFmt = SimpleDateFormat("d MMM yyyy", Locale.US).apply {
+    timeZone = java.util.TimeZone.getTimeZone("UTC")
+}
+private fun labDayFromKey(day: String): String =
+    runCatching { labDayKeyParser.parse(day)?.let { labDayKeyFmt.format(it) } }.getOrNull() ?: day
 
 /** "yyyy-MM-dd" for today offset by [deltaDays], fixed UTC (matches CompareScreen.todayDay). */
 internal fun labDay(deltaDays: Int): String {

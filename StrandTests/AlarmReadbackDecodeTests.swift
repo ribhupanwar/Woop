@@ -1,4 +1,5 @@
 import XCTest
+import WhoopProtocol
 @testable import Strand
 
 /// Pins the WHOOP 4.0 GET_ALARM_TIME (cmd 67) arm-readback decode (#401 close-out).
@@ -85,5 +86,44 @@ final class AlarmReadbackDecodeTests: XCTestCase {
         XCTAssertFalse(FrameRouter.isPlausibleAlarmEpoch(1_499_999_999))
         XCTAssertTrue(FrameRouter.isPlausibleAlarmEpoch(4_102_444_800))
         XCTAssertFalse(FrameRouter.isPlausibleAlarmEpoch(4_102_444_801))
+    }
+
+    // MARK: - Dispatch (handle) coverage
+
+    /// Build a crc32-valid WHOOP 4.0 COMMAND_RESPONSE (type 36) that parseFrame accepts, carrying the
+    /// GET_ALARM_TIME cmd byte (67) and the given readback payload. frameFromPayload lays out
+    /// [0xAA][len][crc8][type][seq][cmd][data…][crc32] with a real crc32, so handle() will not reject it
+    /// on the crcOK gate. `data` is [origin_seq, result, payload…], matching the inner walk the decode
+    /// helpers use.
+    @MainActor
+    private func alarmResponseFrame(cmd: UInt8 = 67, payload: [UInt8]) -> [UInt8] {
+        frameFromPayload([0x42, 0x01] + payload, type: 36, seq: 0x29, cmd: cmd)
+    }
+
+    /// The dispatch regression the ship-blocker fixed: cmdName is "GET_ALARM_TIME(67)" (Schema.enumName
+    /// appends the "(rawValue)" suffix), so an equality compare against "GET_ALARM_TIME" was dead code and
+    /// nothing ever logged. With hasPrefix matching, a synthesized readback frame now fires the branch and
+    /// writes the "strap reports armed" line - proving the branch is reachable, not just the pure decode.
+    @MainActor
+    func testHandle_alarmReadbackFrame_logsStrapReports() {
+        let live = LiveState()
+        let router = FrameRouter(state: live)
+        router.family = .whoop4
+        // SET-mirror payload with the #535 capture epoch (1781912880 = LE 30 D5 35 6A).
+        router.handle(frame: alarmResponseFrame(payload: [0x01, 0x30, 0xD5, 0x35, 0x6A, 0x00, 0x00, 0x00, 0x00]))
+        XCTAssertTrue(live.log.contains { $0.contains("strap reports armed") && $0.contains("1781912880") },
+                      "GET_ALARM_TIME readback branch must fire via handle(): \(live.log)")
+    }
+
+    /// An unrecognised readback payload still fires the branch and logs the raw-hex fallback, proving the
+    /// else arm is reachable too (not just the happy path).
+    @MainActor
+    func testHandle_unrecognisedReadbackPayload_logsRawHex() {
+        let live = LiveState()
+        let router = FrameRouter(state: live)
+        router.family = .whoop4
+        router.handle(frame: alarmResponseFrame(payload: [0x03, 0xAB]))
+        XCTAssertTrue(live.log.contains { $0.contains("unrecognised payload") && $0.contains("03 ab") },
+                      "unrecognised readback must log raw hex via handle(): \(live.log)")
     }
 }

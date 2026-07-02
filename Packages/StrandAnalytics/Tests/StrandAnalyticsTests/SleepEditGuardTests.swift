@@ -46,6 +46,20 @@ final class SleepEditGuardTests: XCTestCase {
         XCTAssertEqual(corrected, date(2026, 7, 1, 23, 0))
     }
 
+    /// MOVE-LATER (the finding's missing case): a user drags a session's bed LATER, past its own wake,
+    /// on the SAME day (nap 14:00-15:00 -> bed 16:00 today, wake 15:00 today). The candidate is at/after
+    /// the wake but in the PAST, so the old rule shoved it back a full day into a ~23h wrong-day window.
+    /// Decrementing here would form an implausible 23h night, so the candidate must be left VERBATIM.
+    func testMoveLaterPastWakeIsNotDecremented() {
+        let previous = date(2026, 7, 2, 14, 0)     // nap start being edited
+        let candidate = date(2026, 7, 2, 16, 0)    // rolled LATER, still same day, after the 15:00 wake
+        let wake = date(2026, 7, 2, 15, 0)
+        let now = date(2026, 7, 2, 20, 0)          // evening: 16:00 today is in the past, not future
+        let corrected = SleepEditGuard.autoCorrectedBed(
+            previousBed: previous, candidateBed: candidate, originalWake: wake, now: now, calendar: cal)
+        XCTAssertEqual(corrected, candidate, "a plausible move-later must not be shoved back a day")
+    }
+
     /// A normal correction (01:06 -> 00:30, still before the wake, in the past) is untouched.
     func testSaneEditIsUntouched() {
         let previous = date(2026, 7, 2, 1, 6)

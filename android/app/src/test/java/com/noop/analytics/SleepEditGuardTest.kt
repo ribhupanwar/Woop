@@ -52,6 +52,23 @@ class SleepEditGuardTest {
         assertEquals(ts(2026, 7, 1, 23, 0), corrected)
     }
 
+    /** MOVE-LATER (the finding's missing case): a user drags a session's bed LATER, past its own wake,
+     *  on the SAME day (nap 14:00-15:00 -> bed 16:00 today, wake 15:00 today). The candidate is at/after
+     *  the wake but in the PAST, so the old rule shoved it back a full day into a ~23h wrong-day window.
+     *  Decrementing here would form an implausible 23h night, so the candidate must be left VERBATIM. */
+    @Test
+    fun moveLaterPastWakeIsNotDecremented() {
+        val candidate = ts(2026, 7, 2, 16, 0)      // rolled LATER, same day, after the 15:00 wake
+        val corrected = SleepEditGuard.autoCorrectedBed(
+            previousBedTs = ts(2026, 7, 2, 14, 0),
+            candidateBedTs = candidate,
+            originalWakeTs = ts(2026, 7, 2, 15, 0),
+            nowTs = ts(2026, 7, 2, 20, 0),         // evening: 16:00 today is in the past, not future
+            zone = zone,
+        )
+        assertEquals(candidate, corrected)
+    }
+
     /** A normal correction (01:06 -> 00:30, before the wake, in the past) is untouched. */
     @Test
     fun saneEditIsUntouched() {

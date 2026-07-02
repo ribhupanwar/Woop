@@ -434,9 +434,29 @@ struct MetricDetailView: View {
     /// The range actually shown: the SELECTED range whenever its window holds ≥1
     /// point, otherwise the smallest LARGER range that does. So switching ranges is
     /// always visibly distinct when data allows, and only sparse windows widen.
+    /// The range the chips + caption ACTUALLY describe, resolved NON-DESTRUCTIVELY from the stored
+    /// `range` (#943, true cross-platform lockstep with Android's effectiveVitalRange). We never
+    /// overwrite the @State selection - a locked default (`range == .month` with under a week of
+    /// history) simply RENDERS as the largest unlocked range with a real finite window that is <= the
+    /// selection, else `.week`. NOT `.all`: coercing a locked default to ALL would jump a calibrating
+    /// user to the everything view. When the stored range is itself unlocked it is used verbatim, so
+    /// once history grows the selection un-coerces on its own with no snap-back.
+    private var coercedSelection: ExploreRange {
+        if isUnlocked(range) { return range }
+        return [ExploreRange.year, .half, .quarter, .month, .week]
+            .first { $0.days != nil && $0.rawValue <= range.rawValue && isUnlocked($0) } ?? .week
+    }
+
+    /// The pill's selection binding: it HIGHLIGHTS the coerced selection (so a locked default shows the
+    /// unlocked chip that is actually rendering) but a user tap writes straight to the stored @State
+    /// `range`. Reads never mutate state, so this stays non-destructive.
+    private var selectionBinding: Binding<ExploreRange> {
+        Binding(get: { coercedSelection }, set: { range = $0 })
+    }
+
     private var effectiveRange: ExploreRange {
-        guard !series.isEmpty else { return range }
-        for r in range.widening where !slice(for: r).isEmpty { return r }
+        guard !series.isEmpty else { return coercedSelection }
+        for r in coercedSelection.widening where !slice(for: r).isEmpty { return r }
         return .all
     }
 
@@ -555,15 +575,10 @@ struct MetricDetailView: View {
         }
         others = loadedOthers
         loaded = true
-        // #943 selection seam: the selection defaults to .month, so with under a week of
-        // history the caption would read "· month" while the month chip below sits locked.
-        // Coerce a locked selection down to the longest unlocked range so the caption, chart,
-        // stats and correlations all describe a window the chips actually offer. Re-runs on
-        // every reload (refreshSeq), so a shrinking history re-coerces too.
-        if !isUnlocked(range) {
-            range = [ExploreRange.year, .half, .quarter, .month, .week]
-                .first { $0.rawValue <= range.rawValue && isUnlocked($0) } ?? .week
-        }
+        // #943 selection seam: a locked default (.month with under a week of history) no longer
+        // OVERWRITES @State range - it renders through `coercedSelection` instead (non-destructive,
+        // recomputed every body eval), so a shrinking history re-coerces and a growing one un-coerces
+        // with no snap-back. See `coercedSelection`.
         // First correlation build, now that `series`/`others` exist.
         recomputeCorrelations()
     }
@@ -601,7 +616,7 @@ struct MetricDetailView: View {
                             .foregroundStyle(StrandPalette.textPrimary)
                     }
                     Spacer()
-                    SegmentedPillControl(ExploreRange.allCases, selection: $range,
+                    SegmentedPillControl(ExploreRange.allCases, selection: selectionBinding,
                                          isEnabled: isUnlocked) { $0.label }
                 }
 
@@ -683,7 +698,7 @@ struct MetricDetailView: View {
                         .foregroundStyle(StrandPalette.textPrimary)
                 }
                 Spacer()
-                SegmentedPillControl(ExploreRange.allCases, selection: $range,
+                SegmentedPillControl(ExploreRange.allCases, selection: selectionBinding,
                                      isEnabled: isUnlocked) { $0.label }
             }
             Text(caption)

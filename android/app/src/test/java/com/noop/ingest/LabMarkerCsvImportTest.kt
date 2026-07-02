@@ -261,6 +261,27 @@ class LabMarkerCsvImportTest {
         assertNull(LabMarkerCsvImport.parseValue(""))
     }
 
+    /** Adversarial value grammar (the CSV-import edge finding), byte-identical to the Swift twin. A
+     *  zero-integer-part decimal comma with exactly 3 decimals is a DECIMAL comma, never a thousands
+     *  group ("0,500" is 0.5, not 500); non-finite tokens (NaN/Infinity spellings, 1e999 overflow) and
+     *  the Java-only "5f"/"5d" literals are REJECTED so nothing non-finite or platform-specific lands. */
+    @Test fun parseValueRejectsThousandGroupForZeroLedDecimalComma() {
+        assertEquals(0.5, LabMarkerCsvImport.parseValue("0,500")!!, 1e-9)   // was 500 (1000x too large)
+        assertEquals(0.95, LabMarkerCsvImport.parseValue("0,95")!!, 1e-9)
+        assertEquals(1500.0, LabMarkerCsvImport.parseValue("1,500")!!, 1e-9) // genuine thousands group stays
+        assertEquals(12345.0, LabMarkerCsvImport.parseValue("12,345")!!, 1e-9) // non-zero-led = thousands
+    }
+
+    @Test fun parseValueRejectsNonFiniteAndJavaOnlyTokens() {
+        assertNull(LabMarkerCsvImport.parseValue("nan"))
+        assertNull(LabMarkerCsvImport.parseValue("NaN"))
+        assertNull(LabMarkerCsvImport.parseValue("Infinity"))
+        assertNull(LabMarkerCsvImport.parseValue("-Infinity"))
+        assertNull(LabMarkerCsvImport.parseValue("1e999"))                   // overflows to +Inf
+        assertNull(LabMarkerCsvImport.parseValue("5f"))                      // Java float literal, Swift rejects
+        assertNull(LabMarkerCsvImport.parseValue("5d"))                      // Java double literal, Swift rejects
+    }
+
     @Test fun customKeyMirrorsManualEditorSlug() {
         assertEquals("custom_magnesium", LabMarkerCsvImport.customKey("Magnesium"))
         assertEquals("custom_apo_b", LabMarkerCsvImport.customKey("Apo B"))

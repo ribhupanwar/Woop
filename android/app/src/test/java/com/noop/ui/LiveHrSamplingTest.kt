@@ -12,6 +12,16 @@ import org.junit.Test
  *  - nothing banked while there's no reading (null stops the buffer, it never flat-lines a dead value),
  *  - the 30..220 physiological range guard (same bounds the on-change append used),
  *  - the rolling cap drops the OLDEST sample, so 180 samples at 1 Hz is a strict ~3 minutes.
+ *
+ * LIFECYCLE CONTRACT (data-honesty, not unit-testable here since it lives in the Compose effect): the
+ * sampling loop in HealthScreen runs inside `lifecycleOwner.lifecycle.repeatOnLifecycle(STARTED)`, so it
+ * only ticks while the UI is at least STARTED. Its inputs (bpm/live) are collected with
+ * collectAsStateWithLifecycle, which STOPS at ON_STOP; without the gate the loop would keep banking the
+ * frozen last value once a second with real timestamps while backgrounded (the BLE foreground service
+ * holds the process alive), fabricating a flat trace - and persisting it if the strap dropped meanwhile.
+ * The gate suspends banking exactly when the inputs freeze and resumes it when fresh state flows again,
+ * matching iOS, whose timer suspends when backgrounded. [appendLiveHrSample] therefore only ever runs
+ * against a LIVE (foreground) reading, which is what the guards below assume.
  */
 class LiveHrSamplingTest {
 

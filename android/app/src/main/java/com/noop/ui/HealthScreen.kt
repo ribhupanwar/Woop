@@ -53,7 +53,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.noop.analytics.Baselines
 import com.noop.analytics.IllnessSignalEngine
 import com.noop.analytics.V5HealthSignals
@@ -1035,14 +1038,24 @@ private fun HeartRateSection(vm: AppViewModel, hrMax: Int) {
     // interval, drawing a phantom ramp where HR was actually flat. A clock tick banks the latest
     // (already spike-filtered) value every second, so steady HR draws flat and the 180-sample cap
     // finally means a strict rolling ~3 minutes. rememberUpdatedState lets the loop read the CURRENT
-    // value without restarting the effect; the loop cancels when the hero leaves composition, and on
-    // disconnect the smoothed bpm nils upstream so the tick stops banking rather than flat-lining.
+    // value without restarting the effect.
+    //
+    // Lifecycle gate (data-honesty): the BLE foreground service keeps the process (and this composition)
+    // alive while backgrounded, but the inputs bpm/live are collected with collectAsStateWithLifecycle,
+    // which STOPS at ON_STOP - so an ungated loop would bank the frozen last value once a second with
+    // real timestamps, fabricating a flat trace for the whole background stretch (and persisting it if
+    // the strap dropped meanwhile). Running the tick inside repeatOnLifecycle(STARTED) suspends banking
+    // exactly when the inputs freeze and resumes it when fresh state flows again, matching iOS (its timer
+    // suspends when backgrounded). See LiveHrSamplingTest for the contract.
     val hrHistory = remember { mutableStateListOf<LiveHrSample>() }
     val latestDisplayHr by rememberUpdatedState(displayHr)
-    LaunchedEffect(Unit) {
-        while (true) {
-            appendLiveHrSample(hrHistory, latestDisplayHr, System.currentTimeMillis())
-            delay(1000)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                appendLiveHrSample(hrHistory, latestDisplayHr, System.currentTimeMillis())
+                delay(1000)
+            }
         }
     }
     val series = hrSeries(hrHistory, live, displayHr)
@@ -1706,7 +1719,7 @@ fun VitalDetailScreen(vm: AppViewModel, key: String) {
         // byte-identical charts. A locked selection (e.g. the MONTH default during the first week)
         // coerces DOWN to the largest unlocked range so a calibrating user always has a live chart.
         val unlockedRanges = remember(detail) { unlockedVitalRanges(vitalHistorySpanDays(detail.points)) }
-        val effectiveRange = if (range in unlockedRanges) range else unlockedRanges.last()
+        val effectiveRange = coercedVitalRange(range, unlockedRanges)
         val filteredPoints = remember(detail, effectiveRange) { filterVitalPoints(detail.points, effectiveRange) }
         if (filteredPoints.size < 2) {
             DataPendingNote(
@@ -1866,6 +1879,21 @@ internal fun vitalHistorySpanDays(points: List<Pair<String, Double>>): Long {
  *  1Y once > 180, ALL once > 365. Locked chips render disabled rather than hidden so a calibrating
  *  user still learns the longer views exist; W staying unconditional means nobody is ever stranded
  *  with zero ranges. */
+/**
+ * The range the chips + caption actually describe, resolved NON-DESTRUCTIVELY (Swift parity with
+ * MetricExplorerView.coercedSelection). A locked selection renders as the largest unlocked range with
+ * a real finite window that is <= the selection, else WEEK. NOT ALL: coercing a locked default to ALL
+ * would jump a calibrating user to the everything view. An unlocked selection is used verbatim, so the
+ * chip un-coerces on its own once history grows.
+ */
+internal fun coercedVitalRange(range: VitalDetailRange, unlocked: List<VitalDetailRange>): VitalDetailRange {
+    if (range in unlocked) return range
+    return VitalDetailRange.entries
+        .filter { it.days != null && it.ordinal <= range.ordinal && it in unlocked }
+        .maxByOrNull { it.ordinal }
+        ?: VitalDetailRange.WEEK
+}
+
 internal fun unlockedVitalRanges(spanDays: Long): List<VitalDetailRange> {
     val ranges = VitalDetailRange.entries
     val unlocked = mutableListOf(ranges.first())
