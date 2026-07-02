@@ -1,5 +1,7 @@
 package com.noop.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,9 +58,13 @@ import com.noop.analytics.LabBookProjection
 import com.noop.analytics.LabMarkerCategory
 import com.noop.analytics.MarkerCatalog
 import com.noop.analytics.WindowedPair
+import com.noop.data.ImportSummary
 import com.noop.data.LabMarkerRow
 import com.noop.data.WhoopDao
+import com.noop.ingest.LabMarkerCsvImport
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -92,6 +99,7 @@ private const val LAB_FLOOR = 4
 @Composable
 fun LabBookScreen(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var markers by remember { mutableStateOf<List<LabMarkerRow>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
@@ -101,6 +109,11 @@ fun LabBookScreen(vm: AppViewModel) {
     var showEditor by remember { mutableStateOf(false) }
     var showDisclaimer by remember { mutableStateOf(false) }
     var detailKey by remember { mutableStateOf<String?>(null) }
+
+    // Markers CSV import (LabMarkerCsvImport, Phase 2).
+    var csvImporting by remember { mutableStateOf(false) }
+    var csvSummary by remember { mutableStateOf<String?>(null) }
+    var csvFailed by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         val all = mutableListOf<LabMarkerRow>()
@@ -112,6 +125,34 @@ fun LabBookScreen(vm: AppViewModel) {
     }
 
     LaunchedEffect(reloadSeq) { reload() }
+
+    // SAF picker for the markers CSV — the same OpenDocument + "*/*" idiom as the Data
+    // Sources importers (csv mime filtering through SAF is unreliable across providers).
+    val csvImportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        csvImporting = true
+        csvSummary = null
+        csvFailed = false
+        scope.launch {
+            val summary = withContext(Dispatchers.IO) {
+                runCatching { LabMarkerCsvImport.importCsv(context, uri, vm.repo) }
+                    .getOrElse { ImportSummary.failure("Lab Book CSV", it.message ?: "failed") }
+            }
+            // Mirror into the exported strap log (issue #421 parity): counts only on
+            // success, the human reason on failure — never a file name, path or value.
+            if (summary.totalRows > 0) {
+                vm.ble.externalLog("Import ${summary.source}: labMarker=${summary.totalRows}")
+            } else {
+                vm.ble.externalLog("Import ${summary.source} failed: ${summary.message}")
+            }
+            csvSummary = summary.message
+            csvFailed = summary.totalRows == 0
+            csvImporting = false
+            reloadSeq++
+        }
+    }
 
     // PERF (#707): lazy scaffold — each top-level section is one `item { }` so only on-screen cards
     // compose + are accessibility-walked on scroll. Order/spacing unchanged (no standalone Spacers; the
@@ -166,9 +207,9 @@ fun LabBookScreen(vm: AppViewModel) {
         }
         }
 
-        // Import entry — reuses the Data Sources import-card idiom. A bulk "Markers CSV" import is a
-        // Phase-2 engine; until it lands the card honestly points the user at Data Sources rather
-        // than fabricating a flow.
+        // Import entry — the Phase-2 markers CSV importer (LabMarkerCsvImport): (date, marker,
+        // value, unit) rows with tolerant headers, catalog + custom marker mapping, and
+        // skip-and-count on anything unreadable. Twin of LabBookView's importCard.
         item {
         NoopCard(padding = 18.dp, tint = Palette.metricAmber) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -183,15 +224,27 @@ fun LabBookScreen(vm: AppViewModel) {
                         Icon(Icons.Filled.FileUpload, contentDescription = null, tint = Palette.metricAmber, modifier = Modifier.size(16.dp))
                     }
                     Text("Import readings", style = NoopType.headline, color = Palette.textPrimary, modifier = Modifier.weight(1f))
-                    StatePill("Coming soon", tone = StrandTone.Neutral, showsDot = false)
                 }
                 Text(
-                    "A bulk markers CSV import (date, marker, value, unit) lands with the file importers in " +
-                        "Data Sources, same as nutrition and lifting. For now, add readings one at a time " +
-                        "above. Everything you import stays on this phone.",
+                    "Bring in a markers CSV (date, marker, value, unit). Names that match the catalog " +
+                        "fold onto your existing markers; anything else comes in as a custom marker. " +
+                        "Rows that can't be read are skipped and counted, never guessed. Everything " +
+                        "you import stays on this phone.",
                     style = NoopType.subhead,
                     color = Palette.textSecondary,
                 )
+                PrimaryActionButton(
+                    if (csvImporting) "Importing…" else "Choose CSV…",
+                    Icons.Filled.FileUpload,
+                    enabled = !csvImporting,
+                ) { csvImportLauncher.launch(arrayOf("*/*")) }
+                csvSummary?.let { s ->
+                    Text(
+                        s,
+                        style = NoopType.subhead,
+                        color = if (csvFailed) Palette.statusWarning else Palette.statusPositive,
+                    )
+                }
             }
         }
         }
