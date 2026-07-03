@@ -62,7 +62,7 @@ final class LiquidMotion {
     /// on Mac Catalyst / simulator it simply stays flat, which reads fine.
     private(set) var tilt: Double = 0
 
-    #if canImport(CoreMotion)
+    #if os(iOS)   // CMMotionManager is iOS/Catalyst only; CoreMotion imports on macOS but the class is unavailable there
     private let manager = CMMotionManager()
     /// Device-motion callbacks land here, OFF the main thread, so 60Hz sensor updates don't contend with
     /// the scroll + Canvas redraws on main. `tilt` is a single 8-byte Double (atomic read/write on ARM64),
@@ -85,7 +85,7 @@ final class LiquidMotion {
         refCount += 1
         guard !started else { return }
         started = true
-        #if canImport(CoreMotion) && !targetEnvironment(macCatalyst)
+        #if os(iOS) && !targetEnvironment(macCatalyst)
         guard manager.isDeviceMotionAvailable else { return }
         manager.deviceMotionUpdateInterval = 1.0 / 60.0
         manager.startDeviceMotionUpdates(to: motionQueue) { [weak self] motion, _ in
@@ -101,7 +101,7 @@ final class LiquidMotion {
         refCount = max(0, refCount - 1)
         guard refCount == 0, started else { return }
         started = false
-        #if canImport(CoreMotion) && !targetEnvironment(macCatalyst)
+        #if os(iOS) && !targetEnvironment(macCatalyst)
         manager.stopDeviceMotionUpdates()
         #endif
         tilt = 0
