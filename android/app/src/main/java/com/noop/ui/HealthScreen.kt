@@ -1808,17 +1808,44 @@ private data class VitalDetailModel(
     val format: (Double) -> String,
 )
 
+/** Metric-detail keys that are NOT plain DailyMetric columns but series the engines/importers persist
+ *  (Fitness Age + Vitality under the computed strap, Steps estimate, Apple active energy). Each Today
+ *  dashboard card taps through to ITS OWN focused trend here (Aaron 2026-07-03), so these load their
+ *  series from the repo on demand rather than off the cached `days` columns. Mirrors iOS metricDetail. */
+private val SERIES_BACKED_VITAL_KEYS = setOf("fitness_age", "vitality", "steps_est", "active_kcal")
+
 @Composable
 fun VitalDetailScreen(vm: AppViewModel, key: String) {
     val days by vm.recentDays.collectAsStateWithLifecycle()
     val tempUnit = UnitPrefs.temperature(LocalContext.current)
-    val detail = remember(days, key, tempUnit) { buildVitalDetail(days, key, tempUnit) }
+    val isSeriesBacked = key in SERIES_BACKED_VITAL_KEYS
+
+    // Series-backed metrics are loaded async from metricSeries; the plain daily vitals build synchronously
+    // off the cached `days`. `seriesLoaded` guards the empty-state so a still-loading trend doesn't flash
+    // "not enough history" before its rows arrive.
+    var seriesDetail by remember(key) { mutableStateOf<VitalDetailModel?>(null) }
+    var seriesLoaded by remember(key) { mutableStateOf(false) }
+    if (isSeriesBacked) {
+        LaunchedEffect(key) {
+            seriesDetail = buildSeriesVitalDetail(vm, key)
+            seriesLoaded = true
+        }
+    }
+    val detail = if (isSeriesBacked) seriesDetail
+    else remember(days, key, tempUnit) { buildVitalDetail(days, key, tempUnit) }
     var range by remember { mutableStateOf(VitalDetailRange.MONTH) }
 
     ScreenScaffold(
         title = detail?.title ?: "Vital Signs",
         subtitle = "Historical trend from cached daily metrics.",
     ) {
+        if (isSeriesBacked && !seriesLoaded) {
+            DataPendingNote(
+                title = "Loading…",
+                body = "Fetching this metric's history.",
+            )
+            return@ScreenScaffold
+        }
         if (detail == null || detail.points.size < 2) {
             DataPendingNote(
                 title = "Not enough history yet",
@@ -2099,6 +2126,49 @@ private fun buildVitalDetail(
     }
     else -> null
     }
+}
+
+/** Build a metric-detail trend for a [SERIES_BACKED_VITAL_KEYS] key by reading its persisted series from
+ *  the repo (async): Fitness Age + Vitality off the computed strap the IntelligenceEngine writes, Steps
+ *  off the resolved step series (imported ∪ estimated), Active Energy off the Apple-Health import. Colours
+ *  match each card's dashboard tint. Returns null for an unknown key. */
+private suspend fun buildSeriesVitalDetail(vm: AppViewModel, key: String): VitalDetailModel? = when (key) {
+    "fitness_age" -> VitalDetailModel(
+        key = key,
+        title = "Fitness Age",
+        unit = "yrs",
+        color = Palette.chargeColor,
+        points = vm.repo.metricSeries(COMPUTED_SOURCE, "fitness_age", "0000-01-01", "9999-12-31")
+            .map { it.day to it.value },
+        format = { it.roundToInt().toString() },
+    )
+    "vitality" -> VitalDetailModel(
+        key = key,
+        title = "Vitality",
+        unit = "",
+        color = Palette.metricPurple,
+        points = vm.repo.metricSeries(COMPUTED_SOURCE, "vitality", "0000-01-01", "9999-12-31")
+            .map { it.day to it.value },
+        format = { it.roundToInt().toString() },
+    )
+    "steps_est" -> VitalDetailModel(
+        key = key,
+        title = "Steps",
+        unit = "steps",
+        color = Palette.metricCyan,
+        points = vm.repo.resolvedSeries("steps_est", "my-whoop", "0000-00-00", "9999-99-99").values,
+        format = { it.roundToInt().toString() },
+    )
+    "active_kcal" -> VitalDetailModel(
+        key = key,
+        title = "Active Energy",
+        unit = "kcal",
+        color = Palette.metricAmber,
+        points = vm.repo.metricSeries("apple-health", "active_kcal", "0000-01-01", "9999-12-31")
+            .map { it.day to it.value },
+        format = { it.roundToInt().toString() },
+    )
+    else -> null
 }
 
 // MARK: - Empty state

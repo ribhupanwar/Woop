@@ -223,11 +223,16 @@ fun TodayScreen(
     onOpenSettings: () -> Unit = {},
     onOpenHydration: () -> Unit = {},
     // #706/#684: the "Your cards" dashboard rows are tappable on iOS but only Hydration navigated on Android.
-    // These push each card's detail (Stress card -> Stress; the overnight vitals + Fitness age / Vitality ->
-    // Health; Sleep -> Sleep), matching the iOS pinnedCardRow destinations. Defaulted to no-ops so the call
-    // site stays compiling; AppRoot binds them to nav.navigate(...) like onOpenHydration.
+    // These push each card's detail (Stress card -> Stress; Sleep -> Sleep), matching the iOS pinnedCardRow
+    // destinations. Defaulted to no-ops so the call site stays compiling; AppRoot binds them to nav.navigate(...)
+    // like onOpenHydration.
     onOpenStress: () -> Unit = {},
     onOpenHealth: () -> Unit = {},
+    // Every metric/vital card (HRV, Resting HR, Respiratory, SpO₂, Skin Temp, Fitness age, Vitality, Steps,
+    // Calories) opens ITS OWN focused detail trend, not the shared Health hub (Aaron 2026-07-03: cards were
+    // wrongly dumping into the Health monitor). Mirrors the iOS liquidCard `metricDetail(key)`. Takes the
+    // vital_detail key; defaults to the Health screen so an unbound caller keeps the old behaviour.
+    onOpenMetric: (String) -> Unit = { onOpenHealth() },
     onOpenSleep: () -> Unit = {},
     // Optional Coupled view card (task #43): a tap-through to the WHOOP-style day screen. Defaulted to a
     // no-op so the call site stays compiling; AppRoot binds it to nav.navigate(CoupledView).
@@ -1156,7 +1161,7 @@ fun TodayScreen(
                 hydrationGoalMl = hydrationGoalMl,
                 onOpenHydration = onOpenHydration,
                 onOpenStress = onOpenStress,
-                onOpenHealth = onOpenHealth,
+                onOpenMetric = onOpenMetric,
                 onOpenSleep = onOpenSleep,
                 onOpenCoupled = onOpenCoupled,
                 onCustomise = { showDashboardEditor = true },
@@ -2659,7 +2664,7 @@ private fun YourCardsSection(
     hydrationGoalMl: Int,
     onOpenHydration: () -> Unit,
     onOpenStress: () -> Unit,
-    onOpenHealth: () -> Unit,
+    onOpenMetric: (String) -> Unit,
     onOpenSleep: () -> Unit,
     onOpenCoupled: () -> Unit,
     onCustomise: () -> Unit,
@@ -2715,14 +2720,14 @@ private fun YourCardsSection(
                         estimatedStepsForDay = estimatedStepsForDay,
                     ),
                     tint = dashboardCardTint(card),
-                    // #706/#684: every card now opens its detail, matching iOS. The Stress card -> Stress; the
-                    // overnight vitals (HRV / Resting HR / Respiratory / SpO₂ / Skin Temp) + Fitness age /
-                    // Vitality / Steps / Calories -> Health (the vital-signs surface, the iOS HealthView twin);
-                    // Sleep -> Sleep; Hydration -> Hydration. The whole row is the button, the chevron the hint.
+                    // #706/#684: every card now opens its OWN detail, matching iOS. The Stress card -> Stress;
+                    // the overnight vitals (HRV / Resting HR / Respiratory / SpO₂ / Skin Temp) + Fitness age /
+                    // Vitality / Steps / Calories -> each metric's focused trend (vital_detail/<key>, the iOS
+                    // metricDetail twin); Sleep -> Sleep; Hydration -> Hydration. Whole row is the button.
                     onClick = dashboardCardDestination(
                         card = card,
                         onOpenStress = onOpenStress,
-                        onOpenHealth = onOpenHealth,
+                        onOpenMetric = onOpenMetric,
                         onOpenSleep = onOpenSleep,
                         onOpenHydration = onOpenHydration,
                         onOpenCoupled = onOpenCoupled,
@@ -2733,14 +2738,32 @@ private fun YourCardsSection(
     }
 }
 
-/** The detail-screen callback a dashboard card opens when tapped, or null if it has no destination. Mirrors
- *  the iOS dashboardCardRow switch: Stress -> Stress; the overnight vitals + Fitness age / Vitality / Steps /
- *  Calories -> Health (the vital-signs hub); Sleep -> Sleep; Hydration -> Hydration. Every card resolves to a
- *  destination, so the chevron is always honest (#706/#684). */
+/** The `vital_detail/<key>` key a metric/vital card opens, or null when the card has its OWN dedicated
+ *  screen (Stress / Sleep / Hydration / Coupled) rather than a metric-detail trend. Mirrors the iOS
+ *  `liquidCard` switch, where every metric/vital card opens `metricDetail(key)` (its own focused trend),
+ *  NOT the shared Health hub (Aaron 2026-07-03). Keys are the Android VitalDetailScreen keys. */
+private fun dashboardCardMetricKey(card: DashboardCard): String? = when (card) {
+    DashboardCard.HRV -> "hrv"
+    DashboardCard.RESTING_HR -> "rhr"
+    DashboardCard.RESPIRATORY -> "resp"
+    DashboardCard.BLOOD_OXYGEN -> "spo2"
+    DashboardCard.SKIN_TEMP -> "skin"
+    DashboardCard.FITNESS_AGE -> "fitness_age"
+    DashboardCard.VITALITY -> "vitality"
+    DashboardCard.STEPS -> "steps_est"
+    DashboardCard.CALORIES -> "active_kcal"
+    // These carry their own full screen, not a per-metric trend.
+    DashboardCard.STRESS, DashboardCard.SLEEP, DashboardCard.HYDRATION, DashboardCard.COUPLED -> null
+}
+
+/** The destination callback a dashboard card opens when tapped. Mirrors the iOS dashboardCardRow switch:
+ *  Stress -> Stress; Sleep -> Sleep; Hydration -> Hydration; Coupled -> the WHOOP-style day screen; every
+ *  metric/vital card -> its OWN focused trend (`vital_detail/<key>` via [onOpenMetric]), matching the iOS
+ *  `metricDetail(key)`. Every card resolves to a destination, so the chevron is always honest (#706/#684). */
 private fun dashboardCardDestination(
     card: DashboardCard,
     onOpenStress: () -> Unit,
-    onOpenHealth: () -> Unit,
+    onOpenMetric: (String) -> Unit,
     onOpenSleep: () -> Unit,
     onOpenHydration: () -> Unit,
     onOpenCoupled: () -> Unit,
@@ -2750,10 +2773,11 @@ private fun dashboardCardDestination(
     DashboardCard.HYDRATION -> onOpenHydration
     // The Coupled view card (#43) taps through to the full WHOOP-style day screen.
     DashboardCard.COUPLED -> onOpenCoupled
-    // Fitness age / Vitality + every overnight vital + steps/calories share the Health detail surface.
-    DashboardCard.FITNESS_AGE, DashboardCard.VITALITY, DashboardCard.HRV, DashboardCard.RESTING_HR,
-    DashboardCard.RESPIRATORY, DashboardCard.BLOOD_OXYGEN, DashboardCard.SKIN_TEMP,
-    DashboardCard.STEPS, DashboardCard.CALORIES -> onOpenHealth
+    // Every overnight vital + Fitness age / Vitality / Steps / Calories opens its own metric-detail trend.
+    else -> {
+        val key = dashboardCardMetricKey(card)
+        if (key != null) ({ onOpenMetric(key) }) else ({})
+    }
 }
 
 /** A dashboard card's WHOOP-token tint (icon + accent). Score cards take their domain colour; vitals take
