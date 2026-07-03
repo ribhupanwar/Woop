@@ -83,6 +83,10 @@ data class CompareMetric(
     val unit: String,
     val source: String,      // "my-whoop" or "apple-health"
     val decimals: Int,
+    // Optional honesty note shown in the metric picker (e.g. BMI is derived from the profile height
+    // when it comes from Health Connect, since Health Connect carries no measured BMI record). The
+    // parity-locked [title] stays identical to the iOS MetricCatalog; the caveat lives here instead.
+    val note: String? = null,
 ) {
     val id: String get() = "$source:$key"
 
@@ -162,7 +166,10 @@ private object CompareCatalog {
         CompareMetric("weight", "Weight", "Health", "kg", "apple-health", 1),
         CompareMetric("body_fat", "Body Fat", "Health", "%", "apple-health", 1),
         CompareMetric("lean_mass", "Lean Body Mass", "Health", "kg", "apple-health", 1),
-        CompareMetric("bmi", "BMI", "Health", "", "apple-health", 1),
+        CompareMetric(
+            "bmi", "BMI", "Health", "", "apple-health", 1,
+            note = "From Health Connect this is derived from your weight and profile height.",
+        ),
         // Nutrition (imported from a food-tracker CSV — calories-in next to calories-out).
         // Mirrors the macOS MetricCatalog entries exactly (same keys + sources, v2.2.0 parity).
         CompareMetric("calories_in", "Calories In", "Nutrition", "kcal", NutritionCsvImporter.SOURCE_ID, 0),
@@ -581,11 +588,20 @@ private fun AddMetricMenu(
                                 }
                             },
                             text = {
-                                Text(
-                                    metric.title,
-                                    style = NoopType.body,
-                                    color = if (enabled) Palette.textPrimary else Palette.textTertiary,
-                                )
+                                Column {
+                                    Text(
+                                        metric.title,
+                                        style = NoopType.body,
+                                        color = if (enabled) Palette.textPrimary else Palette.textTertiary,
+                                    )
+                                    metric.note?.let {
+                                        Text(
+                                            it,
+                                            style = NoopType.footnote,
+                                            color = Palette.textTertiary,
+                                        )
+                                    }
+                                }
                             },
                         )
                     }
