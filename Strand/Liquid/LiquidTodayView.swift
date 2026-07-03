@@ -773,8 +773,15 @@ struct LiquidTodayView: View {
 
         let restSeries = await restA
         let restByDay = Dictionary(restSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
-        // Selected day's Rest; tail fallback only at offset 0 (a past day with no row shows nothing).
-        restScore = restByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? restSeries.last?.value : nil)
+        // Selected day's Rest; tail fallback only at offset 0 (a past day with no row shows nothing) AND
+        // only when the tail night is still fresh. #977: a live 5.0 whose sleep never scores (no overnight
+        // gravity ⇒ no sleep_performance point ever written) used to pin Rest to the weeks-old series tail
+        // forever while Charge advanced; freshness-gate the tail-fallback so a stale tail falls through to
+        // the Rest hero's No-Data/calibrating state (same empty treatment Effort uses) instead of freezing.
+        restScore = TodayView.freshRestScore(
+            todayValue: restByDay[selectedDayKey], lastDay: restSeries.last?.day,
+            lastValue: restSeries.last?.value, isTodaySelected: selectedDayOffset == 0,
+            todayKey: selectedDayKey)
         // StressModel loops the full history to build its baseline — run it OFF the main actor so a big
         // history doesn't stutter the UI. Snapshot the inputs (value types) into the detached task.
         let storedStress = await stressA

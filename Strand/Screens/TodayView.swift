@@ -585,6 +585,21 @@ struct TodayView: View {
         return days > carryFreshnessDays
     }
 
+    /// #977 — HONEST Rest resolution for the selected day. Today's own scored Rest wins; otherwise, ONLY on
+    /// today, tail-fall-back to the last scored night — but ONLY when that night is within the carry-freshness
+    /// window (`isCarryStale == false`). A live 5.0 whose sleep never scores (no overnight gravity ⇒ no
+    /// `sleep_performance` point ever written) used to pin Rest to a weeks-old scored night while Charge kept
+    /// advancing; gating the tail-fallback lets the Rest hero fall through to its No-Data/calibrating state
+    /// instead of freezing on a stale number. The legitimate morning carry of last night's Rest (before today
+    /// scores) is preserved unchanged. Pure + unit-testable. Mirror EXACTLY in Kotlin.
+    static func freshRestScore(todayValue: Double?, lastDay: String?, lastValue: Double?,
+                               isTodaySelected: Bool, todayKey: String) -> Double? {
+        if let v = todayValue { return v }
+        guard isTodaySelected, let lastDay, let lastValue,
+              !isCarryStale(priorDayKey: lastDay, todayKey: todayKey) else { return nil }
+        return lastValue
+    }
+
     /// The carried recovery caption stamp, keyed on that scored day's own date and its recency. Within the
     /// freshness cap it reads "Last night · <date>"; once the carried day is older than the cap (#779) it
     /// reads "Latest sleep · <date>" so a weeks-old import is never surfaced as "Last night". Shared by every
@@ -3859,8 +3874,15 @@ struct TodayView: View {
         // the score reads instead, windowed to the trailing 14 calendar days like every other spark.
         let restSparkLocal = trailingWindow(restSeries, days: 14).map { $0.value }
         sparks["sleep_performance"] = restSparkLocal
-        // The selected day's Rest, falling back to the series tail only when today itself is selected,         // a navigated past day with no Rest row shows ", " rather than borrowing the newest value.
-        let restScoreLocal = restByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? restSeries.last?.value : nil)
+        // The selected day's Rest, falling back to the series tail only when today itself is selected (a
+        // navigated past day with no Rest row shows ", " rather than borrowing the newest value) AND that
+        // tail night is still fresh. #977: a live 5.0 whose sleep never scores used to pin Rest to the
+        // weeks-old series tail forever; gate the tail-fallback on freshness so a stale tail falls through
+        // to the No-Data state instead of freezing.
+        let restScoreLocal = Self.freshRestScore(
+            todayValue: restByDay[selectedDayKey], lastDay: restSeries.last?.day,
+            lastValue: restSeries.last?.value, isTodaySelected: selectedDayOffset == 0,
+            todayKey: selectedDayKey)
         restScore = restScoreLocal
 
         // Component 4, resolve the REAL per-day merge winner for the selected day's derived scores. The

@@ -681,12 +681,19 @@ fun TodayScreen(
     // merges imported + computed sleep_performance (imported-wins), so an importer sees the export's
     // figure and a Bluetooth-only user sees the on-device composite. Null until loaded / no night yet.
     var restScoreForDay by remember { mutableStateOf<Double?>(null) }
-    LaunchedEffect(days, selectedDayKey) {
+    LaunchedEffect(days, selectedDayKey, selectedDayOffset) {
         val byDay = runCatching {
             viewModel.repo.resolvedSeries("sleep_performance", "my-whoop", "0000-00-00", "9999-99-99")
                 .values.associate { it.first to it.second }
         }.getOrDefault(emptyMap())
-        restScoreForDay = byDay[selectedDayKey] ?: byDay.entries.maxByOrNull { it.key }?.value
+        // #977: the tail-fallback (latest scored night) is now freshness-gated. A live 5.0 whose sleep never
+        // scores used to pin Rest to the weeks-old series tail forever while Charge advanced; if that tail is
+        // stale, fall through to null so the Rest ring shows its needs-a-tracked-night state instead of a
+        // frozen number. `selectedDayKey` is today's key at offset 0, so it anchors the freshness check.
+        val latest = byDay.entries.maxByOrNull { it.key }
+        restScoreForDay = freshRestScore(
+            todayValue = byDay[selectedDayKey], lastDay = latest?.key, lastValue = latest?.value,
+            isTodaySelected = selectedDayOffset == 0, today = selectedDayKey)
     }
 
     // The Rest tile's SPARKLINE series (#614 follow-up). The Rest tile's NUMBER is the Rest composite
@@ -3639,6 +3646,22 @@ internal fun isCarryStale(priorDayKey: String, today: String = LocalDate.now().t
     runCatching {
         ChronoUnit.DAYS.between(LocalDate.parse(priorDayKey), LocalDate.parse(today)) > CARRY_FRESHNESS_DAYS
     }.getOrDefault(false)
+
+/** #977 — HONEST Rest resolution for the selected day. Today's own scored Rest wins; otherwise, ONLY on
+ *  today, tail-fall-back to the last scored night — but ONLY when that night is within the carry-freshness
+ *  window ([isCarryStale] == false). A live 5.0 whose sleep never scores (no overnight gravity ⇒ no
+ *  `sleep_performance` point ever written) used to pin Rest to a weeks-old scored night while Charge kept
+ *  advancing; gating the tail-fallback lets the Rest ring fall through to its needs-a-tracked-night state
+ *  instead of freezing on a stale number. The legitimate morning carry of last night's Rest (before today
+ *  scores) is preserved unchanged. Pure + unit-testable. Mirrors iOS TodayView.freshRestScore. */
+internal fun freshRestScore(
+    todayValue: Double?, lastDay: String?, lastValue: Double?,
+    isTodaySelected: Boolean, today: String = LocalDate.now().toString(),
+): Double? {
+    if (todayValue != null) return todayValue
+    if (!isTodaySelected || lastDay == null || lastValue == null) return null
+    return if (isCarryStale(lastDay, today)) null else lastValue
+}
 
 /** The carried recovery caption stamp, keyed on that scored day's own date and its recency. Within the
  *  freshness cap it reads "Last night · <date>"; once the carried day is older than the cap (#779) it reads
