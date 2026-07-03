@@ -129,7 +129,10 @@ struct WorkoutsView: View {
                        // zones card, and a row-per-session table). On a large imported history the eager
                        // VStack built every section + the whole table up-front; the LazyVStack path (which
                        // is byte-identical layout) builds the off-screen sections/rows on demand instead.
-                       lazy: true) {
+                       lazy: true,
+                       // The day-of-sky liquid backdrop, matching Today / Health / Sleep / Trends: a fixed,
+                       // full-bleed time-of-day sky behind the scroll content (it does not scroll).
+                       topBackground: liquidScaffoldSky()) {
             if allRows.isEmpty {
                 VStack(alignment: .leading, spacing: NoopMetrics.space4) {
                     ComingSoon(what: loaded
@@ -610,37 +613,59 @@ struct WorkoutsView: View {
 
     @ViewBuilder
     private func effortHeroGauge(avgStrain: Double, hasData: Bool) -> some View {
-        // Design Reset: the clean flat ring (GlowRing, bloom OFF) used on the Today effort hero — not the
-        // legacy bloom StrainGauge. Value is on the user's selected Effort scale; the arc fills value/max.
+        // The signature liquid gauge: a filling `LiquidVessel` tinted Effort with the typical effort
+        // counting up over it — the SAME hero language Today's score cells, the Sleep Rest hero and the
+        // Trends headline use. The vessel fills to value/max on the user's selected Effort scale; the big
+        // number is the same `effortDisplay` read-out the old ring showed.
         let diameter: CGFloat = 168
         let scaleMax: Double = effortScale == .whoop ? 21 : 100
         let displayValue = UnitFormatter.effortValue(avgStrain, scale: effortScale)
+        let fraction = max(0, min(1, displayValue / scaleMax))
         VStack(spacing: 18) {
             Text("TYPICAL EFFORT")
                 .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.effortColor)
             if hasData {
-                GlowRing(
-                    fraction: displayValue / scaleMax,
-                    value: displayValue,
-                    format: { _ in UnitFormatter.effortDisplay(avgStrain, scale: effortScale) },
-                    color: StrandPalette.effortColor,
-                    diameter: diameter, lineWidth: diameter * 0.10
-                )
-                .frame(maxWidth: .infinity)
-            } else {
-                // No strain data in the window — the faint full-circle track with a centred "No data",
-                // matching the Today empty ring (flat, bloom off).
                 ZStack {
-                    Circle().stroke(StrandPalette.textPrimary.opacity(0.10),
-                                    style: StrokeStyle(lineWidth: diameter * 0.10, lineCap: .round))
+                    // Hero vessel → animated (this is one of the page's live gauges, like the Sleep Rest
+                    // hero and the Today score cells). Reduce-Motion falls back to the static frame inside
+                    // LiquidVessel itself.
+                    LiquidVessel(value: fraction, tint: StrandPalette.effortColor, animated: true)
+                        .frame(width: diameter, height: diameter)
+                    VStack(spacing: 0) {
+                        // `displayValue` is already on the selected scale (0–100 or 0–21), so the count-up
+                        // interpolates it straight to one decimal — no re-scaling in the format closure.
+                        CountUpText(
+                            value: displayValue,
+                            format: { String(format: "%.1f", $0) },
+                            font: StrandFont.rounded(46),
+                            color: StrandPalette.textPrimary
+                        )
+                        .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
+                        Text(effortScale == .whoop ? "of 21" : "of 100")
+                            .font(StrandFont.caption)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                    }
+                    .allowsHitTesting(false)   // taps fall through to the vessel → splash
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(String(localized: "Typical effort \(UnitFormatter.effortDisplay(avgStrain, scale: effortScale))"))
+            } else {
+                // No strain data in the window — an empty vessel (posed, no fill) with a centred "No data",
+                // the honest liquid analogue of the old empty ring.
+                ZStack {
+                    LiquidVessel(value: 0, tint: StrandPalette.effortColor, animated: false)
+                        .frame(width: diameter, height: diameter)
                     Text("No data")
                         .font(StrandFont.headline)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .lineLimit(1).minimumScaleFactor(0.7).fixedSize()
+                        .allowsHitTesting(false)
                 }
-                .frame(width: diameter, height: diameter)
                 .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(String(localized: "Typical effort, no data"))
             }
         }
     }
@@ -1082,7 +1107,18 @@ struct WorkoutsView: View {
     private func sessionRow(_ row: WorkoutRow) -> some View {
         let selectable = WorkoutMerge.isMergeable(row)
         let isSelected = selected.contains(selectionKey(row))
-        return HStack(spacing: 0) {
+        // Same liquid press treatment as the compact row: the PRIMARY tap runs through a Button so the row
+        // settles inward on press, and the inline ••• Menu still captures its own taps. The fixed-width
+        // columns + uniform row height are unchanged (they live inside the Button's label).
+        return Button {
+            if selectionMode {
+                guard selectable else { return }
+                withAnimation(.easeOut(duration: 0.12)) { toggleSelection(row) }
+            } else {
+                openDetail(row)
+            }
+        } label: {
+          HStack(spacing: 0) {
             // #64: leading selection glyph — only rendered in selection mode, so the default table row is
             // byte-identical. A lock replaces the checkmark on imported (read-only) rows.
             if selectionMode {
@@ -1132,27 +1168,24 @@ struct WorkoutsView: View {
             }
             .frame(width: ColWidth.source, alignment: .trailing)
 
-            // Visible per-row actions affordance (#1). Mirrors the right-click contextMenu so the
-            // relabel/edit/dismiss actions are discoverable without knowing to Control-click. Hidden in
-            // selection mode (the toolbar owns the actions there); the column keeps its width for alignment.
-            if selectionMode {
-                Color.clear.frame(width: ColWidth.action)
-            } else {
+            // The ••• column keeps its reserved width for alignment inside the button label, but the actual
+            // interactive Menu is layered as a trailing overlay OUTSIDE the button (below) so it captures
+            // its own taps rather than being swallowed by the row button (the DevicesView #318 idiom).
+            Color.clear.frame(width: ColWidth.action)
+          }
+          .padding(.horizontal, NoopMetrics.cardPadding)
+          .frame(height: RowMetrics.rowHeight)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        // Visible per-row actions affordance (#1/#318): the ••• menu sits on top of the row at the trailing
+        // edge (over its reserved column) so relabel/edit/dismiss stay discoverable and tappable. Hidden in
+        // selection mode (the toolbar owns the actions there).
+        .overlay(alignment: .trailing) {
+            if !selectionMode {
                 rowActionsMenu(row)
                     .frame(width: ColWidth.action, alignment: .trailing)
-            }
-        }
-        .padding(.horizontal, NoopMetrics.cardPadding)
-        .frame(height: RowMetrics.rowHeight)
-        .contentShape(Rectangle())
-        // PRIMARY tap → the read-only detail (#410), or toggle selection when in select mode. The trailing
-        // ••• Menu button consumes its own tap, so tapping the actions glyph still opens the menu.
-        .onTapGesture {
-            if selectionMode {
-                guard selectable else { return }
-                withAnimation(.easeOut(duration: 0.12)) { toggleSelection(row) }
-            } else {
-                openDetail(row)
+                    .padding(.trailing, NoopMetrics.cardPadding)
             }
         }
         .contextMenu { if !selectionMode { rowMenu(row) } }
@@ -1169,44 +1202,62 @@ struct WorkoutsView: View {
     private func compactSessionRow(_ row: WorkoutRow) -> some View {
         let selectable = WorkoutMerge.isMergeable(row)
         let isSelected = selected.contains(selectionKey(row))
-        return HStack(spacing: 12) {
-            if selectionMode {
-                compactSelectionGlyph(selectable: selectable, isSelected: isSelected)
-            }
-            Image(systemName: sportIcon(row.sport))
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(StrandPalette.textSecondary)
-                .frame(width: 22)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    Text(WorkoutSource.displaySport(row.sport))
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Text(Self.effortCellLabel(strain: row.strain, scale: effortScale))
-                        .font(StrandFont.number(15))
-                        .foregroundStyle(row.strain != nil ? StrandPalette.effortColor : StrandPalette.textTertiary)
-                }
-                Text(compactRowSubtitle(row))
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(StrandPalette.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            sourceBadge(row.source)
-            if !selectionMode { rowActionsMenu(row) }
-        }
-        .padding(.horizontal, NoopMetrics.cardPadding)
-        .frame(minHeight: 56)
-        .contentShape(Rectangle())
-        .onTapGesture {
+        // The row's PRIMARY tap runs through a Button so it earns the liquid settle-inward press
+        // (LiquidPressStyle) like every other tappable liquid surface. The trailing ••• Menu is layered as
+        // a trailing overlay OUTSIDE the button (below) so it captures its own taps rather than being
+        // swallowed by the row button (#318). Selection-mode taps toggle instead of opening the detail.
+        return Button {
             if selectionMode {
                 guard selectable else { return }
                 withAnimation(.easeOut(duration: 0.12)) { toggleSelection(row) }
             } else {
                 openDetail(row)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                if selectionMode {
+                    compactSelectionGlyph(selectable: selectable, isSelected: isSelected)
+                }
+                Image(systemName: sportIcon(row.sport))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(StrandPalette.textSecondary)
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 8) {
+                        Text(WorkoutSource.displaySport(row.sport))
+                            .font(StrandFont.subhead)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Text(Self.effortCellLabel(strain: row.strain, scale: effortScale))
+                            .font(StrandFont.number(15))
+                            .foregroundStyle(row.strain != nil ? StrandPalette.effortColor : StrandPalette.textTertiary)
+                    }
+                    Text(compactRowSubtitle(row))
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                sourceBadge(row.source)
+                // Reserve the ••• column width inside the label; the interactive Menu is overlaid on top
+                // (below) so it captures its own taps instead of being swallowed by the row button (#318).
+                if !selectionMode {
+                    Color.clear.frame(width: ColWidth.action)
+                }
+            }
+            .padding(.horizontal, NoopMetrics.cardPadding)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(LiquidPressStyle())
+        // Visible per-row ••• actions (#1/#318), layered at the trailing edge over its reserved column.
+        .overlay(alignment: .trailing) {
+            if !selectionMode {
+                rowActionsMenu(row)
+                    .frame(width: ColWidth.action, alignment: .trailing)
+                    .padding(.trailing, NoopMetrics.cardPadding)
             }
         }
         .contextMenu { if !selectionMode { rowMenu(row) } }
