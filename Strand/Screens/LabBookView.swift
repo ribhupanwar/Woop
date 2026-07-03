@@ -58,7 +58,10 @@ struct LabBookView: View {
             // each carrying its own sparkline-bearing cards. The LazyVStack path builds the off-screen
             // categories on demand — byte-identical layout — so a logbook with many categories doesn't
             // render every section + sparkline up-front.
-            lazy: true
+            lazy: true,
+            // Liquid finish: the day-of-sky backdrop, so Lab Book sits in the same liquid atmosphere as
+            // Today and the other analysis screens.
+            topBackground: liquidScaffoldSky()
         ) {
             VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
                 headerCard
@@ -384,7 +387,9 @@ struct LabBookView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        // Liquid press language: the settle-inward LiquidPressStyle the Today / batch-1 rows use, so
+        // opening a marker's detail feels physical (replaces the flat .plain style).
+        .buttonStyle(LiquidPressStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(displayName(for: key)), latest \(latestLabel(latest, key: key)), \(series.count) readings")
     }
@@ -767,6 +772,12 @@ private struct MarkerDetailView: View {
         let tint = LabBookSignals.correlationColor(c.r)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
+                // A small liquid vessel posed at the association STRENGTH (|r|, a neutral 0–1 statistical
+                // magnitude — never a clinical value), tinted by the relationship's own colour. Matches
+                // Compare's pair card. Decorative — the r read-out + sentence carry the meaning.
+                LiquidVessel(value: min(abs(c.r), 1), tint: tint, animated: false)
+                    .frame(width: 30, height: 30)
+                    .accessibilityHidden(true)
                 Text("\(displayName) ↔ \(signal?.title ?? "")")
                     .font(StrandFont.headline)
                     .foregroundStyle(StrandPalette.textPrimary)
@@ -783,6 +794,10 @@ private struct MarkerDetailView: View {
                 .font(StrandFont.subhead)
                 .foregroundStyle(StrandPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            // The association strength as a liquid tube (the horizontal magnitude idiom), reading |r|
+            // from no link (0) to a perfect one (1). Decorative and non-clinical.
+            LiquidTube(frac: min(abs(c.r), 1), tint: tint, height: 8, animated: false)
+                .accessibilityHidden(true)
             // The mandatory clause for markers (spec §"On-device algorithm").
             Text("\(n) readings used · \(LabBookSignals.strengthWord(c.r)) \(LabBookSignals.directionWord(c.r)) association. This is your own data sitting side by side. It's not a medical finding, and it shows association, not cause.")
                 .font(StrandFont.footnote)
