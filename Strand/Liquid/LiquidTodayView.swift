@@ -50,6 +50,11 @@ struct LiquidTodayView: View {
     // Resolve both ONCE per data/day change in load() and read the cache in body (O(1)).
     @State private var cachedDisplayDay: DailyMetric?
     @State private var cachedReadiness: ReadinessEngine.Readiness?
+    /// The recovery-INDEPENDENT prior-day vitals carry (HRV / RHR / respiratory), resolved ONCE in load()
+    /// alongside cachedDisplayDay. Fixes the v8 rollover blank: after 04:00, before tonight's sleep scores,
+    /// today's row has no vitals yet, so these fall back to the last night that recorded them. Never
+    /// resolved in body — body rescans repo.days ~23× per pass, and this cache keeps that read O(1).
+    @State private var cachedVitalsDay: DailyMetric?
     /// Flips true once the first load() completes. Until then the hero gauges + sky render STATIC so the
     /// launch data-churn (refresh publish + BLE/HR notifies) isn't fighting 4 live canvases + CoreMotion.
     @State private var dataLoaded = false
@@ -84,6 +89,9 @@ struct LiquidTodayView: View {
     /// The DailyMetric shown for the selected day — read from the cache resolved in load() (was an
     /// O(days) `.last(where:)` scan referenced ~23× per body pass; now O(1)).
     private var displayDay: DailyMetric? { cachedDisplayDay }
+    /// The prior-day vitals carry (see `cachedVitalsDay`), read O(1) from the cache. Non-nil only at
+    /// offset 0 (today); a navigated past day carries nothing (its own row is the whole story).
+    private var vitalsDay: DailyMetric? { cachedVitalsDay }
 
     /// The actual O(days) resolution. Offset 0 prefers live repo.today; past offsets look up. Run ONCE
     /// per data/day change from load(), never from body.
@@ -566,20 +574,27 @@ struct LiquidTodayView: View {
     // MARK: - Recovery vitals
 
     private var recoveryVitalsSection: some View {
-        card {
+        // PER-FIELD, today-first carry: each vital reads today's own value, else falls back to the prior
+        // day that recorded it (`vitalsDay`). Coalesce ONCE so the number and its fill fraction agree.
+        let hrv = displayDay?.avgHrv ?? vitalsDay?.avgHrv
+        let rhr = (displayDay?.restingHr ?? vitalsDay?.restingHr).map(Double.init)
+        let resp = displayDay?.respRateBpm ?? vitalsDay?.respRateBpm
+        return card {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("RECOVERY VITALS").font(StrandFont.overline).tracking(1.6)
                         .foregroundStyle(StrandPalette.textSecondary)
                     Spacer()
-                    Text(lastNightLine).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                    if let line = vitalsProvenanceLine {
+                        Text(line).font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                    }
                 }
-                vitalRow("Heart-rate variability", unitText(displayDay?.avgHrv, "ms"),
-                         StrandPalette.metricCyan, fracOver(displayDay?.avgHrv, 120))
-                vitalRow("Resting heart rate", unitText(displayDay?.restingHr.map(Double.init), "bpm"),
-                         StrandPalette.metricRose, fracOver(displayDay?.restingHr.map(Double.init), 100))
-                vitalRow("Breaths per minute", unitText(displayDay?.respRateBpm, "rpm", decimals: 1),
-                         StrandPalette.accent, fracOver(displayDay?.respRateBpm, 24))
+                vitalRow("Heart-rate variability", unitText(hrv, "ms"),
+                         StrandPalette.metricCyan, fracOver(hrv, 120))
+                vitalRow("Resting heart rate", unitText(rhr, "bpm"),
+                         StrandPalette.metricRose, fracOver(rhr, 100))
+                vitalRow("Breaths per minute", unitText(resp, "rpm", decimals: 1),
+                         StrandPalette.accent, fracOver(resp, 24))
             }
         }
     }
@@ -596,14 +611,18 @@ struct LiquidTodayView: View {
     // MARK: - Key metrics grid
 
     private var keyMetricsSection: some View {
-        VStack(spacing: 8) {
+        // HRV / Rest HR tiles share the recovery vitals' per-field today-first carry so they don't blank at
+        // the rollover while Recovery/Strain/Sleep stay strictly today's own (they are scored surfaces).
+        let hrv = displayDay?.avgHrv ?? vitalsDay?.avgHrv
+        let rhr = (displayDay?.restingHr ?? vitalsDay?.restingHr).map(Double.init)
+        return VStack(spacing: 8) {
             sectionHead("KEY METRICS", trailing: "14-day trend")
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                 ktile("Recovery", intText(displayDay?.recovery), "%", StrandPalette.chargeColor, frac(displayDay?.recovery))
                 ktile("Strain", intText(displayDay?.strain), "%", StrandPalette.effortColor, frac(displayDay?.strain))
                 ktile("Sleep", sleepText, "", StrandPalette.restColor, fracOver(displayDay?.totalSleepMin, 480))
-                ktile("HRV", intText(displayDay?.avgHrv), "ms", StrandPalette.metricCyan, fracOver(displayDay?.avgHrv, 120))
-                ktile("Rest HR", intText(displayDay?.restingHr.map(Double.init)), "bpm", StrandPalette.metricRose, fracOver(displayDay?.restingHr.map(Double.init), 100))
+                ktile("HRV", intText(hrv), "ms", StrandPalette.metricCyan, fracOver(hrv, 120))
+                ktile("Rest HR", intText(rhr), "bpm", StrandPalette.metricRose, fracOver(rhr, 100))
                 ktile("Steps", stepsText, "", StrandPalette.chargeColor, fracOver(stepCount, 10000))
             }
             NavigationLink { MetricExplorerView() } label: {
@@ -731,6 +750,10 @@ struct LiquidTodayView: View {
         let day = resolveDisplayDay()
         cachedDisplayDay = day
         cachedReadiness = ReadinessEngine.evaluate(days: repo.days, today: day?.day)
+        // Prior-day vitals carry, resolved ONCE here (never in body). Bound to today's own key so it can't
+        // echo today's still-forming row; only on today (a past day's own row is the whole story).
+        let tkey = cachedDisplayDay?.day ?? selectedDayKey
+        cachedVitalsDay = (selectedDayOffset == 0) ? Repository.lastVitalsDay(days: repo.days, todayKey: tkey) : nil
 
         let cal = Calendar.current
         let dayStart = cal.startOfDay(for: selectedLogicalDay)
@@ -868,12 +891,20 @@ struct LiquidTodayView: View {
         return f.string(from: selectedLogicalDay)
     }
 
-    private var lastNightLine: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "d MMM"
-        let d = Calendar.current.date(byAdding: .day, value: -1, to: Date()) ?? Date()
-        return "Last night · \(f.string(from: d))"
+    /// Provenance caption for the recovery-vitals card, keyed on the row a vital actually came from — NOT a
+    /// hardcoded "yesterday". If ANY shown vital fell back to `vitalsDay` (today's own value is nil and the
+    /// carried row supplies it), it stamps that row's date via the shared `TodayView.carriedCaption`, so a
+    /// genuine post-rollover carry reads "Last night · <date>" and a weeks-old carry relabels to
+    /// "Latest sleep · <date>" (#779) instead of a false "Last night". When every shown vital is today's
+    /// own (or there's nothing to carry), it returns nil — the card must not claim "Last night" at all.
+    private var vitalsProvenanceLine: String? {
+        guard let carried = vitalsDay else { return nil }
+        let carriedHrv = displayDay?.avgHrv == nil && carried.avgHrv != nil
+        let carriedRhr = displayDay?.restingHr == nil && carried.restingHr != nil
+        let carriedResp = displayDay?.respRateBpm == nil && carried.respRateBpm != nil
+        guard carriedHrv || carriedRhr || carriedResp else { return nil }
+        return TodayView.carriedCaption(priorDayKey: carried.day,
+                                        todayKey: displayDay?.day ?? selectedDayKey)
     }
 }
 

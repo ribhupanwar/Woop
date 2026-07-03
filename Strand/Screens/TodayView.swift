@@ -505,6 +505,16 @@ struct TodayView: View {
             isCalibrating: recoveryCalibration != nil)
     }
 
+    /// The recovery-INDEPENDENT prior-day vitals carry for the recovery-VITALS card only (HRV / RHR /
+    /// respiratory). Unlike `lastScoredRecoveryDay` (gated on the prior night's recovery), this carries the
+    /// last night that recorded any vital, so a night with real HRV/RHR but a null recovery still feeds the
+    /// vitals — it is read PER-FIELD, today-first, so today's own value always wins. Only on today (a
+    /// navigated past day shows its own row verbatim); today's own key bounds it so it can't echo today.
+    private var lastVitalsDay: DailyMetric? {
+        guard selectedDayOffset == 0 else { return nil }
+        return Repository.lastVitalsDay(days: repo.days, todayKey: displayDay?.day ?? selectedDayKey)
+    }
+
     /// Pure carry-over selector behind `lastScoredRecoveryDay`, extracted so the gate + selection can be
     /// unit-tested without a live view (mirrors `buildingHintCopy` / the Android `lastScoredRecoveryDay`).
     /// Returns the freshest scored prior row to carry over, or nil. `days` is oldest→newest; the chosen
@@ -2293,10 +2303,20 @@ struct TodayView: View {
     /// (e.g. a BLE-only night with no SpO₂), and today's own value always wins the instant it lands.
     @ViewBuilder
     private func recoveryVitalsCard(_ d: DailyMetric?) -> some View {
-        // The row the vitals read from: today's own row when it carries recovery, else the carried-over
-        // prior scored day (only when we're carrying, `lastScoredRecoveryDay` is gated to that case).
-        let carried = lastScoredRecoveryDay
-        let vd = carried ?? d
+        // PER-FIELD, today-first carry (not a whole-row swap): each vital reads today's own value, else
+        // falls back to the last night that recorded THAT vital (`lastVitalsDay`, recovery-INDEPENDENT — a
+        // night with real HRV/RHR but a null recovery is a valid source, which the old `lastScoredRecoveryDay`
+        // row-swap skipped). Today's own value always wins the instant it lands.
+        let vd = lastVitalsDay
+        let hrv = d?.avgHrv ?? vd?.avgHrv
+        let rhr = d?.restingHr ?? vd?.restingHr
+        let resp = d?.respRateBpm ?? vd?.respRateBpm
+        // The provenance row a shown vital fell back to (nil when every shown vital is today's own): stamps
+        // that row's own date, so the footnote can't claim "Last night" for a value that IS today's.
+        let carriedFromHrv = d?.avgHrv == nil && vd?.avgHrv != nil
+        let carriedFromRhr = d?.restingHr == nil && vd?.restingHr != nil
+        let carriedFromResp = d?.respRateBpm == nil && vd?.respRateBpm != nil
+        let provenance: DailyMetric? = (carriedFromHrv || carriedFromRhr || carriedFromResp) ? vd : nil
         NoopCard(tint: StrandPalette.chargeColor) {
             VStack(spacing: 0) {
                 // DEBUG promo harness: pin HRV / Resting HR to the active frame's values. No-op otherwise.
@@ -2308,24 +2328,24 @@ struct TodayView: View {
                 let demoRhr: String? = nil
                 #endif
                 metricRow(icon: "waveform.path.ecg", label: "HRV",
-                          value: demoHrv ?? (vd?.avgHrv.map { "\(Int($0.rounded()))" } ?? "—"), unit: "ms",
+                          value: demoHrv ?? (hrv.map { "\(Int($0.rounded()))" } ?? "—"), unit: "ms",
                           tint: StrandPalette.metricCyan)
                 Divider().overlay(StrandPalette.hairline)
                 metricRow(icon: "heart.fill", label: "Resting HR",
-                          value: demoRhr ?? (vd?.restingHr.map { "\($0)" } ?? "—"), unit: "bpm",
+                          value: demoRhr ?? (rhr.map { "\($0)" } ?? "—"), unit: "bpm",
                           tint: StrandPalette.metricRose)
                 Divider().overlay(StrandPalette.hairline)
                 metricRow(icon: "lungs.fill", label: "Respiratory",
-                          // Carried day uses its OWN respiratory; a non-carrying today keeps the
-                          // sparkline-tail fallback the tile uses so a sparse-but-recent value still reads.
-                          value: vd?.respRateBpm.map { String(format: "%.1f", $0) }
-                              ?? (carried == nil ? latestString("resp_rate", decimals: 1) : "—"),
+                          // Today's own respiratory, else the carried night's; a non-carrying today keeps the
+                          // sparkline-tail fallback so a sparse-but-recent value still reads.
+                          value: resp.map { String(format: "%.1f", $0) }
+                              ?? (vd == nil ? latestString("resp_rate", decimals: 1) : "—"),
                           unit: "rpm",
                           tint: StrandPalette.accent)
-                // ONE provenance footnote when these are carried prior-day vitals (not today's), matching
-                // the carried Charge ring's "Last night · <date>" stamp, so the whole recovery side is
-                // consistently labelled as a prior read rather than silently passing yesterday off as today.
-                if let prior = carried {
+                // ONE provenance footnote when a shown vital is a carried prior-day read (not today's),
+                // stamped with THAT row's date via the shared caption (which relabels a weeks-old carry to
+                // "Latest sleep", #779), so a prior read is never silently passed off as today.
+                if let prior = provenance {
                     HStack(spacing: 4) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 10, weight: .semibold))
