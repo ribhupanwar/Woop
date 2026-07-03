@@ -15,7 +15,8 @@ enum LiquidRender {
     /// A circular vessel of liquid filled to `sim.level`, tinted, with parallax
     /// slosh, a light band that follows tilt, surface glints, flake and droplets.
     static func vessel(_ base: GraphicsContext, _ size: CGSize, _ sim: LiquidSim, now: Double, tint: Color) {
-        let R = min(size.width, size.height) / 2 - 1.5
+        // Floor at 1 so a degenerate sub-3pt Canvas can't drive R negative (negative well rect / chord math).
+        let R = max(1, min(size.width, size.height) / 2 - 1.5)
         let ext = R * 1.8
         let cx = size.width / 2, cy = size.height / 2
         let well = CGRect(x: -R, y: -R, width: 2 * R, height: 2 * R)

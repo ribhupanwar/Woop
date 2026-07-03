@@ -229,7 +229,7 @@ fun TodayScreen(
     onOpenStress: () -> Unit = {},
     onOpenHealth: () -> Unit = {},
     // Every metric/vital card (HRV, Resting HR, Respiratory, SpO₂, Skin Temp, Fitness age, Vitality, Steps,
-    // Calories) opens ITS OWN focused detail trend, not the shared Health hub (Aaron 2026-07-03: cards were
+    // Calories) opens ITS OWN focused detail trend, not the shared Health hub (2026-07-03: cards were
     // wrongly dumping into the Health monitor). Mirrors the iOS liquidCard `metricDetail(key)`. Takes the
     // vital_detail key; defaults to the Health screen so an unbound caller keeps the old behaviour.
     onOpenMetric: (String) -> Unit = { onOpenHealth() },
@@ -2741,7 +2741,7 @@ private fun YourCardsSection(
 /** The `vital_detail/<key>` key a metric/vital card opens, or null when the card has its OWN dedicated
  *  screen (Stress / Sleep / Hydration / Coupled) rather than a metric-detail trend. Mirrors the iOS
  *  `liquidCard` switch, where every metric/vital card opens `metricDetail(key)` (its own focused trend),
- *  NOT the shared Health hub (Aaron 2026-07-03). Keys are the Android VitalDetailScreen keys. */
+ *  NOT the shared Health hub (2026-07-03). Keys are the Android VitalDetailScreen keys. */
 private fun dashboardCardMetricKey(card: DashboardCard): String? = when (card) {
     DashboardCard.HRV -> "hrv"
     DashboardCard.RESTING_HR -> "rhr"

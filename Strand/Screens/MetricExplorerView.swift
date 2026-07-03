@@ -619,13 +619,13 @@ struct MetricDetailView: View {
         }()
         let fraction = value.flatMap { metricGaugeFraction(metric, value: $0) }
 
-        // Gap fix (Aaron 2026-07-02): draw the starfield as the content's BACKGROUND, not as a
+        // Gap fix (2026-07-02): draw the starfield as the content's BACKGROUND, not as a
         // stretching ZStack sibling — an unconstrained ScenicHeroBackground inside a ScrollView filled
         // the whole viewport and left a huge blank band above the chart. As a .background it sizes to
         // the hero content, so the number/ring sits directly under the range pill.
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                 // Category + title on their OWN full-width row so a long title ("Heart Rate Variability")
-                // is never crushed into a letter-per-line column by the range pill (Aaron 2026-07-02).
+                // is never crushed into a letter-per-line column by the range pill (2026-07-02).
                 VStack(alignment: .leading, spacing: 2) {
                     Text(MetricCatalog.categoryDisplayName(metric.category).uppercased()).strandOverline()
                     Text(metric.title)

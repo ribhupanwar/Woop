@@ -144,7 +144,7 @@ func liquidScaffoldSky(height: CGFloat = 240) -> AnyView {
 
 /// A STATIC time-of-day sky, rendered ONCE (no TimelineView → CoreAnimation caches it as a stable layer,
 /// zero per-frame cost) for the scaffold backgrounds on the chart-heavy tabs. An always-animating Canvas
-/// behind the charts stole frame headroom and caused stutter (Aaron 2026-07-02); this is the same look
+/// behind the charts stole frame headroom and caused stutter (2026-07-02); this is the same look
 /// minus the twinkle/breath, matching the classic app's static scene image for scroll perf.
 struct LiquidSkyStatic: View {
     var hour: Double?

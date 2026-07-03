@@ -71,7 +71,7 @@ struct RootTabView: View {
             // Tab crossfade — README §Motion: ~240ms opacity swap between tab roots, global calm
             // easing cubic-bezier(0.22,1,0.36,1).
             .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24), value: selectedTab)
-            // Swipe left/right anywhere to move between tabs (Aaron 2026-07-02). Simultaneous so vertical
+            // Swipe left/right anywhere to move between tabs (2026-07-02). Simultaneous so vertical
             // scrolling still works; only a decisive horizontal flick switches tabs.
             .simultaneousGesture(
                 DragGesture(minimumDistance: 24)
@@ -88,7 +88,7 @@ struct RootTabView: View {
             )
 
             FloatingTabBar(selection: $selectedTab, onReselect: { _ in
-                // Re-tapping the active tab refreshes that page's data (Aaron 2026-07-02).
+                // Re-tapping the active tab refreshes that page's data (2026-07-02).
                 Task { await repo.refresh() }
             })
         }
@@ -527,7 +527,7 @@ private struct QuickActionSheet: View {
 /// Glass where available, a `.ultraThinMaterial` fallback below. Replaces the hidden native tab bar.
 private struct FloatingTabBar: View {
     @Binding var selection: Int
-    /// Fires when the user taps the ALREADY-active tab (Aaron 2026-07-02: re-tap should refresh).
+    /// Fires when the user taps the ALREADY-active tab (2026-07-02: re-tap should refresh).
     var onReselect: (Int) -> Void = { _ in }
 
     private struct Item: Identifiable { let title: LocalizedStringKey; let icon: String; let tag: Int; var id: Int { tag } }
@@ -549,7 +549,7 @@ private struct FloatingTabBar: View {
         .padding(.horizontal, 8)
         .liquidGlass(in: Capsule())
         // Over the liquid Today the sky ends at ~340pt, so the bar floats on flat opaque surfaceBase —
-        // a blur material has nothing to dissolve and hardens into a solid lozenge (Aaron 2026-07-02:
+        // a blur material has nothing to dissolve and hardens into a solid lozenge (2026-07-02:
         // "clips into a solid shape"). A faint translucent scrim INSIDE the same Capsule keeps the pill
         // reading as tinted glass, not a slab, even against dead-flat colour.
         .background(.white.opacity(0.06), in: Capsule())

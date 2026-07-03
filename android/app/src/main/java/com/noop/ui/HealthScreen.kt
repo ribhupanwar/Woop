@@ -1810,7 +1810,7 @@ private data class VitalDetailModel(
 
 /** Metric-detail keys that are NOT plain DailyMetric columns but series the engines/importers persist
  *  (Fitness Age + Vitality under the computed strap, Steps estimate, Apple active energy). Each Today
- *  dashboard card taps through to ITS OWN focused trend here (Aaron 2026-07-03), so these load their
+ *  dashboard card taps through to ITS OWN focused trend here (2026-07-03), so these load their
  *  series from the repo on demand rather than off the cached `days` columns. Mirrors iOS metricDetail. */
 private val SERIES_BACKED_VITAL_KEYS = setOf("fitness_age", "vitality", "steps_est", "active_kcal")
 
@@ -2159,15 +2159,25 @@ private suspend fun buildSeriesVitalDetail(vm: AppViewModel, key: String): Vital
         points = vm.repo.resolvedSeries("steps_est", "my-whoop", "0000-00-00", "9999-99-99").values,
         format = { it.roundToInt().toString() },
     )
-    "active_kcal" -> VitalDetailModel(
-        key = key,
-        title = "Active Energy",
-        unit = "kcal",
-        color = Palette.metricAmber,
-        points = vm.repo.metricSeries("apple-health", "active_kcal", "0000-01-01", "9999-12-31")
-            .map { it.day to it.value },
-        format = { it.roundToInt().toString() },
-    )
+    "active_kcal" -> {
+        // Read active energy from the SAME apple-health ∪ health-connect union the Today Calories card uses.
+        // Health Connect (the common Android source) writes activeKcal only into the AppleDaily table under
+        // "health-connect", not as an active_kcal metricSeries row, so reading metricSeries("apple-health") alone
+        // opened an empty detail for a Health-Connect-only user whose card DID show a number. One point per day,
+        // apple-health winning a tie (matching the card's newest-value read), ascending.
+        val rows = vm.repo.appleDaily("apple-health", "0000-01-01", "9999-12-31") +
+            vm.repo.appleDaily("health-connect", "0000-01-01", "9999-12-31")
+        val byDay = LinkedHashMap<String, Double>()
+        for (r in rows) r.activeKcal?.let { byDay.putIfAbsent(r.day, it) }
+        VitalDetailModel(
+            key = key,
+            title = "Active Energy",
+            unit = "kcal",
+            color = Palette.metricAmber,
+            points = byDay.entries.sortedBy { it.key }.map { it.key to it.value },
+            format = { it.roundToInt().toString() },
+        )
+    }
     else -> null
 }
 

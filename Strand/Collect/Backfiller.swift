@@ -330,7 +330,7 @@ final class Backfiller {
             // decodes to correct wall time, and we can persist + ack + upload. The correlation is only
             // truly required to map REALTIME (type-40/43) device-epoch timestamps, never in a hist chunk.
             let ref = clockRef ?? { let now = Int(Date().timeIntervalSince1970); return ClockRef(device: now, wall: now) }()
-            // PERF (Aaron 2026-07-03): the heavy decode — parseFrame ×N, extractHistoricalStreams, and the
+            // PERF (2026-07-03): the heavy decode — parseFrame ×N, extractHistoricalStreams, and the
             // reject-classifier's SECOND full parse — runs OFF the main actor so a long history offload no
             // longer freezes the UI (was ~54K parseFrame calls on main for a 27K-row import). Pure functions
             // only; every @Published write, the store insert, and the ack/cursor sequence below stay on the

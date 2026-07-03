@@ -328,7 +328,7 @@ fun AppRoot(viewModel: AppViewModel = viewModel()) {
                         onOpenStress = { nav.navigate(Destination.Stress.route) },
                         onOpenHealth = { nav.navigate(Destination.Health.route) },
                         // Every metric/vital card opens its OWN focused detail trend (vital_detail/<key>),
-                        // not the shared Health hub (Aaron 2026-07-03). Mirrors the iOS liquidCard metricDetail.
+                        // not the shared Health hub (2026-07-03). Mirrors the iOS liquidCard metricDetail.
                         onOpenMetric = { key -> nav.navigate("vital_detail/$key") },
                         onOpenSleep = { nav.navigateTopLevel(Destination.Sleep.route) },
                         // Optional Coupled view card (task #43): a normal push so back returns to Today.

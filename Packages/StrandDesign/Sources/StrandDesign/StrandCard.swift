@@ -61,7 +61,7 @@ public struct FrostedCardSurface: View {
                     )
                 )
             )
-            // Liquid redesign (Aaron 2026-07-02): a 1px resting hairline in BOTH themes so every card
+            // Liquid redesign (2026-07-02): a 1px resting hairline in BOTH themes so every card
             // matches the liquid home card's edge (LiquidTodayView.card), not just fill contrast.
             .overlay(shape.strokeBorder(StrandPalette.hairline, lineWidth: 1))
             // LIGHT raises white cards off the warm-paper canvas with a soft resting drop shadow; DARK

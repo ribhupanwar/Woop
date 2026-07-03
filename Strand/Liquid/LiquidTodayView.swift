@@ -30,7 +30,7 @@ struct LiquidTodayView: View {
     @State private var stress: Double?             // StressModel(...).score, 0–3
     @State private var fitnessAge: Double?         // exploreSeries("fitness_age").last
     @State private var vitality: Double?           // exploreSeries("vitality").last
-    @State private var stepsEst: Double?           // exploreSeries("steps_est").last (fallback)
+    @State private var stepsEst: Double?           // steps_est, day-keyed to the selected day (fallback)
     @State private var hrValues: [Double] = []     // hrBuckets since midnight → 5-min means
     @State private var workouts: [WorkoutRow] = [] // newest-first
 
@@ -217,7 +217,7 @@ struct LiquidTodayView: View {
         // this owns the horizontal gesture here.
         .simultaneousGesture(daySwipeGesture)
         // A light tick when the day changes (swipe or calendar pick) — the WHOOP-style day nav should
-        // feel physical (Aaron: "every tiny little thing").
+        // feel physical ("every tiny little thing").
         .liquidSelectionHaptic(trigger: selectedDayOffset)
         // A firm tick when the pull passes the release threshold (the custom liquid refresh).
         .liquidMediumHaptic(trigger: pullHaptic)
@@ -468,7 +468,7 @@ struct LiquidTodayView: View {
     }
 
     /// The per-metric detail page (its own data screen with chart + history), looked up by catalog key.
-    /// Each card opens ITS metric (Aaron 2026-07-02: not the shared Health screen). Falls back to Health
+    /// Each card opens ITS metric (2026-07-02: not the shared Health screen). Falls back to Health
     /// only if the key is somehow absent from the catalog.
     @ViewBuilder
     private func metricDetail(_ key: String) -> some View {
@@ -761,7 +761,12 @@ struct LiquidTodayView: View {
         }.value
         fitnessAge = (await fitA).last?.value   // history-wide latest banked (not day-scoped)
         vitality = (await vitA).last?.value
-        stepsEst = (await stepsA).last?.value
+        // Steps is a DAILY metric, so key it to the SELECTED day (like restScore above), not the history-wide
+        // latest. Without this, swiping to a past day with no strap step count showed today's estimate (the
+        // `.last` value) instead of that day's. Mirrors the classic Today's stepsEstByDay[selectedDayKey].
+        let stepsSeries = await stepsA
+        let stepsByDay = Dictionary(stepsSeries.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last })
+        stepsEst = stepsByDay[selectedDayKey] ?? (selectedDayOffset == 0 ? stepsSeries.last?.value : nil)
         hrValues = (await hrA).map { $0.bpm }
         workouts = await wkA
 
@@ -835,9 +840,16 @@ struct LiquidTodayView: View {
         return f.string(from: NSNumber(value: Int(s))) ?? "\(Int(s))"
     }
 
+    // The user's Effort display scale (#268), 0–100 by default or the WHOOP 0–21 axis if chosen — the SAME
+    // preference the Workouts screen + Trends read, so a workout's Effort number is identical everywhere.
+    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
+    private var effortScale: EffortScale { UnitPrefs.resolveEffortScale(effortScaleRaw) }
+
     private func effortText(_ s: Double?) -> String {
         guard let s else { return "–" }
-        return String(format: "%.1f", (s / 100) * 21) // WHOOP 0–21 axis, matching the mock
+        // Route through the shared formatter instead of hardcoding *21: a default (0–100) user was shown the
+        // WHOOP-scaled number here while the hero + Workouts table showed 0–100, two numbers for one workout.
+        return UnitFormatter.effortDisplay(s, scale: effortScale)
     }
 
     private func workoutSub(_ w: WorkoutRow) -> String {
