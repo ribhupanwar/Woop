@@ -617,20 +617,39 @@ class CorruptionPreservingOpenHelperFactory(
         override fun onOpen(db: SupportSQLiteDatabase) = roomCallback.onOpen(db)
 
         override fun onCorruption(db: SupportSQLiteDatabase) {
-            // Do NOT call super — the base implementation deletes the file. Log + close + preserve.
+            // Do NOT call super — the base implementation DELETES the file outright (non-resendable strap
+            // history gone without a trace). Instead QUARANTINE the corrupt file aside and let the store
+            // recreate a fresh one, so the app OPENS instead of crash-looping on every launch. #1014
+            // (wanxorg): 8.2.0 preserved the file but left it in place, so the very next open re-hit the
+            // same corruption and the app crashed on startup until a reinstall. Moving the original out of
+            // the way keeps the crash-recovery the platform default gives (next open finds no file → clean
+            // rebuild) WITHOUT the silent data loss — the corrupt copy stays as `*.corrupt` for recovery.
             val path = runCatching { db.path }.getOrNull()
             Log.e(
                 "WhoopDatabase",
-                "SQLite reported corruption in $path — preserving the file (NOT deleting it). " +
-                    "The store may fail to open until the file is repaired or restored from a backup.",
+                "SQLite reported corruption in $path — quarantining it to *.corrupt and recreating a fresh " +
+                    "store. The corrupt copy is kept; restore from a backup to get your data back.",
             )
             runCatching { db.close() }
             if (path != null && path != ":memory:") {
                 val original = File(path)
-                val preserved = File("$path.corrupt")
-                if (original.exists() && !preserved.exists()) {
-                    runCatching { original.copyTo(preserved) }
+                if (original.exists()) {
+                    val preserved = File("$path.corrupt")
+                    if (!preserved.exists()) {
+                        // Move (not copy) so the original is gone and the next open rebuilds clean. Fall
+                        // back to copy+delete if rename fails (e.g. across a storage boundary).
+                        if (!runCatching { original.renameTo(preserved) }.getOrDefault(false)) {
+                            runCatching { original.copyTo(preserved, overwrite = false) }
+                            runCatching { original.delete() }
+                        }
+                    } else {
+                        // A quarantine copy already exists — just drop the still-corrupt original.
+                        runCatching { original.delete() }
+                    }
                 }
+                // Drop the WAL/SHM sidecars so a fresh DB can't inherit a stale write-ahead log.
+                runCatching { File("$path-wal").delete() }
+                runCatching { File("$path-shm").delete() }
             }
         }
     }
