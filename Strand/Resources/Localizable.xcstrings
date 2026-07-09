@@ -31598,6 +31598,52 @@
         }
       }
     },
+    "Card transparency": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kartentransparenz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transparencia de las tarjetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transparence des cartes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trasparenza delle schede"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Transparência dos cartões"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片透明度"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片透明度"
+          }
+        }
+      }
+    },
     "Cardiac": {
       "localizations": {
         "de": {
@@ -51179,6 +51225,52 @@
         }
       }
     },
+    "Extends the sky behind the whole Today screen, so lowering Card transparency lets it show through every card. Needs the day-cycle background on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweitert den Himmel hinter dem gesamten Heute-Bildschirm, sodass er bei geringerer Kartentransparenz durch jede Karte hindurchscheint. Erfordert aktivierten Tageszyklus-Hintergrund."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extiende el cielo detrás de toda la pantalla Hoy, de modo que al reducir la Transparencia de las tarjetas se vea a través de cada tarjeta. Requiere que el fondo según el ciclo del día esté activado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étend le ciel derrière tout l'écran Aujourd'hui, de sorte qu'en réduisant la Transparence des cartes, il apparaît à travers chaque carte. Nécessite que le fond du cycle journalier soit activé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estende il cielo dietro l'intera schermata Oggi, così riducendo la Trasparenza delle schede lo si vede attraverso ogni scheda. Richiede che lo sfondo del ciclo giornaliero sia attivo."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Estende o céu atrás de todo o ecrã Hoje, para que, ao reduzir a Transparência dos cartões, ele apareça através de cada cartão. Requer que o fundo conforme o ciclo do dia esteja ativado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将天空延伸到整个「今天」界面背后，这样调低卡片透明度时，它会透过每张卡片显现。需要开启日循环背景。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將天空延伸到整個「今天」畫面背後，這樣調低卡片透明度時，它會透過每張卡片顯現。需要開啟日循環背景。"
+          }
+        }
+      }
+    },
     "FULL BOND": {
       "localizations": {
         "de": {
@@ -59714,6 +59806,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的睡眠恢復效果如何：時長、效率、深睡+REM、時間點。"
+          }
+        }
+      }
+    },
+    "How see-through the cards (Heart Rate, Key Metrics, Recovery Vitals, …) are. Left = solid, right = clear.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie durchsichtig die Karten (Herzfrequenz, Kernmetriken, Erholungswerte, …) sind. Links = deckend, rechts = durchsichtig."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto se transparentan las tarjetas (Frecuencia cardíaca, Métricas clave, Datos de recuperación, …). Izquierda = sólido, derecha = transparente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À quel point les cartes (Fréquence cardiaque, Métriques clés, Données de récupération, …) sont transparentes. Gauche = opaque, droite = transparent."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto sono trasparenti le schede (Frequenza cardiaca, Metriche chiave, Dati di recupero, …). Sinistra = opaco, destra = trasparente."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Quão transparentes são os cartões (Frequência Cardíaca, Métricas chave, Dados de recuperação, …). Esquerda = opaco, direita = transparente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片（心率、关键指标、恢复数据、…）的透明程度。左 = 不透明，右 = 透明。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片（心率、關鍵指標、恢復數據、…）的透明程度。左 = 不透明，右 = 透明。"
           }
         }
       }
@@ -109274,6 +109412,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳過今天"
+          }
+        }
+      }
+    },
+    "Sky behind cards": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Himmel hinter Karten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cielo detrás de las tarjetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciel derrière les cartes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cielo dietro le schede"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Céu atrás dos cartões"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片后方的天空"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片後方的天空"
           }
         }
       }
