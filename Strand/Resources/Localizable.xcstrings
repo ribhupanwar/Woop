@@ -65996,18 +65996,18 @@
         }
       }
     },
-    "Last Workouts": {
+    "Latest Workouts": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Letzte Workouts"
+            "value": "Neueste Workouts"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last Workouts"
+            "value": "Latest Workouts"
           }
         },
         "es": {
