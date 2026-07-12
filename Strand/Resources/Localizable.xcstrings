@@ -55972,6 +55972,12 @@
     },
     "HRV (RMSSD)": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HRV (RMSSD)"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
@@ -94134,6 +94140,12 @@
     },
     "RHR": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RHR"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
