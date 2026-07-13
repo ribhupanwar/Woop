@@ -148537,6 +148537,56 @@
           }
         }
       }
+    },
+    "RECOVERY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERHOLUNG"
+          }
+        }
+      }
+    },
+    "OPTIMAL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OPTIMAL"
+          }
+        }
+      }
+    },
+    "No sleep tracked last night": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Nacht kein Schlaf erfasst"
+          }
+        }
+      }
+    },
+    "Wear the strap overnight to score a night first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trage den Strap über Nacht, um zuerst eine Nacht zu bewerten."
+          }
+        }
+      }
+    },
+    "A classic one-glance read of NOOP's own scores. Same data, different lens.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein klassischer Überblick über NOOPs eigene Werte auf einen Blick. Gleiche Daten, andere Perspektive."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
