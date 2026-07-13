@@ -148627,6 +148627,26 @@
           }
         }
       }
+    },
+    "Supplements": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nahrungsergänzung"
+          }
+        }
+      }
+    },
+    "Lifestyle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensstil"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
