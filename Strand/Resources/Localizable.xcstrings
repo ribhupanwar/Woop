@@ -148587,6 +148587,46 @@
           }
         }
       }
+    },
+    "Coupled read": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gekoppelt"
+          }
+        }
+      }
+    },
+    "%@ slept": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ geschlafen"
+          }
+        }
+      }
+    },
+    "%@ needed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ benötigt"
+          }
+        }
+      }
+    },
+    "Today, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute, %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
