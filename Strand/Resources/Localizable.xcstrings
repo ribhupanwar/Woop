@@ -164492,26 +164492,6 @@
         }
       }
     },
-    "Kick in at": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktiv ab"
-          }
-        }
-      }
-    },
-    "Slows background strap-sync (every 45 min instead of 15) while your battery is low or Low Power Mode is on. No data loss — sync just batches into larger, less frequent pulls.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlangsamt die Hintergrund-Synchronisierung des Sensors (alle 45 statt 15 Minuten), wenn der Akku niedrig ist oder der Stromsparmodus aktiv ist. Kein Datenverlust – die Synchronisierung erfolgt in größeren, selteneren Schüben."
-          }
-        }
-      }
-    },
     "Pause HRV capture": {
       "localizations": {
         "de": {
@@ -164522,12 +164502,32 @@
         }
       }
     },
-    "While saving power (battery low or Low Power Mode), stop the always-on background HRV stream — the biggest live drain. A Live screen still shows heart rate, and it re-arms automatically once you're off power saving.": {
+    "Kick in at (strap battery)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Während des Energiesparens (niedriger Akku oder Stromsparmodus) wird der dauerhafte HFV-Hintergrundstream gestoppt – der größte Live-Verbraucher. Ein Live-Bildschirm zeigt weiterhin die Herzfrequenz an, und er wird automatisch reaktiviert, sobald das Energiesparen endet."
+            "value": "Aktiv ab (Band-Akku)"
+          }
+        }
+      }
+    },
+    "Slows background strap-sync (every 45 min instead of 15) while your strap's battery is low. No data loss — the strap banks everything, so sync just batches into larger, less frequent pulls.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlangsamt die Hintergrund-Synchronisierung des Sensors (alle 45 statt 15 Minuten), wenn der Akku deines Bandes niedrig ist. Kein Datenverlust – das Band speichert alles, die Synchronisierung erfolgt nur in größeren, selteneren Schüben."
+          }
+        }
+      }
+    },
+    "While your strap's battery is low, stop the always-on background HRV stream — the biggest continuous drain on the strap. A Live screen still shows heart rate, and it re-arms automatically once the strap is charged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn der Akku deines Bandes niedrig ist, wird der dauerhafte HFV-Hintergrundstream gestoppt – der größte Dauerverbraucher am Band. Ein Live-Bildschirm zeigt weiterhin die Herzfrequenz an, und er wird automatisch reaktiviert, sobald das Band geladen ist."
           }
         }
       }
