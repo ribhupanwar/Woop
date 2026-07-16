@@ -166768,6 +166768,18 @@
             "state": "translated",
             "value": "Zu diesem Tempo"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobre ese ritmo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos de ce rythme"
+          }
         }
       }
     },
@@ -166783,6 +166795,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zielart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tipo de objetivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type d'objectif"
           }
         }
       }
@@ -166800,6 +166824,18 @@
             "state": "translated",
             "value": "Trotzdem speichern"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar de todos modos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer quand même"
+          }
         }
       }
     },
@@ -166815,6 +166851,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit dem Coach teilen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartir esto con el coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partager ceci avec le coach"
           }
         }
       }
@@ -166832,6 +166880,18 @@
             "state": "translated",
             "value": "Zieldatum"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fecha objetivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date cible"
+          }
         }
       }
     },
@@ -166847,6 +166907,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Worauf arbeitest du hin?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Hacia qué estás trabajando?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vers quoi travailles-tu ?"
           }
         }
       }
@@ -166864,6 +166936,18 @@
             "state": "translated",
             "value": "Warum dieses Tempo?"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Por qué este ritmo?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi ce rythme ?"
+          }
         }
       }
     },
@@ -166879,6 +166963,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ohne Ziel kann ich dir nicht sagen, wo du stehst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin uno no puedo decirte cómo vas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans objectif, je ne peux pas te dire où tu en es."
           }
         }
       }
@@ -166896,6 +166992,18 @@
             "state": "translated",
             "value": "Das ist schneller als üblicherweise empfohlen. Deine Entscheidung — sag mir warum, und ich notiere es. So begleite ich dich dabei, statt jede Woche mit dir zu diskutieren."
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto es más rápido de lo que se suele recomendar. Tú decides: dime por qué y lo anotaré, así te acompaño en ello en lugar de discutir contigo cada semana."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C'est plus rapide que ce qui est habituellement recommandé. C'est ton choix : dis-moi pourquoi et je le noterai, afin de t'accompagner plutôt que de débattre chaque semaine."
+          }
         }
       }
     },
@@ -166911,6 +167019,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mit Zielwert und Datum kann ich dir sagen, wo du stehst — nicht nur, wie du geschlafen hast. Völlig optional: alles andere funktioniert auch ohne."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con un objetivo y una fecha puedo decirte dónde estás, no solo cómo dormiste. Totalmente opcional: todo lo demás funciona sin ello."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avec une cible et une date, je peux te dire où tu en es, pas seulement comment tu as dormi. Totalement facultatif : tout le reste fonctionne sans."
           }
         }
       }
@@ -166928,6 +167048,18 @@
             "state": "translated",
             "value": "Ich verfolge dein Gewicht und plane dein Training danach — aber ich habe keine Ernährungsdaten, und dort entscheidet sich der Großteil einer Gewichtsveränderung. Ich tue nicht so, als wäre es anders."
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguiré tu peso y planificaré tu entrenamiento en torno a él, pero no tengo datos de nutrición, y ahí es donde se decide la mayor parte del cambio de peso. No voy a fingir lo contrario."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je suivrai ton poids et organiserai ton entraînement autour, mais je n'ai aucune donnée nutritionnelle, et c'est là que se joue l'essentiel d'un changement de poids. Je ne prétendrai pas le contraire."
+          }
         }
       }
     },
@@ -166943,6 +167075,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ich kann dieses Ziel festhalten und dein Training danach ausrichten, aber vom Strap messen kann ich es nicht — also erfinde ich auch keine Fortschrittszahlen dafür."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedo mantener este objetivo y orientar tu entrenamiento hacia él, pero no puedo medirlo desde tu correa, así que no me inventaré cifras de progreso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je peux retenir cet objectif et orienter ton entraînement, mais je ne peux pas le mesurer depuis ton bracelet — je n'inventerai donc aucun chiffre de progression."
           }
         }
       }
@@ -166960,6 +167104,18 @@
             "state": "translated",
             "value": "Ausgefallen"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No ocurrió"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas eu lieu"
+          }
         }
       }
     },
@@ -166975,6 +167131,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wie hart"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué intensidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle intensité"
           }
         }
       }
@@ -166992,6 +167160,18 @@
             "state": "translated",
             "value": "Noch kein Plan"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todavía no hay plan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore de plan"
+          }
         }
       }
     },
@@ -167007,6 +167187,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Festlegen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définir"
           }
         }
       }
@@ -167024,6 +167216,18 @@
             "state": "translated",
             "value": "Uhrzeit festlegen"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir una hora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définir une heure"
+          }
         }
       }
     },
@@ -167039,6 +167243,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tauschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échanger"
           }
         }
       }
@@ -167056,6 +167272,18 @@
             "state": "translated",
             "value": "Einheit tauschen"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar la sesión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échanger la séance"
+          }
         }
       }
     },
@@ -167071,6 +167299,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was deine Historie sagt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que dice tu historial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que dit ton historique"
           }
         }
       }
@@ -167088,6 +167328,18 @@
             "state": "translated",
             "value": "Dein Plan"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu plan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton plan"
+          }
         }
       }
     },
@@ -167103,6 +167355,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Frag den Coach, was diese Woche ansteht. Alles, was er vorschlägt, landet zuerst hier für dein Ja — nichts wird hinter deinem Rücken verplant."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pregunta al coach qué hacer esta semana. Todo lo que proponga aparece aquí primero para que des el sí: nada se programa a tus espaldas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demande au coach quoi faire cette semaine. Tout ce qu'il propose arrive ici d'abord pour ton accord — rien n'est planifié dans ton dos."
           }
         }
       }
@@ -167120,6 +167384,18 @@
             "state": "translated",
             "value": "Letzte Frage"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Última pregunta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernière question"
+          }
         }
       }
     },
@@ -167135,6 +167411,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Reise ansehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver tu recorrido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir ton parcours"
           }
         }
       }
@@ -167152,6 +167440,18 @@
             "state": "translated",
             "value": "Änderungen an diesem Ziel"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambios en este objetivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifications de cet objectif"
+          }
         }
       }
     },
@@ -167167,6 +167467,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meilensteine"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hitos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jalons"
           }
         }
       }
@@ -167184,6 +167496,18 @@
             "state": "translated",
             "value": "Kein Ziel gesetzt"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin objetivo definido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun objectif défini"
+          }
         }
       }
     },
@@ -167199,6 +167523,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch nichts geplant."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada planificado todavía."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien de planifié pour l'instant."
           }
         }
       }
@@ -167216,6 +167552,18 @@
             "state": "translated",
             "value": "Noch nichts — bei einem so neuen Ziel ganz normal."
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada aún: es normal con un objetivo tan reciente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien encore — c'est normal pour un objectif aussi récent."
+          }
         }
       }
     },
@@ -167231,6 +167579,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geplant vs. tatsächlich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planificado vs. real"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prévu vs. réel"
           }
         }
       }
@@ -167248,6 +167608,18 @@
             "state": "translated",
             "value": "Fortschritt"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progreso"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progression"
+          }
         }
       }
     },
@@ -167263,6 +167635,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lege in den Coach-Einstellungen eines fest, um hier deine Reise zu sehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Define uno en los ajustes del Coach para ver aquí tu recorrido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définis-en un dans les réglages du Coach pour voir ton parcours ici."
           }
         }
       }
@@ -167280,6 +167664,18 @@
             "state": "translated",
             "value": "Deine Reise"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu recorrido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton parcours"
+          }
         }
       }
     },
@@ -167295,6 +167691,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Statt %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En vez de %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Au lieu de %@"
           }
         }
       }
@@ -167312,6 +167720,18 @@
             "state": "translated",
             "value": "getauscht von %@"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cambiado desde %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "échangé depuis %@"
+          }
         }
       }
     },
@@ -167328,53 +167748,773 @@
             "state": "translated",
             "value": "Tempo bestätigt: „%@“"
           }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritmo confirmado: «%@»"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rythme confirmé : « %@ »"
+          }
         }
       }
     },
-    "Instead of \\(proposal.sport)": {
+    "Ask your Coach": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instead of \\(proposal.sport)"
+            "value": "Ask your Coach"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Instead of \\(proposal.sport)"
+            "value": "Frag deinen Coach"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pregunta a tu Coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demande à ton Coach"
           }
         }
       }
     },
-    "Pace acknowledged: \\\"\\(ack.reason)\\\"": {
+    "Your data, in plain language": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pace acknowledged: \\\"\\(ack.reason)\\\""
+            "value": "Your data, in plain language"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pace acknowledged: \\\"\\(ack.reason)\\\""
+            "value": "Deine Daten, in verständlicher Sprache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus datos, en lenguaje claro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes données, en langage clair"
           }
         }
       }
     },
-    "swapped from \\(from)": {
+    "Conversations": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "swapped from \\(from)"
+            "value": "Conversations"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "swapped from \\(from)"
+            "value": "Unterhaltungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations"
+          }
+        }
+      }
+    },
+    "New chat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New chat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Chat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle discussion"
+          }
+        }
+      }
+    },
+    "Rename conversation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename conversation"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterhaltung umbenennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renombrar conversación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renommer la conversation"
+          }
+        }
+      }
+    },
+    "No conversations yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No conversations yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Unterhaltungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay conversaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune conversation pour l'instant"
+          }
+        }
+      }
+    },
+    "Coach settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Einstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes del Coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages du Coach"
+          }
+        }
+      }
+    },
+    "Edit fact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit fact"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fakt bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar dato"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier le fait"
+          }
+        }
+      }
+    },
+    "Coach entry": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach entry"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Zugang"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acceso al Coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès au Coach"
+          }
+        }
+      }
+    },
+    "How you open Coach from Today — a card, a draggable floating button, or both.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How you open Coach from Today — a card, a draggable floating button, or both."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie du den Coach von „Heute“ aus öffnest — eine Karte, ein verschiebbarer schwebender Knopf oder beides."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cómo abres el Coach desde Hoy: una tarjeta, un botón flotante que puedes arrastrar, o ambos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment ouvrir le Coach depuis Aujourd'hui : une carte, un bouton flottant déplaçable, ou les deux."
+          }
+        }
+      }
+    },
+    "Button position": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Button position"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knopfposition"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posición del botón"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position du bouton"
+          }
+        }
+      }
+    },
+    "Lock position": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock position"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position sperren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloquear la posición"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouiller la position"
+          }
+        }
+      }
+    },
+    "Stops the button moving if you brush it. Tapping still opens Coach.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops the button moving if you brush it. Tapping still opens Coach."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verhindert, dass sich der Knopf verschiebt, wenn du ihn streifst. Antippen öffnet den Coach weiterhin."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evita que el botón se mueva si lo rozas. Al tocarlo sigue abriéndose el Coach."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empêche le bouton de bouger si tu l'effleures. Un appui ouvre toujours le Coach."
+          }
+        }
+      }
+    },
+    "Summarise past chats": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarise past chats"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vergangene Chats zusammenfassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumir chats anteriores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumer les discussions passées"
+          }
+        }
+      }
+    },
+    "Memory model": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory model"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedächtnis-Modell"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de memoria"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de mémoire"
+          }
+        }
+      }
+    },
+    "The cheap, fast model used only for memory upkeep — keep it small to stay cheap.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The cheap, fast model used only for memory upkeep — keep it small to stay cheap."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das günstige, schnelle Modell nur für die Gedächtnispflege — halte es klein, damit es günstig bleibt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo barato y rápido que solo se usa para mantener la memoria: mantenlo pequeño para que salga barato."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle rapide et bon marché utilisé uniquement pour l'entretien de la mémoire — garde-le petit pour qu'il reste économique."
+          }
+        }
+      }
+    },
+    "Summarise this chat now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summarise this chat now"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Chat jetzt zusammenfassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumir este chat ahora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumer cette discussion maintenant"
+          }
+        }
+      }
+    },
+    "Coaching style": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coaching style"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coaching-Stil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estilo de coaching"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Style de coaching"
+          }
+        }
+      }
+    },
+    "Daily check-in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily check-in"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Täglicher Check-in"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check-in diario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point quotidien"
+          }
+        }
+      }
+    },
+    "Notifications are off. Enable them for NOOP in Settings to use check-ins.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off. Enable them for NOOP in Settings to use check-ins."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitteilungen sind aus. Aktiviere sie für NOOP in den Einstellungen, um Check-ins zu nutzen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las notificaciones están desactivadas. Actívalas para NOOP en Ajustes para usar los check-ins."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les notifications sont désactivées. Active-les pour NOOP dans Réglages pour utiliser les points."
+          }
+        }
+      }
+    },
+    "Coach memory": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach memory"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Gedächtnis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memoria del Coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire du Coach"
+          }
+        }
+      }
+    },
+    "Remembered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remembered"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemerkt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recordado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémorisé"
+          }
+        }
+      }
+    },
+    "Forget everything": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget everything"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles vergessen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Olvidarlo todo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout oublier"
+          }
+        }
+      }
+    },
+    "Thinking…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thinking…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denkt nach…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pensando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réflexion…"
+          }
+        }
+      }
+    },
+    "Connect a provider to start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect a provider to start"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde einen Anbieter zum Start"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta un proveedor para empezar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecte un fournisseur pour commencer"
+          }
+        }
+      }
+    },
+    "Coach uses your own API key. Nothing leaves %@ until you connect and ask a question.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach uses your own API key. Nothing leaves %@ until you connect and ask a question."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach nutzt deinen eigenen API-Schlüssel. Nichts verlässt %@, bis du eine Verbindung herstellst und eine Frage stellst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El Coach usa tu propia clave de API. Nada sale de %@ hasta que te conectes y hagas una pregunta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Coach utilise ta propre clé d'API. Rien ne quitte %@ tant que tu ne t'es pas connecté et que tu n'as pas posé de question."
+          }
+        }
+      }
+    },
+    "Regenerate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerate"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu generieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regenerar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Régénérer"
           }
         }
       }
