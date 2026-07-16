@@ -164635,6 +164635,630 @@
           }
         }
       }
+    },
+    "About that pace": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About that pace"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu diesem Tempo"
+          }
+        }
+      }
+    },
+    "Goal type": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Goal type"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zielart"
+          }
+        }
+      }
+    },
+    "Save anyway": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save anyway"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trotzdem speichern"
+          }
+        }
+      }
+    },
+    "Share this with the coach": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share this with the coach"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit dem Coach teilen"
+          }
+        }
+      }
+    },
+    "Target date": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target date"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zieldatum"
+          }
+        }
+      }
+    },
+    "What are you working towards?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What are you working towards?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worauf arbeitest du hin?"
+          }
+        }
+      }
+    },
+    "Why this pace?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this pace?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum dieses Tempo?"
+          }
+        }
+      }
+    },
+    "Without one I can't tell you how you're tracking.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without one I can't tell you how you're tracking."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Ziel kann ich dir nicht sagen, wo du stehst."
+          }
+        }
+      }
+    },
+    "This is faster than usually recommended. It's your call — tell me why and I'll note it, so I coach you through it instead of arguing with you every week.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is faster than usually recommended. It's your call — tell me why and I'll note it, so I coach you through it instead of arguing with you every week."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist schneller als üblicherweise empfohlen. Deine Entscheidung — sag mir warum, und ich notiere es. So begleite ich dich dabei, statt jede Woche mit dir zu diskutieren."
+          }
+        }
+      }
+    },
+    "With a target and a date I can tell you where you stand, not just how you slept. Entirely optional — everything else works without it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With a target and a date I can tell you where you stand, not just how you slept. Entirely optional — everything else works without it."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Zielwert und Datum kann ich dir sagen, wo du stehst — nicht nur, wie du geschlafen hast. Völlig optional: alles andere funktioniert auch ohne."
+          }
+        }
+      }
+    },
+    "I'll track your weight and plan your training around it — but I have no nutrition data, and that's where most of weight change is decided. I won't pretend otherwise.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'll track your weight and plan your training around it — but I have no nutrition data, and that's where most of weight change is decided. I won't pretend otherwise."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich verfolge dein Gewicht und plane dein Training danach — aber ich habe keine Ernährungsdaten, und dort entscheidet sich der Großteil einer Gewichtsveränderung. Ich tue nicht so, als wäre es anders."
+          }
+        }
+      }
+    },
+    "I can hold this goal and shape your training around it, but I can't measure it from your strap — so I won't invent progress numbers for it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I can hold this goal and shape your training around it, but I can't measure it from your strap — so I won't invent progress numbers for it."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ich kann dieses Ziel festhalten und dein Training danach ausrichten, aber vom Strap messen kann ich es nicht — also erfinde ich auch keine Fortschrittszahlen dafür."
+          }
+        }
+      }
+    },
+    "Didn't happen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Didn't happen"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgefallen"
+          }
+        }
+      }
+    },
+    "How hard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How hard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie hart"
+          }
+        }
+      }
+    },
+    "No plan yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No plan yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Plan"
+          }
+        }
+      }
+    },
+    "Set": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Festlegen"
+          }
+        }
+      }
+    },
+    "Set a time": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a time"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uhrzeit festlegen"
+          }
+        }
+      }
+    },
+    "Swap": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tauschen"
+          }
+        }
+      }
+    },
+    "Swap session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap session"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einheit tauschen"
+          }
+        }
+      }
+    },
+    "What your history says": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What your history says"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was deine Historie sagt"
+          }
+        }
+      }
+    },
+    "Your plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your plan"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Plan"
+          }
+        }
+      }
+    },
+    "Ask the coach what to do this week. Anything it suggests lands here for your yes first — nothing gets scheduled behind your back.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask the coach what to do this week. Anything it suggests lands here for your yes first — nothing gets scheduled behind your back."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frag den Coach, was diese Woche ansteht. Alles, was er vorschlägt, landet zuerst hier für dein Ja — nichts wird hinter deinem Rücken verplant."
+          }
+        }
+      }
+    },
+    "Last question": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last question"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Frage"
+          }
+        }
+      }
+    },
+    "View your journey": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your journey"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Reise ansehen"
+          }
+        }
+      }
+    },
+    "Changes to this goal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes to this goal"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen an diesem Ziel"
+          }
+        }
+      }
+    },
+    "Milestones": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Milestones"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meilensteine"
+          }
+        }
+      }
+    },
+    "No goal set": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No goal set"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Ziel gesetzt"
+          }
+        }
+      }
+    },
+    "Nothing planned yet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing planned yet."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts geplant."
+          }
+        }
+      }
+    },
+    "Nothing yet — that's normal for a goal this new.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing yet — that's normal for a goal this new."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts — bei einem so neuen Ziel ganz normal."
+          }
+        }
+      }
+    },
+    "Planned vs actual": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Planned vs actual"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplant vs. tatsächlich"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progress"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortschritt"
+          }
+        }
+      }
+    },
+    "Set one from Coach settings to see your journey here.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set one from Coach settings to see your journey here."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege in den Coach-Einstellungen eines fest, um hier deine Reise zu sehen."
+          }
+        }
+      }
+    },
+    "Your journey": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your journey"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Reise"
+          }
+        }
+      }
+    },
+    "Instead of %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instead of %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statt %@"
+          }
+        }
+      }
+    },
+    "swapped from %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "swapped from %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "getauscht von %@"
+          }
+        }
+      }
+    },
+    "Pace acknowledged: \"%@\"": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace acknowledged: \"%@\""
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo bestätigt: „%@“"
+          }
+        }
+      }
+    },
+    "Instead of \\(proposal.sport)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instead of \\(proposal.sport)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instead of \\(proposal.sport)"
+          }
+        }
+      }
+    },
+    "Pace acknowledged: \\\"\\(ack.reason)\\\"": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace acknowledged: \\\"\\(ack.reason)\\\""
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace acknowledged: \\\"\\(ack.reason)\\\""
+          }
+        }
+      }
+    },
+    "swapped from \\(from)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "swapped from \\(from)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "swapped from \\(from)"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
