@@ -16661,58 +16661,6 @@
         }
       }
     },
-    "A gentle buzz when your HRV drops while your heart rate is calm, a cue to take a paced breath. Rate-limited to once every 15 minutes; off by default.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein sanftes Vibrieren, wenn deine HRV fällt, während deine Herzfrequenz ruhig ist – ein Anstoß für einen getakteten Atemzug. Auf einmal alle 15 Minuten begrenzt; standardmäßig aus."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una vibración suave cuando tu VFC baja mientras tu frecuencia cardíaca está tranquila, una señal para respirar con calma. Limitada a una vez cada 15 minutos; desactivada por defecto."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une vibration douce quand votre VFC baisse alors que votre fréquence cardiaque est calme, un signal pour prendre une respiration rythmée. Limitée à une fois toutes les 15 minutes ; désactivée par défaut."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una vibrazione leggera quando la tua HRV scende mentre la frequenza cardiaca è calma, un invito a fare un respiro ritmato. Limitata a una volta ogni 15 minuti; disattivata per impostazione predefinita."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma vibração suave quando a tua VFC desce enquanto a frequência cardíaca está calma, um sinal para respirares com calma. Limitada a uma vez a cada 15 minutos; desativada por predefinição."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Лёгкая вибрация, когда ваша ВСР падает при спокойном пульсе — сигнал сделать ритмичный вдох. Срабатывает не чаще раза в 15 минут; по умолчанию выключено."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当你的 HRV 下降而心率平稳时，轻轻震动一下，提示你做一次有节奏的呼吸。每 15 分钟最多一次；默认关闭。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "當你的 HRV 下降而心率平穩時，給你一次輕柔的震動，提示你做一次節奏呼吸。每 15 分鐘最多一次；預設關閉。"
-          }
-        }
-      }
-    },
     "A gentle wrist buzz when you've been sitting too long, a nudge to get up and move. Inferred from the strap's motion on each history sync, so it lags real time by a sync or two.": {
       "localizations": {
         "de": {
@@ -111825,58 +111773,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "靜息心率相較你的常態偏高。你的身體今天正承受負荷，請保持輕度活動。"
-          }
-        }
-      }
-    },
-    "Resting stress nudge (experimental)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ruhestress-Anstoß (experimentell)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aviso de estrés en reposo (experimental)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rappel de stress au repos (expérimental)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promemoria stress a riposo (sperimentale)"
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aviso de stress em repouso (experimental)"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Подсказка о стрессе в покое (экспериментально)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "静息压力提醒（实验性）"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "靜息壓力提醒（實驗性）"
           }
         }
       }
