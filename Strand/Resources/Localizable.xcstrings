@@ -169554,6 +169554,34 @@
           }
         }
       }
+    },
+    "Don't have a key? Get one from %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't have a key? Get one from %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keinen Schlüssel? Hol dir einen bei %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿No tienes una clave? Consíguela en %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore de clé ? Obtiens-en une auprès de %@."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
