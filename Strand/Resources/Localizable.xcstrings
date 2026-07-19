@@ -1,6 +1,182 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%.2f V": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f V"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f V"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f V"
+          }
+        }
+      }
+    },
+    "Battery voltage %.2f volts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akkuspannung %.2f Volt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltaje de batería %.2f voltios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tension batterie %.2f volts"
+          }
+        }
+      }
+    },
+    "Battery-info probe (#592 RE)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akku-Info-Test (#592 RE)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de info de batería (#592 RE)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde d'info batterie (#592 RE)"
+          }
+        }
+      }
+    },
+    "Battery-info probe (#592 RE)…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akku-Info-Test (#592 RE)…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de info de batería (#592 RE)…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde d'info batterie (#592 RE)…"
+          }
+        }
+      }
+    },
+    "Battery-info probe result (#592)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnis des Akku-Info-Tests (#592)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultado de la sonda de info de batería (#592)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultat de la sonde d'info batterie (#592)"
+          }
+        }
+      }
+    },
+    "Send probe (read-only)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test senden (nur lesen)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar sonda (solo lectura)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer la sonde (lecture seule)"
+          }
+        }
+      }
+    },
+    "Waiting for the strap's reply…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf die Antwort des Bands…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esperando la respuesta de la banda…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente de la réponse du bracelet…"
+          }
+        }
+      }
+    },
+    "Two independent protocol tables disagree on the extended-battery opcode (98 vs 87). This sends the curated read-only 98 and shows the strap's full raw reply. A battery-style payload confirms 98 on your firmware; a short stub means it stays ambiguous. Nothing is written to the strap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei unabhängige Protokolltabellen widersprechen sich beim Extended-Battery-Opcode (98 vs. 87). Dies sendet das kuratierte, nur lesende 98 und zeigt die vollständige Rohantwort des Bands. Eine batterieartige Nutzlast bestätigt 98 auf deiner Firmware; ein kurzer Stub bleibt mehrdeutig. Es wird nichts auf das Band geschrieben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos tablas de protocolo independientes discrepan sobre el opcode de batería extendida (98 vs 87). Esto envía el 98 curado y de solo lectura y muestra la respuesta cruda completa de la banda. Una carga tipo batería confirma 98 en tu firmware; un stub corto lo deja ambiguo. No se escribe nada en la banda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux tables de protocole indépendantes divergent sur l'opcode de batterie étendue (98 contre 87). Ceci envoie le 98 curé en lecture seule et affiche la réponse brute complète du bracelet. Une charge de type batterie confirme 98 sur votre firmware ; un stub court le laisse ambigu. Rien n'est écrit sur le bracelet."
+          }
+        }
+      }
+    },
     "Optimal strain reached": {
       "localizations": {
         "de": {
