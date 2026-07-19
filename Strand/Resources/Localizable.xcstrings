@@ -17599,6 +17599,50 @@
         }
       }
     },
+    "A Shortcut wants to add %lld days and %lld workouts to the Apple Health import source.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Kurzbefehl möchte %lld Tage und %lld Workouts zur Apple-Health-Importquelle hinzufügen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un atajo quiere añadir %lld días y %lld entrenamientos a la fuente de importación de Apple Health."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un raccourci veut ajouter %lld jours et %lld entraînements à la source d'import Apple Santé."
+          }
+        }
+      }
+    },
+    "A Shortcut wants to add data to the Apple Health import source.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Kurzbefehl möchte Daten zur Apple-Health-Importquelle hinzufügen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un atajo quiere añadir datos a la fuente de importación de Apple Health."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un raccourci veut ajouter des données à la source d'import Apple Santé."
+          }
+        }
+      }
+    },
     "A relaxation rhythm, not cardiac control. It never paces below a safe rate and you can stop anytime. If your heart rate doesn't settle, we'll say so plainly.": {
       "localizations": {
         "de": {
@@ -68724,6 +68768,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入 Apple Health 匯出檔案"
+          }
+        }
+      }
+    },
+    "Import Apple Health data?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple-Health-Daten importieren?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Importar datos de Apple Health?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer les données Apple Santé ?"
           }
         }
       }
