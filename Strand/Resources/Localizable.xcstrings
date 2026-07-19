@@ -170562,6 +170562,230 @@
           }
         }
       }
+    },
+    "Coaching model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coaching-Modell"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coaching model"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de coaching"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de coaching"
+          }
+        }
+      }
+    },
+    "Background models": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hintergrund-Modelle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background models"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos en segundo plano"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles d'arrière-plan"
+          }
+        }
+      }
+    },
+    "Cheaper models for background jobs — leave blank to use %@'s small model. Keeps the pricey coaching model for the actual conversation.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günstigere Modelle für Hintergrundaufgaben — leer lassen, um das kleine Modell von %@ zu nutzen. So bleibt das teure Coaching-Modell dem eigentlichen Gespräch vorbehalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cheaper models for background jobs — leave blank to use %@'s small model. Keeps the pricey coaching model for the actual conversation."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos más económicos para tareas en segundo plano: déjalo en blanco para usar el modelo pequeño de %@. Reserva el costoso modelo de coaching para la conversación real."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles moins chers pour les tâches d'arrière-plan — laissez vide pour utiliser le petit modèle de %@. Réserve le coûteux modèle de coaching à la conversation elle-même."
+          }
+        }
+      }
+    },
+    "The model this uses lives under Connection & model → Background models.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das dafür genutzte Modell findest du unter „Verbindung & Modell“ → „Hintergrund-Modelle“."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The model this uses lives under Connection & model → Background models."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo que usa está en Conexión y modelo → Modelos en segundo plano."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle utilisé se trouve dans Connexion et modèle → Modèles d'arrière-plan."
+          }
+        }
+      }
+    },
+    "Chat summaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat-Zusammenfassungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat summaries"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resúmenes de chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumés de discussion"
+          }
+        }
+      }
+    },
+    "Card analyses": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karten-Analysen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card analyses"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Análisis de tarjetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyses de cartes"
+          }
+        }
+      }
+    },
+    "Distils a finished chat so the coach can recall it later.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verdichtet einen abgeschlossenen Chat, damit der Coach ihn später erinnern kann."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distils a finished chat so the coach can recall it later."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume un chat finalizado para que el coach pueda recordarlo después."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Condense une discussion terminée pour que le coach s'en souvienne plus tard."
+          }
+        }
+      }
+    },
+    "A short read when you ask the coach about one health card.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine kurze Einordnung, wenn du den Coach zu einer Gesundheitskarte fragst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A short read when you ask the coach about one health card."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una lectura breve cuando le preguntas al coach sobre una tarjeta de salud."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une brève lecture quand tu interroges le coach sur une carte de santé."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
