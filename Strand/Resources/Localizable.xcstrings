@@ -170786,6 +170786,734 @@
           }
         }
       }
+    },
+    "Before you talk to your coach": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bevor du mit deinem Coach sprichst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Before you talk to your coach"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antes de hablar con tu coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avant de parler à ton coach"
+          }
+        }
+      }
+    },
+    "A quick, honest heads-up — not fine print.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein kurzer, ehrlicher Hinweis — kein Kleingedrucktes."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A quick, honest heads-up — not fine print."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un aviso rápido y honesto, no letra pequeña."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un mot rapide et honnête — pas des petits caractères."
+          }
+        }
+      }
+    },
+    "It's only as good as its model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er ist nur so gut wie sein Modell"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's only as good as its model"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es tan bueno como su modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il ne vaut que son modèle"
+          }
+        }
+      }
+    },
+    "The coach's judgement is the model's judgement. A small or cheap model gives shallow, generic answers; a capable one reasons well over your numbers.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Urteil des Coaches ist das Urteil des Modells. Ein kleines oder billiges Modell gibt oberflächliche, allgemeine Antworten; ein starkes denkt gut über deine Zahlen nach."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach's judgement is the model's judgement. A small or cheap model gives shallow, generic answers; a capable one reasons well over your numbers."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El criterio del coach es el criterio del modelo. Un modelo pequeño o barato da respuestas superficiales y genéricas; uno capaz razona bien sobre tus datos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le jugement du coach, c'est celui du modèle. Un petit modèle bon marché donne des réponses superficielles et génériques ; un modèle solide raisonne bien sur tes chiffres."
+          }
+        }
+      }
+    },
+    "It's support, not the last word": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er ist Unterstützung, nicht das letzte Wort"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's support, not the last word"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es apoyo, no la última palabra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C'est un soutien, pas le dernier mot"
+          }
+        }
+      }
+    },
+    "Treat its answers as a helpful second opinion. Don't follow them blindly — keep using your own judgement.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieh seine Antworten als hilfreiche zweite Meinung. Folge ihnen nicht blind — nutze weiter deinen eigenen Verstand."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Treat its answers as a helpful second opinion. Don't follow them blindly — keep using your own judgement."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toma sus respuestas como una útil segunda opinión. No las sigas a ciegas: usa tu propio juicio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Considère ses réponses comme un deuxième avis utile. Ne les suis pas aveuglément — garde ton propre jugement."
+          }
+        }
+      }
+    },
+    "It's not a doctor, therapist or trainer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er ist kein Arzt, Therapeut oder Trainer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's not a doctor, therapist or trainer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No es médico, terapeuta ni entrenador"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n'est pas un médecin, un thérapeute ou un coach sportif"
+          }
+        }
+      }
+    },
+    "For anything medical, or anything that really matters, talk to a qualified professional. The coach can be wrong and can miss context you didn't share.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei allem Medizinischen oder wirklich Wichtigen sprich mit qualifiziertem Fachpersonal. Der Coach kann sich irren und Zusammenhänge übersehen, die du nicht geteilt hast."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For anything medical, or anything that really matters, talk to a qualified professional. The coach can be wrong and can miss context you didn't share."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para cualquier cosa médica, o algo que de verdad importe, consulta a un profesional cualificado. El coach puede equivocarse y pasar por alto contexto que no compartiste."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour tout ce qui est médical, ou vraiment important, parle à un professionnel qualifié. Le coach peut se tromper et manquer un contexte que tu n'as pas partagé."
+          }
+        }
+      }
+    },
+    "It works with your data": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Er arbeitet mit deinen Daten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It works with your data"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trabaja con tus datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il travaille avec tes données"
+          }
+        }
+      }
+    },
+    "To answer well, it sends a short summary of your relevant metrics to the provider you chose — using your own key, and only when you ask. Nothing is sent otherwise.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um gut zu antworten, sendet er eine kurze Zusammenfassung deiner relevanten Werte an den von dir gewählten Anbieter — mit deinem eigenen Schlüssel und nur, wenn du fragst. Sonst wird nichts gesendet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To answer well, it sends a short summary of your relevant metrics to the provider you chose — using your own key, and only when you ask. Nothing is sent otherwise."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para responder bien, envía un breve resumen de tus métricas relevantes al proveedor que elegiste, con tu propia clave y solo cuando preguntas. De lo contrario, no se envía nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour bien répondre, il envoie un court résumé de tes indicateurs pertinents au fournisseur que tu as choisi — avec ta propre clé, et seulement quand tu demandes. Sinon, rien n'est envoyé."
+          }
+        }
+      }
+    },
+    "How it works, and exactly what's shared": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie er funktioniert und was genau geteilt wird"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How it works, and exactly what's shared"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cómo funciona y qué se comparte exactamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment ça marche, et ce qui est partagé exactement"
+          }
+        }
+      }
+    },
+    "How Coach works": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie der Coach funktioniert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How Coach works"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cómo funciona Coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment Coach fonctionne"
+          }
+        }
+      }
+    },
+    "What stays here, what's sent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was hierbleibt, was gesendet wird"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What stays here, what's sent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué se queda aquí y qué se envía"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui reste ici, ce qui est envoyé"
+          }
+        }
+      }
+    },
+    "Provider & model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anbieter & Modell"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provider & model"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proveedor y modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournisseur et modèle"
+          }
+        }
+      }
+    },
+    "Why the model matters": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warum das Modell wichtig ist"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why the model matters"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por qué importa el modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourquoi le modèle compte"
+          }
+        }
+      }
+    },
+    "Its limits": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seine Grenzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its limits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sus límites"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses limites"
+          }
+        }
+      }
+    },
+    "The coach reads a compact summary of your recent data — roughly your last two weeks plus 30-day averages and recent workouts — and can call small tools to fetch specific numbers on demand. Then it answers in plain language, grounded in those numbers rather than generic advice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach liest eine kompakte Zusammenfassung deiner jüngeren Daten — grob deine letzten zwei Wochen plus 30-Tage-Durchschnitte und aktuelle Workouts — und kann kleine Tools aufrufen, um bei Bedarf konkrete Zahlen zu holen. Dann antwortet er in klarer Sprache, gestützt auf diese Zahlen statt auf allgemeine Ratschläge."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach reads a compact summary of your recent data — roughly your last two weeks plus 30-day averages and recent workouts — and can call small tools to fetch specific numbers on demand. Then it answers in plain language, grounded in those numbers rather than generic advice."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El coach lee un resumen compacto de tus datos recientes — más o menos tus últimas dos semanas más promedios de 30 días y entrenamientos recientes — y puede llamar a pequeñas herramientas para obtener números concretos cuando hace falta. Luego responde en lenguaje claro, apoyándose en esos números en vez de dar consejos genéricos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le coach lit un résumé compact de tes données récentes — en gros tes deux dernières semaines plus les moyennes sur 30 jours et tes entraînements récents — et peut appeler de petits outils pour récupérer des chiffres précis au besoin. Puis il répond en langage clair, en s'appuyant sur ces chiffres plutôt que sur des conseils génériques."
+          }
+        }
+      }
+    },
+    "Everything is computed on %@. The coach is the ONE feature in NOOP that talks to the internet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles wird auf %@ berechnet. Der Coach ist die EINZIGE Funktion in NOOP, die mit dem Internet spricht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything is computed on %@. The coach is the ONE feature in NOOP that talks to the internet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo se calcula en %@. El coach es la ÚNICA función de NOOP que se comunica con internet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout est calculé sur %@. Le coach est la SEULE fonction de NOOP qui communique avec internet."
+          }
+        }
+      }
+    },
+    "When you ask a question with data-sharing on, it sends a short TEXT summary of the relevant metrics — never your raw sensor streams — to your chosen provider, using your own key. With data-sharing off, it sends only your question. Either way, nothing leaves until you ask.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du mit aktivierter Datenfreigabe eine Frage stellst, sendet er eine kurze TEXT-Zusammenfassung der relevanten Werte — nie deine rohen Sensordaten — an deinen gewählten Anbieter, mit deinem eigenen Schlüssel. Ohne Datenfreigabe wird nur deine Frage gesendet. So oder so verlässt nichts das Gerät, bevor du fragst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you ask a question with data-sharing on, it sends a short TEXT summary of the relevant metrics — never your raw sensor streams — to your chosen provider, using your own key. With data-sharing off, it sends only your question. Either way, nothing leaves until you ask."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando haces una pregunta con el uso de datos activado, envía un breve resumen de TEXTO de las métricas relevantes — nunca tus datos de sensor en bruto — al proveedor que elijas, con tu propia clave. Con el uso de datos desactivado, solo envía tu pregunta. En cualquier caso, nada sale hasta que preguntas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand tu poses une question avec le partage de données activé, il envoie un court résumé TEXTE des indicateurs pertinents — jamais tes flux de capteurs bruts — au fournisseur choisi, avec ta propre clé. Sans partage de données, il n'envoie que ta question. Dans tous les cas, rien ne part avant que tu demandes."
+          }
+        }
+      }
+    },
+    "You bring your own API key. The provider — right now %@ — is who actually receives your data, so it's the real privacy choice: pick one you trust, and check how they handle it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bringst deinen eigenen API-Schlüssel mit. Der Anbieter — aktuell %@ — ist derjenige, der deine Daten tatsächlich erhält, also ist er die eigentliche Datenschutz-Entscheidung: Wähle einen, dem du vertraust, und prüfe, wie er damit umgeht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You bring your own API key. The provider — right now %@ — is who actually receives your data, so it's the real privacy choice: pick one you trust, and check how they handle it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tú aportas tu propia clave de API. El proveedor — ahora mismo %@ — es quien realmente recibe tus datos, así que es la verdadera decisión de privacidad: elige uno en el que confíes y comprueba cómo los gestiona."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu apportes ta propre clé d'API. Le fournisseur — actuellement %@ — est celui qui reçoit réellement tes données, c'est donc le vrai choix de confidentialité : choisis-en un de confiance et vérifie comment il les traite."
+          }
+        }
+      }
+    },
+    "The coaching model runs the conversation; cheaper background models handle chat summaries and quick card reads (Settings → Connection & model). NOOP never sends more personal data than a request needs.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Coaching-Modell führt das Gespräch; günstigere Hintergrund-Modelle übernehmen Chat-Zusammenfassungen und kurze Karten-Analysen (Einstellungen → Verbindung & Modell). NOOP sendet nie mehr persönliche Daten, als eine Anfrage braucht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coaching model runs the conversation; cheaper background models handle chat summaries and quick card reads (Settings → Connection & model). NOOP never sends more personal data than a request needs."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo de coaching lleva la conversación; modelos de fondo más económicos se encargan de los resúmenes de chat y lecturas rápidas de tarjetas (Ajustes → Conexión y modelo). NOOP nunca envía más datos personales de los que necesita una solicitud."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle de coaching mène la conversation ; des modèles d'arrière-plan moins chers gèrent les résumés de discussion et les lectures rapides de cartes (Réglages → Connexion et modèle). NOOP n'envoie jamais plus de données personnelles qu'une requête n'en a besoin."
+          }
+        }
+      }
+    },
+    "The coach is only as sharp as the model behind it. A stronger model reasons better over your data and gives advice worth acting on; a weak or very cheap one tends to be shallow or generic. That's why the default coaching model is a capable one, not a mini one — a bad first answer is a bad first impression for no reason you chose.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach ist nur so scharfsinnig wie das Modell dahinter. Ein stärkeres Modell denkt besser über deine Daten nach und gibt Rat, der es wert ist, umgesetzt zu werden; ein schwaches oder sehr billiges bleibt oft oberflächlich oder allgemein. Deshalb ist das Standard-Coaching-Modell ein leistungsfähiges, kein Mini-Modell — eine schlechte erste Antwort ist ein schlechter erster Eindruck ohne Grund, den du gewählt hättest."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach is only as sharp as the model behind it. A stronger model reasons better over your data and gives advice worth acting on; a weak or very cheap one tends to be shallow or generic. That's why the default coaching model is a capable one, not a mini one — a bad first answer is a bad first impression for no reason you chose."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El coach es tan agudo como el modelo que lo respalda. Un modelo más potente razona mejor sobre tus datos y da consejos que vale la pena seguir; uno débil o muy barato suele ser superficial o genérico. Por eso el modelo de coaching por defecto es uno capaz, no uno mini: una mala primera respuesta es una mala primera impresión sin ninguna razón que hayas elegido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le coach n'est aussi fin que le modèle qui le sous-tend. Un modèle plus puissant raisonne mieux sur tes données et donne des conseils qui valent la peine d'être suivis ; un modèle faible ou très bon marché reste souvent superficiel ou générique. C'est pourquoi le modèle de coaching par défaut est capable, pas un mini — une mauvaise première réponse est une mauvaise première impression pour aucune raison que tu aurais choisie."
+          }
+        }
+      }
+    },
+    "It's a support tool, not a medical or clinical authority. It can be wrong, it can miss context you didn't tell it, and it never replaces professional advice. Use it to think — not to obey.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es ist ein Hilfsmittel, keine medizinische oder klinische Autorität. Es kann sich irren, es kann Zusammenhänge übersehen, die du ihm nicht gesagt hast, und es ersetzt nie fachlichen Rat. Nutze es zum Nachdenken — nicht zum Gehorchen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's a support tool, not a medical or clinical authority. It can be wrong, it can miss context you didn't tell it, and it never replaces professional advice. Use it to think — not to obey."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es una herramienta de apoyo, no una autoridad médica o clínica. Puede equivocarse, puede pasar por alto contexto que no le contaste y nunca reemplaza el consejo profesional. Úsalo para pensar, no para obedecer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C'est un outil d'aide, pas une autorité médicale ou clinique. Il peut se tromper, manquer un contexte que tu ne lui as pas dit, et ne remplace jamais un avis professionnel. Utilise-le pour réfléchir — pas pour obéir."
+          }
+        }
+      }
+    },
+    "What runs on %@, what's sent, and why the model matters.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was auf %@ läuft, was gesendet wird und warum das Modell wichtig ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What runs on %@, what's sent, and why the model matters."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué se ejecuta en %@, qué se envía y por qué importa el modelo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui tourne sur %@, ce qui est envoyé, et pourquoi le modèle compte."
+          }
+        }
+      }
+    },
+    "The coach works with your data on purpose — that's what makes it personal. With a Custom server you point it at, nothing leaves %@ at all. NOOP only ever sends what a request needs — a summary of the relevant metrics, never raw sensor data.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach arbeitet bewusst mit deinen Daten — das macht ihn persönlich. Mit einem eigenen Server, auf den du ihn richtest, verlässt gar nichts %@. NOOP sendet immer nur, was eine Anfrage braucht — eine Zusammenfassung der relevanten Werte, nie rohe Sensordaten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach works with your data on purpose — that's what makes it personal. With a Custom server you point it at, nothing leaves %@ at all. NOOP only ever sends what a request needs — a summary of the relevant metrics, never raw sensor data."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El coach trabaja con tus datos a propósito: eso es lo que lo hace personal. Con un servidor propio al que lo apuntes, nada sale de %@ en absoluto. NOOP solo envía lo que necesita una solicitud — un resumen de las métricas relevantes, nunca datos de sensor en bruto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le coach travaille avec tes données à dessein — c'est ce qui le rend personnel. Avec un serveur perso vers lequel tu le diriges, rien ne quitte %@ du tout. NOOP n'envoie que ce dont une requête a besoin — un résumé des indicateurs pertinents, jamais de données de capteur brutes."
+          }
+        }
+      }
+    },
+    "The coach works with your data on purpose — that's what makes it personal. The real privacy question is your provider (%@): they receive what you send, so choose one you trust. NOOP only ever sends what a request needs — a summary of the relevant metrics, never raw sensor data or unrelated personal details.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach arbeitet bewusst mit deinen Daten — das macht ihn persönlich. Die eigentliche Datenschutzfrage ist dein Anbieter (%@): Er erhält, was du sendest, also wähle einen, dem du vertraust. NOOP sendet immer nur, was eine Anfrage braucht — eine Zusammenfassung der relevanten Werte, nie rohe Sensordaten oder unnötige persönliche Angaben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach works with your data on purpose — that's what makes it personal. The real privacy question is your provider (%@): they receive what you send, so choose one you trust. NOOP only ever sends what a request needs — a summary of the relevant metrics, never raw sensor data or unrelated personal details."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El coach trabaja con tus datos a propósito: eso es lo que lo hace personal. La verdadera cuestión de privacidad es tu proveedor (%@): recibe lo que envías, así que elige uno en el que confíes. NOOP solo envía lo que necesita una solicitud — un resumen de las métricas relevantes, nunca datos de sensor en bruto ni detalles personales no relacionados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le coach travaille avec tes données à dessein — c'est ce qui le rend personnel. La vraie question de confidentialité, c'est ton fournisseur (%@) : il reçoit ce que tu envoies, alors choisis-en un de confiance. NOOP n'envoie que ce dont une requête a besoin — un résumé des indicateurs pertinents, jamais de données de capteur brutes ni de détails personnels sans rapport."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
