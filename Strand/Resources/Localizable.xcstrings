@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Optimal strain reached": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optimale Anstrengung erreicht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esfuerzo óptimo alcanzado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effort optimal atteint"
+          }
+        }
+      }
+    },
+    "You've hit today's optimal strain target of %lld. Nice work — your recovery earned it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast dein heutiges optimales Anstrengungsziel von %lld erreicht. Stark — deine Erholung hat es ermöglicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has alcanzado tu objetivo de esfuerzo óptimo de hoy de %lld. Bien hecho: tu recuperación se lo ha ganado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez atteint votre objectif d'effort optimal du jour de %lld. Bravo — votre récupération l'a permis."
+          }
+        }
+      }
+    },
+    "Strain target": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anstrengungsziel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objetivo de esfuerzo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objectif d'effort"
+          }
+        }
+      }
+    },
+    "A once-a-day nudge when your Effort reaches the low end of today's optimal strain range, worked out from your recovery.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal täglich ein Hinweis, wenn deine Anstrengung das untere Ende des heutigen optimalen Bereichs erreicht, berechnet aus deiner Erholung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un aviso una vez al día cuando tu esfuerzo alcanza el extremo inferior del rango óptimo de hoy, calculado a partir de tu recuperación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un rappel une fois par jour lorsque votre effort atteint le bas de la plage optimale du jour, calculée à partir de votre récupération."
+          }
+        }
+      }
+    },
+    "Notify when optimal strain is reached": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigen, wenn die optimale Anstrengung erreicht ist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificar cuando se alcance el esfuerzo óptimo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifier lorsque l'effort optimal est atteint"
+          }
+        }
+      }
+    },
+    "Posts after your strap syncs and NOOP scores the day — not the exact second you cross it. At most once per day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheint, nachdem dein Band synchronisiert hat und NOOP den Tag bewertet hat — nicht in der exakten Sekunde des Überschreitens. Höchstens einmal pro Tag."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparece después de que tu banda sincroniza y NOOP puntúa el día — no en el segundo exacto en que lo cruzas. Como máximo una vez al día."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparaît après la synchronisation de votre bracelet et le calcul du jour par NOOP — pas à la seconde exacte du franchissement. Au plus une fois par jour."
+          }
+        }
+      }
+    },
     "Night": {
       "localizations": {
         "de": {
