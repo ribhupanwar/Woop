@@ -1,6 +1,468 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Grounded in %lld of your data sources": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestützt auf %lld deiner Datenquellen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basado en %lld de tus fuentes de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fondé sur %lld de vos sources de données"
+          }
+        }
+      }
+    },
+    "Recovery, HRV, resting HR and sleep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erholung, HRV, Ruhepuls und Schlaf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperación, VFC, FC en reposo y sueño"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupération, VFC, FC au repos et sommeil"
+          }
+        }
+      }
+    },
+    "Your last few sessions and their strain": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine letzten Einheiten und deren Belastung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus últimas sesiones y su esfuerzo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos dernières séances et leur charge"
+          }
+        }
+      }
+    },
+    "Autonomic load from today's heart-rate variability": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autonome Last aus der heutigen Herzfrequenzvariabilität"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carga autónoma según la variabilidad de tu frecuencia cardíaca de hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charge autonome d'après la variabilité de la fréquence cardiaque du jour"
+          }
+        }
+      }
+    },
+    "Your own strongest n-of-1 correlations": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine stärksten persönlichen Korrelationen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus correlaciones personales más fuertes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos corrélations personnelles les plus fortes"
+          }
+        }
+      }
+    },
+    "A metric plotted over time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Metrik im zeitlichen Verlauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una métrica a lo largo del tiempo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une métrique dans le temps"
+          }
+        }
+      }
+    },
+    "Facts you've asked the coach to keep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fakten, die der Coach für dich behalten soll"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos que le pediste al coach que recuerde"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des faits que vous avez demandé au coach de retenir"
+          }
+        }
+      }
+    },
+    "Earlier things you discussed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Dinge, die du besprochen hast"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cosas que hablaste antes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des sujets que vous avez abordés plus tôt"
+          }
+        }
+      }
+    },
+    "Caffeine you logged": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von dir erfasstes Koffein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cafeína que registraste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La caféine que vous avez enregistrée"
+          }
+        }
+      }
+    },
+    "A journal note you logged": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine von dir erfasste Journalnotiz"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una nota de diario que registraste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une note de journal que vous avez enregistrée"
+          }
+        }
+      }
+    },
+    "A lab marker you logged": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein von dir erfasster Laborwert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un marcador de laboratorio que registraste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un marqueur de laboratoire que vous avez enregistré"
+          }
+        }
+      }
+    },
+    "Last night's stages, timing and debt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlafphasen, Zeiten und Defizit der letzten Nacht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las fases, los horarios y la deuda de anoche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les phases, les horaires et la dette de la nuit dernière"
+          }
+        }
+      }
+    },
+    "Trends across a range of weeks or months": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trends über mehrere Wochen oder Monate"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tendencias a lo largo de semanas o meses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tendances sur plusieurs semaines ou mois"
+          }
+        }
+      }
+    },
+    "Today's push / maintain / rest call": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die heutige Einschätzung: pushen / halten / ruhen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La recomendación de hoy: exigir / mantener / descansar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La recommandation du jour : pousser / maintenir / se reposer"
+          }
+        }
+      }
+    },
+    "What moved your Charge up or down": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was deine Charge gehoben oder gesenkt hat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué subió o bajó tu Charge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui a fait monter ou descendre votre Charge"
+          }
+        }
+      }
+    },
+    "A session proposed for you to accept or change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Einheit, die du annehmen oder ändern kannst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una sesión propuesta para que aceptes o cambies"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une séance proposée à accepter ou à modifier"
+          }
+        }
+      }
+    },
+    "What a session would cost, from your history": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was eine Einheit kosten würde, aus deinem Verlauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que costaría una sesión, según tu historial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que coûterait une séance, d'après votre historique"
+          }
+        }
+      }
+    },
+    "Tomorrow's Charge under a plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Charge morgen unter einem Plan"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu Charge de mañana con un plan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre Charge de demain selon un plan"
+          }
+        }
+      }
+    },
+    "How closely you've kept to your plan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie genau du deinen Plan eingehalten hast"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qué tan bien seguiste tu plan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À quel point vous avez suivi votre plan"
+          }
+        }
+      }
+    },
+    "What you logged — caffeine, journal, lab, mood": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was du erfasst hast – Koffein, Journal, Labor, Stimmung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que registraste: cafeína, diario, laboratorio, ánimo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que vous avez enregistré : caféine, journal, labo, humeur"
+          }
+        }
+      }
+    },
+    "Time spent in each heart-rate zone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeit in jeder Herzfrequenzzone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo en cada zona de frecuencia cardíaca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps passé dans chaque zone de fréquence cardiaque"
+          }
+        }
+      }
+    },
     "Ask coach": {
       "localizations": {
         "de": {
