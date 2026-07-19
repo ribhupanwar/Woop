@@ -170366,6 +170366,202 @@
           }
         }
       }
+    },
+    "Forget saved key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherten Schlüssel vergessen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget saved key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Olvidar clave guardada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oublier la clé enregistrée"
+          }
+        }
+      }
+    },
+    "Forget your saved %@ key?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deinen gespeicherten %@-Schlüssel vergessen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget your saved %@ key?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Olvidar tu clave de %@ guardada?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oublier votre clé %@ enregistrée ?"
+          }
+        }
+      }
+    },
+    "Forget key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel vergessen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget key"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Olvidar clave"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oublier la clé"
+          }
+        }
+      }
+    },
+    "You'll need to paste it again to reconnect. This is different from Disconnect, which keeps the key.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du musst ihn zum erneuten Verbinden wieder einfügen. Das ist etwas anderes als „Trennen“, wobei der Schlüssel erhalten bleibt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You'll need to paste it again to reconnect. This is different from Disconnect, which keeps the key."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tendrás que pegarla de nuevo para reconectar. Esto es diferente de Desconectar, que conserva la clave."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous devrez la coller à nouveau pour vous reconnecter. C'est différent de Déconnecter, qui conserve la clé."
+          }
+        }
+      }
+    },
+    "You disconnected, but your key is still saved locally — reconnect without re-entering it, or pick a different provider below.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast die Verbindung getrennt, aber dein Schlüssel ist weiterhin lokal gespeichert — verbinde dich erneut, ohne ihn neu einzugeben, oder wähle unten einen anderen Anbieter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You disconnected, but your key is still saved locally — reconnect without re-entering it, or pick a different provider below."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te desconectaste, pero tu clave sigue guardada localmente: vuelve a conectar sin volver a introducirla, o elige otro proveedor abajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous vous êtes déconnecté, mais votre clé est toujours enregistrée localement — reconnectez-vous sans la ressaisir, ou choisissez un autre fournisseur ci-dessous."
+          }
+        }
+      }
+    },
+    "Your logs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Protokolle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your logs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus registros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes journaux"
+          }
+        }
+      }
+    },
+    "Zone minutes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zonenminuten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zone minutes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutos en zona"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minutes en zone"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
