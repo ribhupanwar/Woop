@@ -171514,6 +171514,62 @@
           }
         }
       }
+    },
+    "What are you really after?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Worum geht es dir wirklich?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What are you really after?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué buscas realmente?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qu'est-ce que tu vises vraiment ?"
+          }
+        }
+      }
+    },
+    "Pick what's driving this — the coach uses it to shape its advice, not just decorate the screen.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle, was dich antreibt — der Coach nutzt das, um seine Ratschläge zu formen, nicht nur zur Deko."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick what's driving this — the coach uses it to shape its advice, not just decorate the screen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige qué te impulsa: el coach lo usa para dar forma a sus consejos, no solo para decorar la pantalla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis ce qui te motive — le coach s'en sert pour façonner ses conseils, pas juste pour décorer l'écran."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
