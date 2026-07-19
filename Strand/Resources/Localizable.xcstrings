@@ -171626,6 +171626,62 @@
           }
         }
       }
+    },
+    "Proactive messages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proaktive Nachrichten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proactive messages"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensajes proactivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Messages proactifs"
+          }
+        }
+      }
+    },
+    "The coach only reaches out on a real milestone or a run of missed sessions — never chatter. Each message uses your provider (and your tokens).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Coach meldet sich nur bei einem echten Meilenstein oder einer Serie verpasster Einheiten — nie zum Plaudern. Jede Nachricht nutzt deinen Anbieter (und deine Tokens)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The coach only reaches out on a real milestone or a run of missed sessions — never chatter. Each message uses your provider (and your tokens)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El coach solo te escribe ante un hito real o una racha de sesiones perdidas, nunca por charlar. Cada mensaje usa tu proveedor (y tus tokens)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le coach ne te contacte que pour un vrai jalon ou une série de séances manquées — jamais pour bavarder. Chaque message utilise ton fournisseur (et tes tokens)."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
