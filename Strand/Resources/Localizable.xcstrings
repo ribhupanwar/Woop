@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Same as coaching model": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie Coaching-Modell"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igual que el modelo de coaching"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identique au modèle de coaching"
+          }
+        }
+      }
+    },
+    "Cheaper models for background jobs — leave on default to use %@'s small model. Keeps the pricey coaching model for the actual conversation.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günstigere Modelle für Hintergrundaufgaben — bei Standard bleibt das kleine Modell von %@ aktiv. So bleibt das teurere Coaching-Modell für das eigentliche Gespräch reserviert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos más económicos para tareas en segundo plano — con el valor por defecto se usa el modelo pequeño de %@. Así el modelo de coaching, más costoso, queda reservado para la conversación real."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Des modèles moins chers pour les tâches en arrière-plan — laissé par défaut, le petit modèle de %@ est utilisé. Le modèle de coaching, plus coûteux, reste ainsi réservé à la conversation elle-même."
+          }
+        }
+      }
+    },
     "Why didn't it happen?": {
       "localizations": {
         "de": {
