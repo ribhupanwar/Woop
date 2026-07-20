@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Show coach avatar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Avatar anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar avatar del coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher l’avatar du coach"
+          }
+        }
+      }
+    },
+    "Use your coach’s picture on the Today entry instead of a plain icon.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Bild deines Coaches statt eines schlichten Symbols am „Heute“-Einstieg verwenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa la imagen de tu coach en la entrada de Hoy en lugar de un icono simple."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser la photo de votre coach sur l’entrée Aujourd’hui plutôt qu’une simple icône."
+          }
+        }
+      }
+    },
     "Show Coach on Today": {
       "localizations": {
         "de": {
