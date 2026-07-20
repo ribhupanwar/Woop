@@ -1,6 +1,358 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "You already have an active %@ goal — continuing will offer to replace it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast bereits ein aktives %@-Ziel — wenn du fortfährst, kannst du es ersetzen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya tienes un objetivo de %@ activo — si continúas, podrás reemplazarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as déjà un objectif de %@ actif — en continuant, tu pourras le remplacer."
+          }
+        }
+      }
+    },
+    "Or fill it in all at once": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oder alles auf einmal ausfüllen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O rellénalo todo de una vez"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ou remplis tout d'un coup"
+          }
+        }
+      }
+    },
+    "Add without the questions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne die Fragen hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir sin las preguntas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter sans les questions"
+          }
+        }
+      }
+    },
+    "Add another goal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiteres Ziel hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir otro objetivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un autre objectif"
+          }
+        }
+      }
+    },
+    "A short, guided setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine kurze, geführte Einrichtung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una configuración breve y guiada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une configuration courte et guidée."
+          }
+        }
+      }
+    },
+    "You have the maximum of %lld active goals. Set one aside or close one out to add another.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast das Maximum von %lld aktiven Zielen erreicht. Lege eines beiseite oder schließe eines ab, um ein weiteres hinzuzufügen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has alcanzado el máximo de %lld objetivos activos. Aparta uno o cierra uno para añadir otro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as atteint le maximum de %lld objectifs actifs. Mets-en un de côté ou clôtures-en un pour en ajouter un autre."
+          }
+        }
+      }
+    },
+    "Edit your %@ goal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein %@-Ziel bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar tu objetivo de %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier ton objectif de %@"
+          }
+        }
+      }
+    },
+    "View your journey — progress, milestones and plan history": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Reise ansehen — Fortschritt, Meilensteine und Plan-Verlauf"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver tu recorrido — progreso, hitos e historial del plan"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir ton parcours — progrès, étapes et historique du plan"
+          }
+        }
+      }
+    },
+    "Your %@ target date has passed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Zieldatum für %@ ist verstrichen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu fecha objetivo de %@ ha pasado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta date cible pour %@ est passée"
+          }
+        }
+      }
+    },
+    "Replace your existing goal?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein bestehendes Ziel ersetzen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Reemplazar tu objetivo actual?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacer ton objectif actuel ?"
+          }
+        }
+      }
+    },
+    "Replace it": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reemplazarlo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le remplacer"
+          }
+        }
+      }
+    },
+    "You already have an active %@ goal. Replacing it closes that one out — its story stays in your history.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast bereits ein aktives %@-Ziel. Es zu ersetzen schließt dieses ab — seine Geschichte bleibt in deiner Historie erhalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya tienes un objetivo de %@ activo. Reemplazarlo lo cierra — su historia se conserva en tu historial."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as déjà un objectif de %@ actif. Le remplacer le clôture — son histoire reste dans ton historique."
+          }
+        }
+      }
+    },
+    "You're at the limit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast das Limit erreicht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has llegado al límite"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as atteint la limite"
+          }
+        }
+      }
+    },
+    "You already have %lld active goals — set one aside or close one out before adding another.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast bereits %lld aktive Ziele — lege eines beiseite oder schließe eines ab, bevor du ein weiteres hinzufügst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya tienes %lld objetivos activos — aparta uno o cierra uno antes de añadir otro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as déjà %lld objectifs actifs — mets-en un de côté ou clôtures-en un avant d'en ajouter un autre."
+          }
+        }
+      }
+    },
+    "Add a goal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziel hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir objetivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un objectif"
+          }
+        }
+      }
+    },
+    "About your combined training load": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu deiner kombinierten Trainingsbelastung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sobre tu carga de entrenamiento combinada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos de ta charge d'entraînement combinée"
+          }
+        }
+      }
+    },
     "Show coach avatar": {
       "localizations": {
         "de": {
