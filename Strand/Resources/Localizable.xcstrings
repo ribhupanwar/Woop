@@ -1,6 +1,336 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Coach identity": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Identität"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identidad del coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identité du coach"
+          }
+        }
+      }
+    },
+    "Coach identity: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Identität: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identidad del coach: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identité du coach : %@"
+          }
+        }
+      }
+    },
+    "Start from a coach": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit einem Coach starten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empezar con un coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partir d'un coach"
+          }
+        }
+      }
+    },
+    "Svea and Marv are two ready-made coaches — a name, a picture and a tone. Pick one, then change anything you like.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svea und Marv sind zwei fertige Coaches — Name, Bild und Ton. Wähle einen und ändere dann, was du möchtest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svea y Marv son dos coaches predefinidos: un nombre, una imagen y un tono. Elige uno y luego cambia lo que quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svea et Marv sont deux coachs prêts à l'emploi — un nom, une image et un ton. Choisis-en un, puis modifie ce que tu veux."
+          }
+        }
+      }
+    },
+    "Use the %@ preset": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ als Vorlage verwenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar %@ como preajuste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser %@ comme préréglage"
+          }
+        }
+      }
+    },
+    "Coach name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Name"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre del coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom du coach"
+          }
+        }
+      }
+    },
+    "Picture": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image"
+          }
+        }
+      }
+    },
+    "Upload a photo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto hochladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subir una foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer une photo"
+          }
+        }
+      }
+    },
+    "Your photo stays on %@. The coach is never shown your picture — only its name and tone reach your provider.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Foto bleibt auf %@. Dem Coach wird dein Bild nie gezeigt — nur sein Name und Ton erreichen deinen Anbieter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu foto permanece en %@. Al coach nunca se le muestra tu imagen; solo su nombre y su tono llegan a tu proveedor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta photo reste sur %@. Le coach ne voit jamais ton image — seuls son nom et son ton parviennent à ton fournisseur."
+          }
+        }
+      }
+    },
+    "Avatar option": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avatar-Option"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opción de avatar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Option d'avatar"
+          }
+        }
+      }
+    },
+    "Tone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tono"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton"
+          }
+        }
+      }
+    },
+    "Coach tone": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach-Ton"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tono del coach"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton du coach"
+          }
+        }
+      }
+    },
+    "A light lean in how the coach phrases things, on top of its coaching style. It never changes what the coach decides.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine leichte Tendenz, wie der Coach Dinge formuliert — zusätzlich zu seinem Coaching-Stil. Was der Coach entscheidet, ändert sich dadurch nie."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una ligera inclinación en cómo el coach se expresa, además de su estilo de coaching. Nunca cambia lo que el coach decide."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une légère inclinaison dans la façon dont le coach formule les choses, en plus de son style de coaching. Cela ne change jamais ce que le coach décide."
+          }
+        }
+      }
+    },
+    "Warm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warm"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cálido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaleureux"
+          }
+        }
+      }
+    },
+    "Grounded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geerdet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sereno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posé"
+          }
+        }
+      }
+    },
     "Same as coaching model": {
       "localizations": {
         "de": {
