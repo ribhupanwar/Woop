@@ -167978,6 +167978,28 @@
           }
         }
       }
+    },
+    "Tap a day to catch up": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf einen Tag zum Nachtragen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toca un día para ponerte al día"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touchez un jour pour le compléter"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
