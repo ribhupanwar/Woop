@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Show Coach on Today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach auf „Heute“ anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar Coach en Hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher le Coach sur Aujourd’hui"
+          }
+        }
+      }
+    },
+    "Turn off to hide the Coach card and floating button. Per-metric “Ask coach” and the AI that writes your card summaries keep working.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausschalten, um die Coach-Karte und den schwebenden Button auszublenden. Das „Coach fragen“ pro Messwert und die KI, die deine Kartenzusammenfassungen schreibt, laufen weiter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactívalo para ocultar la tarjeta del Coach y el botón flotante. El “Preguntar al coach” por métrica y la IA que redacta los resúmenes de tus tarjetas siguen funcionando."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivez pour masquer la carte du Coach et le bouton flottant. Le « Demander au coach » par métrique et l’IA qui rédige les résumés de vos cartes continuent de fonctionner."
+          }
+        }
+      }
+    },
     "Archived": {
       "localizations": {
         "de": {
