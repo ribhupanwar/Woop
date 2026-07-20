@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Set up with a few questions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit ein paar Fragen einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar con unas preguntas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer en quelques questions"
+          }
+        }
+      }
+    },
+    "A short, guided setup — or tap above to fill it in all at once.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine kurze, geführte Einrichtung – oder oben tippen und alles auf einmal ausfüllen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una configuración breve y guiada, o toca arriba para rellenarlo todo de una vez."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une configuration courte et guidée – ou touchez ci-dessus pour tout remplir d’un coup."
+          }
+        }
+      }
+    },
+    "Set up your goal with a few questions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richte dein Ziel mit ein paar Fragen ein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura tu objetivo con unas preguntas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurez votre objectif en quelques questions"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schritt %1$lld von %2$lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paso %1$lld de %2$lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étape %1$lld sur %2$lld"
+          }
+        }
+      }
+    },
+    "A few quick questions and your coach knows what you're working towards — so it can tell you where you stand, not just how you slept.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein paar kurze Fragen, und dein Coach weiß, worauf du hinarbeitest – so kann er dir sagen, wo du stehst, nicht nur wie du geschlafen hast."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unas preguntas rápidas y tu coach sabrá hacia qué trabajas, para poder decirte dónde estás, no solo cómo dormiste."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelques questions rapides et votre coach saura vers quoi vous travaillez – pour vous dire où vous en êtes, pas seulement comment vous avez dormi."
+          }
+        }
+      }
+    },
+    "Entirely optional. Everything else works without a goal, and you can change or drop it any time.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Völlig optional. Alles andere funktioniert auch ohne Ziel, und du kannst es jederzeit ändern oder verwerfen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totalmente opcional. Todo lo demás funciona sin un objetivo, y puedes cambiarlo o eliminarlo cuando quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entièrement facultatif. Tout le reste fonctionne sans objectif, et vous pouvez le changer ou l’abandonner à tout moment."
+          }
+        }
+      }
+    },
     "Goal and journey": {
       "localizations": {
         "de": {
