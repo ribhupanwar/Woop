@@ -1,6 +1,146 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Look at this more closely": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look at this more closely"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genauer ansehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizar con más detalle"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Examiner de plus près"
+          }
+        }
+      }
+    },
+    "Answer again using the deeper analysis model": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Answer again using the deeper analysis model"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut antworten, mit dem Modell für die genauere Analyse"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Responder de nuevo con el modelo de análisis más detallado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Répondre à nouveau avec le modèle d'analyse approfondie"
+          }
+        }
+      }
+    },
+    "Closer look": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closer look"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genauer ansehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Análisis detallado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Examen approfondi"
+          }
+        }
+      }
+    },
+    "An optional heavier model for \"Look at this more closely\" on a reply. Leave unset to hide that option.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An optional heavier model for \"Look at this more closely\" on a reply. Leave unset to hide that option."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein optionales, stärkeres Modell für „Genauer ansehen“ unter einer Antwort. Nicht gesetzt, blendet die Option aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modelo más potente y opcional para \"Analizar con más detalle\" en una respuesta. Si lo dejas sin definir, la opción se oculta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modèle plus puissant, facultatif, pour « Examiner de plus près » sous une réponse. Non défini, l'option est masquée."
+          }
+        }
+      }
+    },
+    "Off — no closer-look option": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off — no closer-look option"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus — keine Option „Genauer ansehen“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivado: sin opción de análisis detallado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé — pas d'examen approfondi"
+          }
+        }
+      }
+    },
     "You already have an active %@ goal — continuing will offer to replace it.": {
       "localizations": {
         "de": {
