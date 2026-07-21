@@ -1,6 +1,94 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Body-location probe (#690 RE)…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Körperpositions-Test (#690 RE)…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de posición corporal (#690 RE)…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde de position corporelle (#690 RE)…"
+          }
+        }
+      }
+    },
+    "Body-location probe (#690 RE)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Körperpositions-Test (#690 RE)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de posición corporal (#690 RE)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde de position corporelle (#690 RE)"
+          }
+        }
+      }
+    },
+    "Sends the read-only GET_BODY_LOCATION_AND_STATUS (0x54) and shows the strap's full raw reply, decoding the body-location record (revision / location / confidence / status) on WHOOP 4.0. Nothing is written to the strap, and it never changes wear detection or scoring.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sendet den nur lesenden Befehl GET_BODY_LOCATION_AND_STATUS (0x54) und zeigt die vollständige Rohantwort des Bands, wobei der Datensatz (Revision / Position / Konfidenz / Status) auf der WHOOP 4.0 dekodiert wird. Es wird nichts auf das Band geschrieben, und Trageerkennung oder Bewertung werden nie verändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía el comando de solo lectura GET_BODY_LOCATION_AND_STATUS (0x54) y muestra la respuesta cruda completa de la banda, decodificando el registro (revisión / posición / confianza / estado) en la WHOOP 4.0. No se escribe nada en la banda y nunca cambia la detección de uso ni la puntuación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoie la commande en lecture seule GET_BODY_LOCATION_AND_STATUS (0x54) et affiche la réponse brute complète du bracelet, en décodant l'enregistrement (révision / position / confiance / état) sur la WHOOP 4.0. Rien n'est écrit sur le bracelet, et la détection de port ou la notation ne sont jamais modifiées."
+          }
+        }
+      }
+    },
+    "Body-location probe result (#690)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnis des Körperpositions-Tests (#690)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultado de la sonda de posición corporal (#690)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultat de la sonde de position corporelle (#690)"
+          }
+        }
+      }
+    },
     "%.2f V": {
       "localizations": {
         "de": {
