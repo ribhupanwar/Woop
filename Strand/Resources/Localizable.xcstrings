@@ -1,6 +1,34 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Currently: %@. %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently: %@. %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell: %1$@. %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualmente: %1$@. %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement : %1$@. %2$@"
+          }
+        }
+      }
+    },
     "Your daily brief — the coach got in touch": {
       "localizations": {
         "en": {
