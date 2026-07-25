@@ -169334,6 +169334,40 @@
           }
         }
       }
+    },
+    "Restarted when you recalibrated on %@ — no need to tap it again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restarted when you recalibrated on %@ — no need to tap it again."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu gestartet, als du am %@ neu kalibriert hast — du musst nicht erneut tippen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciado cuando recalibraste el %@ — no hace falta volver a pulsarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redémarré lors de votre recalibrage du %@ — inutile d'appuyer à nouveau."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciado quando recalibraste em %@ — não precisas de tocar novamente."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
