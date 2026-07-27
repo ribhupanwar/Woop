@@ -169628,6 +169628,214 @@
           }
         }
       }
+    },
+    "Optical block experiment": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optisches Blockexperiment"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimento de bloques ópticos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expérience sur les blocs optiques"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esperimento sui blocchi ottici"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experiência de blocos óticos"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эксперимент с оптическими блоками"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光学块实验"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光學區塊實驗"
+          }
+        }
+      }
+    },
+    "Mark the start of each physical phase while wearing or handling the strap. NOOP aligns the marker to the timestamp inside delayed history buffers, then the offline analyzer compares block activation, header bytes and raw ADC changes. It does not assume a wavelength or calculate SpO₂/BP.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markiere den Beginn jeder physischen Phase, während du das Band trägst oder handhabst. NOOP richtet die Markierung am Zeitstempel in den verzögerten Verlaufspuffern aus, dann vergleicht der Offline-Analyzer Blockaktivierung, Header-Bytes und rohe ADC-Änderungen. Es nimmt keine Wellenlänge an und berechnet kein SpO₂ und keinen Blutdruck."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marca el inicio de cada fase física mientras llevas puesta o manipulas la banda. NOOP alinea el marcador con la marca de tiempo dentro de los búferes de historial diferidos y después el analizador sin conexión compara la activación de bloques, los bytes de cabecera y los cambios de ADC en bruto. No asume una longitud de onda ni calcula SpO₂ ni presión arterial."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marquez le début de chaque phase physique pendant que vous portez ou manipulez le bracelet. NOOP aligne le marqueur sur l'horodatage contenu dans les tampons d'historique différés, puis l'analyseur hors ligne compare l'activation des blocs, les octets d'en-tête et les variations brutes de l'ADC. Il ne présume aucune longueur d'onde et ne calcule ni SpO₂ ni tension artérielle."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segna l'inizio di ogni fase fisica mentre indossi o maneggi la fascia. NOOP allinea il marcatore al timestamp contenuto nei buffer di cronologia differiti, poi l'analizzatore offline confronta l'attivazione dei blocchi, i byte di intestazione e le variazioni grezze dell'ADC. Non presume una lunghezza d'onda e non calcola SpO₂ né la pressione sanguigna."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marca o início de cada fase física enquanto usas ou manipulas a bracelete. O NOOP alinha o marcador com a marca temporal dentro dos buffers de histórico diferidos e depois o analisador offline compara a ativação dos blocos, os bytes de cabeçalho e as alterações do ADC em bruto. Não assume um comprimento de onda nem calcula SpO₂ ou tensão arterial."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отмечайте начало каждой физической фазы, нося браслет или манипулируя им. NOOP сопоставляет метку с временной отметкой внутри отложенных буферов истории, затем офлайн-анализатор сравнивает активацию блоков, байты заголовка и изменения сырых значений АЦП. Он не предполагает длину волны и не вычисляет SpO₂ или артериальное давление."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在佩戴或操作手环时标记每个物理阶段的开始。NOOP 会将标记对齐到延迟历史缓冲区内的时间戳，然后离线分析器比较块激活情况、头部字节和原始 ADC 变化。它不假定波长，也不计算 SpO₂ 或血压。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在配戴或操作手環時標記每個物理階段的開始。NOOP 會將標記對齊到延遲歷史緩衝區內的時間戳，然後離線分析器比較區塊啟用情況、標頭位元組與原始 ADC 變化。它不假定波長，也不計算 SpO₂ 或血壓。"
+          }
+        }
+      }
+    },
+    "Mark optical experiment phase": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phase des optischen Experiments markieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marcar fase del experimento óptico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marquer la phase de l'expérience optique"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segna la fase dell'esperimento ottico"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marcar fase da experiência ótica"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отметить фазу оптического эксперимента"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标记光学实验阶段"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標記光學實驗階段"
+          }
+        }
+      }
+    },
+    "A marker starts the selected phase and ends the previous one. This only timestamps the local capture file; it sends nothing to the strap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Markierung startet die gewählte Phase und beendet die vorherige. Sie versieht nur die lokale Aufzeichnungsdatei mit einem Zeitstempel; an das Band wird nichts gesendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un marcador inicia la fase seleccionada y termina la anterior. Esto solo pone una marca de tiempo en el archivo de captura local; no envía nada a la banda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un marqueur démarre la phase sélectionnée et termine la précédente. Cela ne fait qu'horodater le fichier de capture local ; rien n'est envoyé au bracelet."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un marcatore avvia la fase selezionata e termina la precedente. Aggiunge solo un timestamp al file di acquisizione locale; non invia nulla alla fascia."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um marcador inicia a fase selecionada e termina a anterior. Isto apenas coloca uma marca temporal no ficheiro de captura local; nada é enviado para a bracelete."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Метка начинает выбранную фазу и завершает предыдущую. Она лишь добавляет временную отметку в локальный файл записи; на браслет ничего не отправляется."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标记会开始所选阶段并结束上一个阶段。这只会为本地采集文件添加时间戳；不会向手环发送任何内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標記會開始所選階段並結束上一個階段。這只會為本機擷取檔案加上時間戳記；不會向手環傳送任何內容。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
