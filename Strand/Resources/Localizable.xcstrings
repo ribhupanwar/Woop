@@ -1,6 +1,214 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Feature-flag probe (#761 RE)…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feature-Flag-Test (#761 RE)…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de indicadores de función (#761 RE)…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde des indicateurs de fonction (#761 RE)…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda dei flag di funzionalità (#761 RE)…"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de sinalizadores de funcionalidade (#761 RE)…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проба флагов функций (#761 RE)…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能标志探测（#761 RE）…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能旗標探測（#761 RE）…"
+          }
+        }
+      }
+    },
+    "Feature-flag probe (#761 RE)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feature-Flag-Test (#761 RE)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de indicadores de función (#761 RE)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonde des indicateurs de fonction (#761 RE)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda dei flag di funzionalità (#761 RE)"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonda de sinalizadores de funcionalidade (#761 RE)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проба флагов функций (#761 RE)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能标志探测（#761 RE）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能旗標探測（#761 RE）"
+          }
+        }
+      }
+    },
+    "Feature-flag probe result (#761)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnis des Feature-Flag-Tests (#761)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultado de la sonda de indicadores de función (#761)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultat de la sonde des indicateurs de fonction (#761)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultato della sonda dei flag di funzionalità (#761)"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultado da sonda de sinalizadores de funcionalidade (#761)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Результат пробы флагов функций (#761)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能标志探测结果（#761）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "功能旗標探測結果（#761）"
+          }
+        }
+      }
+    },
+    "Asks the strap to list the feature-flag NAMES its own firmware knows: START_FF_KEY_EXCHANGE (0x75) then SEND_NEXT_FF (0x76) until the strap says it's done. Read-only — no flag value is written, and the SET commands are never sent from this probe. The list is shown here and written to the strap log.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragt das Band nach den NAMEN der Feature-Flags, die seine eigene Firmware kennt: START_FF_KEY_EXCHANGE (0x75), dann SEND_NEXT_FF (0x76), bis das Band das Ende meldet. Nur lesend — es wird kein Flag-Wert geschrieben, und die SET-Befehle werden von diesem Test nie gesendet. Die Liste wird hier angezeigt und ins Strap-Log geschrieben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pide a la banda que enumere los NOMBRES de los indicadores de función que conoce su propio firmware: START_FF_KEY_EXCHANGE (0x75) y luego SEND_NEXT_FF (0x76) hasta que la banda indique que ha terminado. Solo lectura — no se escribe ningún valor y esta sonda nunca envía los comandos SET. La lista se muestra aquí y se escribe en el registro de la banda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demande au bracelet la liste des NOMS des indicateurs de fonction que son propre micrologiciel connaît : START_FF_KEY_EXCHANGE (0x75) puis SEND_NEXT_FF (0x76) jusqu'à ce que le bracelet signale la fin. Lecture seule — aucune valeur n'est écrite, et les commandes SET ne sont jamais envoyées par cette sonde. La liste s'affiche ici et est consignée dans le journal du bracelet."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiede al bracciale di elencare i NOMI dei flag di funzionalità noti al suo firmware: START_FF_KEY_EXCHANGE (0x75) e poi SEND_NEXT_FF (0x76) finché il bracciale non segnala la fine. Sola lettura — non viene scritto alcun valore e questa sonda non invia mai i comandi SET. L'elenco viene mostrato qui e scritto nel log del bracciale."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pede à bracelete a lista dos NOMES dos sinalizadores de funcionalidade que o seu próprio firmware conhece: START_FF_KEY_EXCHANGE (0x75) e depois SEND_NEXT_FF (0x76) até a bracelete indicar que terminou. Apenas leitura — nenhum valor é escrito e os comandos SET nunca são enviados por esta sonda. A lista é mostrada aqui e registada no registo da bracelete."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запрашивает у ремешка список ИМЁН флагов функций, известных его прошивке: START_FF_KEY_EXCHANGE (0x75), затем SEND_NEXT_FF (0x76), пока ремешок не сообщит о завершении. Только чтение — ни одно значение не записывается, и команды SET этой пробой никогда не отправляются. Список показывается здесь и записывается в журнал ремешка."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求手环列出其固件已知的功能标志名称：先发送 START_FF_KEY_EXCHANGE (0x75)，再重复发送 SEND_NEXT_FF (0x76)，直到手环表示已列完。只读——不会写入任何标志值，本探测也从不发送 SET 命令。列表会显示在此处并写入手环日志。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要求手環列出其韌體已知的功能旗標名稱：先傳送 START_FF_KEY_EXCHANGE (0x75)，再重複傳送 SEND_NEXT_FF (0x76)，直到手環表示已列完。唯讀——不會寫入任何旗標值，本探測也從不傳送 SET 指令。清單會顯示在此處並寫入手環記錄。"
+          }
+        }
+      }
+    },
     "Body-location probe (#690 RE)…": {
       "localizations": {
         "de": {
