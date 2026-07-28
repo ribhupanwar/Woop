@@ -167248,7 +167248,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carga pesa su HRV contra su base personal (~55%%), la frecuencia cardíaca restante (~20%%), la calidad de reposo (~15%%), la respiración (~5%%) y la desviación de la temperatura de la piel (~5%%). Effort es una carga cardiovascular de 0-%lld de vez en cuando en zonas de frecuencia cardíaca. El descanso es escenario del movimiento y la frecuencia cardíaca. Todo está calculado aquí desde los datos brutos de la correa. Funciona para cualquier día NOOP recogió corrientes crudas."
+            "value": "La carga pesa su HRV contra su base personal (~55%%), la frecuencia cardíaca en reposo (~20%%), la calidad de reposo (~15%%), la respiración (~5%%) y la desviación de la temperatura de la piel (~5%%). El Esfuerzo es una carga cardiovascular de 0 a %lld calculada a partir del tiempo pasado en las zonas de frecuencia cardíaca. El Descanso se determina a partir del movimiento y la frecuencia cardíaca. Todo está calculado aquí desde los datos brutos de la correa. Funciona para cualquier día en que NOOP haya recogido flujos brutos."
           }
         },
         "fr": {
