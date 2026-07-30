@@ -139022,6 +139022,64 @@
         }
       }
     },
+    "These backups are unencrypted too. If this folder syncs to Drive, Dropbox or iCloud, the readable file goes there as well — only point it at a service you trust.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch diese Sicherungen sind unverschlüsselt. Wenn dieser Ordner mit Drive, Dropbox oder iCloud synchronisiert wird, landet die lesbare Datei auch dort — zeigen Sie nur auf einen Dienst, dem Sie vertrauen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These backups are unencrypted too. If this folder syncs to Drive, Dropbox or iCloud, the readable file goes there as well — only point it at a service you trust."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estas copias de seguridad tampoco están cifradas. Si esta carpeta se sincroniza con Drive, Dropbox o iCloud, el archivo legible también llegará allí: apunte solo a un servicio de confianza."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces sauvegardes ne sont pas chiffrées non plus. Si ce dossier se synchronise avec Drive, Dropbox ou iCloud, le fichier lisible y sera aussi copié : ne pointez que vers un service de confiance."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anche questi backup non sono cifrati. Se questa cartella si sincronizza con Drive, Dropbox o iCloud, anche il file leggibile finisce lì — punta solo a un servizio di cui ti fidi."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estas cópias de segurança também não estão encriptadas. Se esta pasta sincronizar com o Drive, o Dropbox ou o iCloud, o ficheiro legível também vai parar lá — aponta apenas para um serviço de confiança."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эти резервные копии тоже не зашифрованы. Если эта папка синхронизируется с Drive, Dropbox или iCloud, читаемый файл попадёт и туда — указывайте только надёжный сервис."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些备份同样未加密。如果这个文件夹与 Drive、Dropbox 或 iCloud 同步，可读的文件也会一并上传——只指向你信任的服务。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些備份同樣未加密。如果這個資料夾與 Drive、Dropbox 或 iCloud 同步，可讀的檔案也會一併上傳——只指向你信任的服務。"
+          }
+        }
+      }
+    },
     "These days are excluded from the estimate (your phone's real count is shown instead). They're here only so you can judge the estimate's accuracy.": {
       "localizations": {
         "de": {
@@ -139559,6 +139617,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "此安裝版本無法直接連接 Apple 健康。它簽署時使用的描述檔不包含 Apple 的健康權限，因此這裡沒有可授予的項目。"
+          }
+        }
+      }
+    },
+    "This is a plain, unencrypted archive — anyone who gets the file can open it with any zip tool. Store it somewhere you trust.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist ein einfaches, unverschlüsseltes Archiv — wer die Datei bekommt, kann sie mit jedem Zip-Programm öffnen. Bewahren Sie sie an einem Ort auf, dem Sie vertrauen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is a plain, unencrypted archive — anyone who gets the file can open it with any zip tool. Store it somewhere you trust."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es un archivo sencillo y sin cifrar: cualquiera que consiga el archivo puede abrirlo con cualquier herramienta zip. Guárdelo en un lugar de confianza."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C'est une archive simple, non chiffrée : quiconque récupère le fichier peut l'ouvrir avec n'importe quel outil zip. Conservez-le dans un endroit de confiance."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo è un archivio semplice, non cifrato — chiunque ottenga il file può aprirlo con qualsiasi strumento zip. Conservalo in un posto di cui ti fidi."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É um arquivo simples, não encriptado — quem tiver o ficheiro pode abri-lo com qualquer ferramenta zip. Guarda-o num sítio de confiança."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это обычный незашифрованный архив — любой, у кого есть файл, может открыть его любым zip-инструментом. Храните его в надёжном месте."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是一个未加密的普通压缩包——任何拿到文件的人都能用任意压缩工具打开它。请把它存放在你信任的地方。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是一個未加密的普通壓縮檔——任何拿到檔案的人都能用任意壓縮工具開啟它。請把它存放在你信任的地方。"
           }
         }
       }
