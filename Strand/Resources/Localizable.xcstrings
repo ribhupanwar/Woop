@@ -40229,6 +40229,110 @@
         }
       }
     },
+    "Clear scheduled exports": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante Exporte löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar exportaciones programadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer les exports programmés"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar exportações agendadas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除计划导出"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除排程匯出"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella gli export pianificati"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить запланированные экспорты"
+          }
+        }
+      }
+    },
+    "Clear scheduled exports?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante Exporte löschen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Borrar exportaciones programadas?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer les exports programmés ?"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar exportações agendadas?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除计划导出？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除排程匯出？"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancellare gli export pianificati?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Очистить запланированные экспорты?"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "de": {
@@ -74579,6 +74683,58 @@
         }
       }
     },
+    "Keep last exports": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Exporte behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener últimas exportaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserver les derniers exports"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter últimas exportações"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留最近的导出"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留最近的匯出"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni gli ultimi export"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранить последние экспорты"
+          }
+        }
+      }
+    },
     "Keep last snapshots": {
       "localizations": {
         "de": {
@@ -94178,6 +94334,58 @@
         }
       }
     },
+    "No scheduled exports to clear.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine geplanten Exporte zu löschen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay exportaciones programadas que borrar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun export programmé à effacer."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não há exportações agendadas para eliminar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有需要清除的计划导出。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有需要清除的排程匯出。"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun export pianificato da cancellare."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет запланированных экспортов для очистки."
+          }
+        }
+      }
+    },
     "No scored days in this window. Widen the range or import more history.": {
       "localizations": {
         "de": {
@@ -98876,6 +99084,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "Os cópia de seguranças mais antigos para além deste número são removidos, os mais antigos em primeiro lugar (≈ este número de dias). Se os dados estiverem corrompidos, restaure os mais recentes."
+          }
+        }
+      }
+    },
+    "Older scheduled exports beyond this many are pruned automatically, oldest first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ältere geplante Exporte über diese Anzahl hinaus werden automatisch entfernt, älteste zuerst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las exportaciones programadas más antiguas que superen este número se eliminan automáticamente, empezando por las más antiguas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les exports programmés au-delà de ce nombre sont supprimés automatiquement, les plus anciens en premier."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As exportações agendadas mais antigas além deste número são eliminadas automaticamente, começando pelas mais antigas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超出该数量的旧计划导出会自动清理，最旧的优先。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超出此數量的舊排程匯出會自動清除，最舊的優先。"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli export pianificati più vecchi oltre questo numero vengono eliminati automaticamente, a partire dai più vecchi."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Более старые запланированные экспорты сверх этого числа удаляются автоматически, начиная с самых старых."
           }
         }
       }
@@ -114033,6 +114293,58 @@
         }
       }
     },
+    "Removed %lld file(s).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Datei(en) entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld archivo(s) eliminado(s)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fichier(s) supprimé(s)."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ficheiro(s) removido(s)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移除 %lld 个文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移除 %lld 個檔案。"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld file rimossi."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалено файлов: %lld."
+          }
+        }
+      }
+    },
     "Removed all Apple Health imported data.": {
       "localizations": {
         "de": {
@@ -121709,6 +122021,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "掃描中…"
+          }
+        }
+      }
+    },
+    "Scheduled exports cleared": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante Exporte gelöscht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportaciones programadas eliminadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exports programmés effacés"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportações agendadas eliminadas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "计划导出已清除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排程匯出已清除"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export pianificati cancellati"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запланированные экспорты очищены"
           }
         }
       }
@@ -139407,6 +139771,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "這會隨著手環同步逐步建立。在你佩戴並睡過一晚後，強度和睡眠便會出現。恢復需要大約一週的夜晚來學習你的基線，或者匯入你的 WHOOP 匯出檔案以跳過等待。"
+          }
+        }
+      }
+    },
+    "This deletes every scheduled strap-log and raw-capture file NOOP has saved. This can't be undone.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dies löscht jede geplante Bandprotokoll- und Rohdaten-Erfassungsdatei, die NOOP gespeichert hat. Dies kann nicht rückgängig gemacht werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto elimina todos los archivos de registro de la correa y de captura en bruto programados que NOOP ha guardado. Esto no se puede deshacer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ceci supprime tous les fichiers de journal du bracelet et de capture brute programmés que NOOP a enregistrés. Cette action est irréversible."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isto elimina todos os ficheiros de registo da pulseira e de captura em bruto agendados que a NOOP guardou. Esta ação não pode ser anulada."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这会删除 NOOP 保存的所有计划手环日志和原始捕获文件。此操作无法撤销。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這會刪除 NOOP 儲存的所有排程手環日誌與原始擷取檔案。此操作無法復原。"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo elimina ogni file di log del cinturino e di cattura grezza pianificato salvato da NOOP. Questa azione non può essere annullata."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это удалит все запланированные файлы журнала ремешка и необработанного захвата, сохранённые NOOP. Это действие нельзя отменить."
           }
         }
       }
