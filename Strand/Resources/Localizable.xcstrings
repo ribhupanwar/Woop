@@ -24632,6 +24632,122 @@
         }
       }
     },
+    "Key header": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel-Header"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key header"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encabezado de clave"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En-tête de clé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intestazione chiave"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cabeçalho da chave"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заголовок ключа"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密钥标头"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金鑰標頭"
+          }
+        }
+      }
+    },
+    "Use Bearer for most local servers; use x-api-key for gateways that require the key in that header.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwende Bearer für die meisten lokalen Server; verwende x-api-key für Gateways, die den Schlüssel in diesem Header verlangen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Bearer for most local servers; use x-api-key for gateways that require the key in that header."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Bearer para la mayoría de los servidores locales; usa x-api-key para las pasarelas que requieren la clave en ese encabezado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisez Bearer pour la plupart des serveurs locaux ; utilisez x-api-key pour les passerelles qui exigent la clé dans cet en-tête."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Bearer per la maggior parte dei server locali; usa x-api-key per i gateway che richiedono la chiave in quell'header."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Bearer para a maioria dos servidores locais; usa x-api-key para gateways que exigem a chave nesse cabeçalho."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Используйте Bearer для большинства локальных серверов; используйте x-api-key для шлюзов, которым нужен ключ в этом заголовке."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大多数本地服务器使用 Bearer；对于要求在该标头中提供密钥的网关，请使用 x-api-key。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大多數本機伺服器使用 Bearer；對於要求在該標頭中提供金鑰的閘道，請使用 x-api-key。"
+          }
+        }
+      }
+    },
     "Any amount helps. Thank you, genuinely.": {
       "localizations": {
         "de": {
