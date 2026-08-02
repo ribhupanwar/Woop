@@ -173036,6 +173036,110 @@
           }
         }
       }
+    },
+    "Reduce motion in NOOP": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewegung in NOOP reduzieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reducir movimiento en NOOP"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réduire les animations dans NOOP"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riduci movimento in NOOP"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduzir movimento no NOOP"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уменьшить анимацию в NOOP"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "减少 NOOP 中的动态效果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "減少 NOOP 中的動態效果"
+          }
+        }
+      }
+    },
+    "Holds the liquid gauges, the sky and the tilt response still, and turns off the motion sensor that drives them. Saves battery. Low Power Mode and the system Reduce Motion setting already do this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hält die Flüssigkeitsanzeigen, den Himmel und die Neigungsreaktion still und schaltet den Bewegungssensor ab, der sie antreibt. Spart Akku. Der Stromsparmodus und die Systemeinstellung „Bewegung reduzieren“ tun dies bereits."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantiene quietos los medidores líquidos, el cielo y la respuesta a la inclinación, y apaga el sensor de movimiento que los impulsa. Ahorra batería. El modo de bajo consumo y el ajuste del sistema «Reducir movimiento» ya hacen esto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fige les jauges liquides, le ciel et la réaction à l’inclinaison, et coupe le capteur de mouvement qui les anime. Économise la batterie. Le mode économie d’énergie et le réglage système « Réduire les animations » font déjà cela."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocca gli indicatori liquidi, il cielo e la risposta all’inclinazione e spegne il sensore di movimento che li anima. Risparmia batteria. La modalità Risparmio energetico e l’impostazione di sistema «Riduci movimento» lo fanno già."
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantém parados os medidores líquidos, o céu e a resposta à inclinação, e desliga o sensor de movimento que os anima. Poupa bateria. O Modo de Baixo Consumo e a definição de sistema «Reduzir movimento» já fazem isto."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Останавливает жидкостные шкалы, небо и отклик на наклон и отключает датчик движения, который их питает. Экономит заряд батареи. Режим энергосбережения и системная настройка «Уменьшение движения» уже делают это."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让液态仪表、天空和倾斜响应保持静止，并关闭驱动它们的运动传感器。省电。低电量模式和系统的“减弱动态效果”设置已经会这样做。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "讓液態儀表、天空和傾斜回應保持靜止，並關閉驅動它們的動作感測器。省電。低耗電模式和系統的「減少動態效果」設定已經會這樣做。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
