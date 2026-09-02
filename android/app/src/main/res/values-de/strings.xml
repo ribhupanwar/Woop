@@ -2677,4 +2677,5 @@
     <string name="l10n_body_clock_dial_card_your_clock_1b91f5ee">Deine innere Uhr</string>
     <string name="vo2max_method_change_caption">Die Linie bricht dort ab, wo sich die Schätzmethode geändert hat oder nicht erfasst wurde.</string>
     <string name="l10n_app_changelog_a_whoop_5_that_stays_connected_7b490eee">Eine WHOOP 5, die verbunden bleibt, deine innere Uhr im Schlaf-Screen und ein Journal, das Nein von gar nichts unterscheidet</string>
+    <string name="l10n_app_changelog_choose_a_12_hour_clock_sleep_8a19db5c">Wähle dein Zeitformat, Schlaf von Straps ohne Bewegungsdaten und ein Strap-Log, das nicht mehr rät</string>
 </resources>
