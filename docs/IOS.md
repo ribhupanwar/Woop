@@ -27,6 +27,35 @@ ID**. Nothing about this touches NOOP's identity or Apple's servers on our side.
    and installs NOOP. First launch may need **Settings → General → VPN & Device Management → trust
    your Apple ID**.
 
+### If AltServer can't sign in with your Apple ID
+
+A failure at **step 1** — before NOOP is involved at all — usually looks like this:
+
+> **AltServer could not sign in with your Apple ID. The data is not in the correct format.**
+>
+> `NSCocoaErrorDomain 3840` · *Encountered unknown tag html on line 1*
+
+That is the same shape as the source-URL note below: something expected **structured data** and received an
+**HTML page**. AltServer asked Apple's ID service for a property list and got a web page back, so the
+parser hit `<html>` on the first line. The "malformed data byte group / invalid hex" line underneath is
+the same failure reported by the older-style parser, not a second problem.
+
+Nothing in the response reached Apple's auth service as intended, so the usual causes are between you and
+Apple rather than in your account:
+
+- **A DNS filter, content blocker or VPN** returning a block page for Apple's auth domain. The most common
+  cause, and the easiest to miss if the filtering is network-wide rather than on the machine.
+- **An out-of-date AltServer**, calling an endpoint Apple has since moved and receiving a redirect or
+  error page.
+- **Something waiting on Apple's side** — terms to accept, a rate limit, or a locked account. All of those
+  are served as HTML.
+
+Worth trying in this order: sign in at [appleid.apple.com](https://appleid.apple.com) in a browser to
+clear anything pending, retry with filtering and any VPN off, then update AltServer.
+
+This is AltStore's own setup rather than anything NOOP controls — but it is the first step of the install,
+so it is written down here rather than left as a dead end.
+
 ### Add NOOP as a source (recommended — auto-updates)
 
 So you never have to manually re-download, add NOOP's **source** to AltStore/SideStore once — new
