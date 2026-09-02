@@ -7400,6 +7400,32 @@ class WhoopBleClient(
                             } else if (ev.startsWith("CHARGING_OFF")) {
                                 _state.update { s -> s.copy(charging = false) }
                             }
+                            // BATTERY_PACK_CONNECTED(21) / BATTERY_PACK_REMOVED(22) are defined in
+                            // EventNumber and handled NOWHERE. On a 5/MG they fire reliably on every
+                            // attach and detach, and they LEAD the 7/8 edges above, so handling them here
+                            // is what makes the pill respond the moment a pack goes on or comes off.
+                            //
+                            // Measured on WHOOP MG fw 50.39.1.0 over two attach/detach cycles, with every
+                            // pushed event logged:
+                            //
+                            //   01:40:51  BATTERY_PACK_CONNECTED(21)      <- attach
+                            //   01:40:51  CHARGING_ON(7)
+                            //   01:41:06  CHARGING_OFF(8)
+                            //   01:41:11  BATTERY_PACK_REMOVED(22)        <- detach
+                            //
+                            // Both families fire; 21/22 are simply the ones nothing was listening to. The
+                            // 7/8 branch above is kept exactly as it is -- this adds a second source for
+                            // the same flag, it does not replace one.
+                            //
+                            // Same replayedOffload gate as the branch above, and it is load-bearing: the
+                            // strap REPLAYS these edges during the next historical offload with identical
+                            // payloads, so an accepted replay would switch the pill back on minutes after
+                            // the pack was physically removed.
+                            if (ev.startsWith("BATTERY_PACK_CONNECTED")) {
+                                _state.update { s -> s.copy(charging = true) }
+                            } else if (ev.startsWith("BATTERY_PACK_REMOVED")) {
+                                _state.update { s -> s.copy(charging = false) }
+                            }
                         }
                         // PR #577: the strap fired its firmware smart alarm (STRAP_DRIVEN_ALARM_EXECUTED,
                         // event 57) → re-arm the next day's instant (single absolute time, no recurrence).
