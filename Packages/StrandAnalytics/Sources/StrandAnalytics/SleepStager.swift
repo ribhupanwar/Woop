@@ -472,6 +472,78 @@ public enum SleepStager {
         return periods
     }
 
+    /// Epoch for the HR-only spine, in seconds.
+    public static let hrOnlyEpochS: Int = 60
+
+    /// Sleep/active runs built from HEART RATE ALONE, for a strap that streams HR but banks no motion.
+    ///
+    /// Stage 0 is normally a gravity-stillness spine (Cole-Kripke) that HR only CONFIRMS, via
+    /// `hrSleepBandAcross` and `confirmSleepWithHR`. A WHOOP 5/MG that cannot bond never banks motion at
+    /// all — `SET_CLOCK` rides a handshake it never completes — so `grav` is empty, there is no spine, and
+    /// no quantity of HR can stage the night (#1801). This builds the spine from the one signal such a
+    /// strap does provide.
+    ///
+    /// Deliberately the SAME rule the confirm path already trusts: per-epoch MEDIAN bpm against
+    /// `baseline * hrSleepBandMult`, median for the reason `hrSleepBandAcross` spells out. The run
+    /// construction follows `buildRuns` — close on a class change or a gap over `maxGapMin` — so the two
+    /// spines segment alike once flags exist, and only the flag SOURCE differs.
+    ///
+    /// With ONE branch deliberately absent, and it is not an oversight. `buildRuns` can forgive a gap when
+    /// `hrSleepBandAcross` vouches that HR stayed in band across it, which rescues a night whose GRAVITY
+    /// dropped out. Here the gap IS in the heart rate, so there is nothing left to vouch with and no
+    /// analogue to port. A long HR dropout therefore breaks an HR-only run where it would not break a
+    /// motion-backed one, and a night fragmented that way is dropped by the caller's minimum-duration
+    /// gate rather than bridged.
+    ///
+    /// WEAKER THAN THE MOTION SPINE, by construction rather than by tuning. The file already notes that a
+    /// long still daytime stretch is gravity-indistinguishable from a nap and that HR is what saves it;
+    /// with motion gone the inverse is exposed, and a quiet evening at rest can sit in the sleep band. A
+    /// caller must treat these runs as lower-confidence than a motion-backed night and must not let one
+    /// reach a baseline it cannot be unwound from.
+    ///
+    /// Bucket order does not depend on sort stability: samples are grouped by epoch and reduced with a
+    /// median, so their order within an epoch cannot change the result.
+    static func hrOnlySleepRuns(_ hr: [HRSample], baseline: Double?,
+                                epochS: Int = hrOnlyEpochS,
+                                maxGapMinutes: Int = maxGapMin) -> [Period] {
+        guard let baseline = baseline, baseline > 0 else { return [] }
+        if hr.isEmpty || epochS <= 0 { return [] }
+        var byEpoch: [Int: [Double]] = [:]
+        var lastTs: [Int: Int] = [:]
+        for s in hr {
+            let k = s.ts / epochS
+            byEpoch[k, default: []].append(Double(s.bpm))
+            lastTs[k] = max(lastTs[k] ?? Int.min, s.ts)
+        }
+        let keys = byEpoch.keys.sorted()
+        // Two axes, deliberately. A gap and a run's START use the epoch's own start, so a gap is measured
+        // between epochs rather than between whichever samples sat at their edges. A run's END is the last
+        // SAMPLE observed in its final epoch, which is what `buildRuns` means by `end` — reading the epoch
+        // start there would report every run one whole epoch shorter than the data it covers, and that
+        // understatement would then be weighed against the caller's minimum-duration gate.
+        let times = keys.map { $0 * epochS }
+        let ends = keys.map { lastTs[$0]! }
+        let flags = keys.map { HRVAnalyzer.median(byEpoch[$0]!) <= baseline * hrSleepBandMult }
+        let maxGapS = maxGapMinutes * 60
+        var periods: [Period] = []
+        var runStart = 0
+        for i in 1...keys.count {
+            let atEnd = (i == keys.count)
+            let close: Bool
+            if atEnd {
+                close = true
+            } else {
+                close = flags[i] != flags[runStart] || (times[i] - times[i - 1]) > maxGapS
+            }
+            if close {
+                periods.append(Period(stage: flags[runStart] ? "sleep" : "active",
+                                      start: times[runStart], end: ends[i - 1]))
+                runStart = i
+            }
+        }
+        return periods
+    }
+
     /// Absorb runs shorter than mergeMin minutes into their neighbours.
     static func mergePeriods(_ periods: [Period], mergeMinutes: Int = mergeMin) -> [Period] {
         if periods.isEmpty { return [] }

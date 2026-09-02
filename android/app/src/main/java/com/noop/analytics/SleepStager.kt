@@ -524,6 +524,87 @@ object SleepStager {
         return medianHR <= baseline * hrSleepBandMult
     }
 
+    /** Epoch for the HR-only spine, in seconds. */
+    const val hrOnlyEpochS: Long = 60
+
+    /**
+     * Sleep/active runs built from HEART RATE ALONE, for a strap that streams HR but banks no motion.
+     *
+     * Stage 0 is normally a gravity-stillness spine (Cole-Kripke) that HR only CONFIRMS, via
+     * [hrSleepBandAcross] and `confirmSleepWithHR`. A WHOOP 5/MG that cannot bond never banks motion at
+     * all — `SET_CLOCK` rides a handshake it never completes — so `grav` is empty, there is no spine, and
+     * no quantity of HR can stage the night (#1801). This builds the spine from the one signal such a
+     * strap does provide.
+     *
+     * Deliberately the SAME rule the confirm path already trusts: per-epoch MEDIAN bpm against
+     * `baseline * `[hrSleepBandMult], median for the reason [hrSleepBandAcross] spells out. The run
+     * construction follows [buildRuns] — close on a class change or a gap over [maxGapMin] — so the two
+     * spines segment alike once flags exist, and only the flag SOURCE differs.
+     *
+     * With ONE branch deliberately absent, and it is not an oversight. [buildRuns] can forgive a gap when
+     * [hrSleepBandAcross] vouches that HR stayed in band across it, which rescues a night whose GRAVITY
+     * dropped out. Here the gap IS in the heart rate, so there is nothing left to vouch with and no
+     * analogue to port. A long HR dropout therefore breaks an HR-only run where it would not break a
+     * motion-backed one, and a night fragmented that way is dropped by the caller's minimum-duration
+     * gate rather than bridged.
+     *
+     * WEAKER THAN THE MOTION SPINE, by construction rather than by tuning. The file already notes that a
+     * long still daytime stretch is gravity-indistinguishable from a nap and that HR is what saves it;
+     * with motion gone the inverse is exposed, and a quiet evening at rest can sit in the sleep band. A
+     * caller must treat these runs as lower-confidence than a motion-backed night and must not let one
+     * reach a baseline it cannot be unwound from.
+     *
+     * Bucket order does not depend on sort stability: samples are grouped by epoch and reduced with a
+     * median, so their order within an epoch cannot change the result.
+     */
+    internal fun hrOnlySleepRuns(
+        hr: List<HrSample>,
+        baseline: Double?,
+        epochS: Long = hrOnlyEpochS,
+        maxGapMinutes: Int = maxGapMin,
+    ): List<Period> {
+        if (baseline == null || baseline <= 0.0) return emptyList()
+        if (hr.isEmpty() || epochS <= 0L) return emptyList()
+        val byEpoch = HashMap<Long, MutableList<Double>>()
+        val lastTs = HashMap<Long, Long>()
+        for (s in hr) {
+            val k = s.ts / epochS
+            byEpoch.getOrPut(k) { ArrayList() }.add(s.bpm.toDouble())
+            lastTs[k] = maxOf(lastTs[k] ?: Long.MIN_VALUE, s.ts)
+        }
+        val keys = byEpoch.keys.sorted()
+        // Two axes, deliberately. A gap and a run's START use the epoch's own start, so a gap is measured
+        // between epochs rather than between whichever samples sat at their edges. A run's END is the last
+        // SAMPLE observed in its final epoch, which is what [buildRuns] means by `end` — reading the epoch
+        // start there would report every run one whole epoch shorter than the data it covers, and that
+        // understatement would then be weighed against the caller's minimum-duration gate.
+        val times = keys.map { it * epochS }
+        val ends = keys.map { lastTs.getValue(it) }
+        val flags = keys.map { HrvAnalyzer.median(byEpoch.getValue(it)) <= baseline * hrSleepBandMult }
+        val maxGapS = (maxGapMinutes * 60).toLong()
+        val periods = ArrayList<Period>()
+        var runStart = 0
+        for (i in 1..keys.size) {
+            val atEnd = (i == keys.size)
+            val close = if (atEnd) {
+                true
+            } else {
+                flags[i] != flags[runStart] || (times[i] - times[i - 1]) > maxGapS
+            }
+            if (close) {
+                periods.add(
+                    Period(
+                        stage = if (flags[runStart]) "sleep" else "active",
+                        start = times[runStart],
+                        end = ends[i - 1],
+                    )
+                )
+                runStart = i
+            }
+        }
+        return periods
+    }
+
     /** Per-record sleep flags from a rolling fraction of "still" samples. */
     internal fun classifyStill(grav: List<GravitySample>, deltas: List<Double>): List<Boolean> {
         val n = grav.size
