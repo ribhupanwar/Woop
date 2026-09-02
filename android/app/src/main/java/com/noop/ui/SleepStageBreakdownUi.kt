@@ -238,7 +238,9 @@ internal fun FilledHypnogram(
     // stranding the axis at just onset/mid/wake; a tablet fans out to the 8-label ceiling. Floor 4 keeps a
     // narrow phone from collapsing back to bare edges.
     val maxAxisLabels = (LocalConfiguration.current.screenWidthDp / 60).coerceIn(4, 8)
-    val is24h = DateFormat.is24HourFormat(LocalContext.current)
+    // #1821: the reader's CHOSEN clock, not the raw device switch. Reading the device here would have
+    // left the hypnogram axis in 24h while the sleep card above it changed - the setting half-applied.
+    val is24h = ClockPrefs.uses24Hour(LocalContext.current)
     val axisTicks = if (showsAxis) hypnogramAxisTicks(onsetTs!!, wakeTs!!, maxAxisLabels, is24h) else emptyList()
     Column(verticalArrangement = Arrangement.spacedBy(Metrics.space6)) {
         Canvas(
@@ -436,9 +438,10 @@ private fun hypnogramSummaryFor(intervals: List<StageInterval>): String =
  */
 @Composable
 internal fun ClockLabelRow(onsetTs: Long, wakeTs: Long) {
-    val onset = clockTimeLabel(onsetTs)
-    val mid = clockTimeLabel((onsetTs + wakeTs) / 2L)
-    val wake = clockTimeLabel(wakeTs)
+    val is24h = ClockPrefs.uses24Hour(LocalContext.current)   // #1821
+    val onset = clockTimeLabel(onsetTs, is24h)
+    val mid = clockTimeLabel((onsetTs + wakeTs) / 2L, is24h)
+    val wake = clockTimeLabel(wakeTs, is24h)
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             onset,
