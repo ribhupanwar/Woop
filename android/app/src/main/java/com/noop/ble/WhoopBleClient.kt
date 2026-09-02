@@ -63,6 +63,7 @@ import com.noop.protocol.WhoopGattServiceFamily
 import com.noop.protocol.whoopGattScanDecision
 import com.noop.analytics.Baselines
 import com.noop.analytics.BatterySocLine
+import com.noop.analytics.ConnectionReadout
 import com.noop.analytics.IntelligenceEngine
 import com.noop.analytics.NapDetector
 import com.noop.analytics.NapPrefs
@@ -6141,6 +6142,10 @@ class WhoopBleClient(
                     // exactly what distinguishes a healthy connection from the flapping loop that keeps
                     // the reconnect streak — and so the scan mode — pinned at its most power-hungry.
                     linkUpSinceMs = System.currentTimeMillis()
+                    // #1809: this link's inbound tally starts empty, so the epitaph on disconnect reports
+                    // exactly what arrived on THIS link and never a previous session's traffic.
+                    inboundFrames = 0; inboundBytes = 0; cmdChannelFrames = 0
+                    realtimeArmedThisLink = false
                     // A connect succeeded → clear the stale-bond re-pair guide UNLESS we are in a known
                     // bond-loop (#617). In that loop the strap "connects" every ~3 s before timing out
                     // again, so clearing here wiped the guide on EVERY cycle: it flashed for ~1 s and
@@ -6539,7 +6544,7 @@ class WhoopBleClient(
                     // window would re-arm the stream from it and stay armed until the next tick.
                     val realtimeWantNow = screenWantsRealtime || continuousCaptureWantsNow()
                     wantsRealtime = realtimeWantNow
-                    if (realtimeWantNow) { realtimeArmed = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
+                    if (realtimeWantNow) { realtimeArmed = true; realtimeArmedThisLink = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
                 }
             } else if (!didBond && connectedFamily == DeviceFamily.WHOOP4) {
                 didBond = true
@@ -6662,7 +6667,29 @@ class WhoopBleClient(
     // MARK: Inbound routing  (port of didUpdateValueFor + FrameRouter.handle)
     // ====================================================================================
 
+    /** #1809: per-connection inbound accounting for the link epitaph - the strap log could not previously
+     *  say whether the strap transmitted anything at all. Twin of the Swift counters. */
+    private var inboundFrames = 0
+    private var inboundBytes = 0
+    private var cmdChannelFrames = 0
+    /** #1809: was realtime armed at ANY point on THIS link. Not the same thing as [realtimeArmed], which
+     *  is persistent edge state: it can carry true in from a previous link, or read false at the drop
+     *  after a mid-link disarm. The epitaph needs the per-link fact, which is what the Apple twin's
+     *  `realtimeArmedAt` gives (it is cleared on every disconnect). Reset with the counters on connect.
+     *
+     *  @Volatile for the same reason [realtimeArmed] is: the arm sites include the reconcile path, which
+     *  does not run on the GATT callback thread that reads this at the drop. A stale read here would print
+     *  "armed=no" for a link that WAS armed, and that word is what a reader uses to decide whether #80
+     *  applies. The frame/byte counters above are deliberately plain - ++ is not atomic whatever we
+     *  annotate them with, and an approximate count still answers "did anything arrive at all". */
+    @Volatile private var realtimeArmedThisLink = false
+
     private fun onInbound(uuid: UUID, bytes: ByteArray) {
+        // Count BEFORE any routing below, so the tally covers every inbound frame including ones no branch
+        // consumes - the epitaph must answer "did anything arrive at all".
+        inboundFrames++
+        inboundBytes += bytes.size
+        if (uuid == CMD_NOTIFY_CHAR) cmdChannelFrames++
         lastDataAtMs = System.currentTimeMillis()   // feeds the keep-alive liveness watchdog
         resubscribedSinceData = false               // data is flowing again — re-arm the one-shot resubscribe
         when {
@@ -7546,7 +7573,7 @@ class WhoopBleClient(
         // outside the overnight window must not arm the stream from a stale precomputed [wantsRealtime].
         val realtimeWantNow = screenWantsRealtime || continuousCaptureWantsNow()
         wantsRealtime = realtimeWantNow
-        if (realtimeWantNow) { realtimeArmed = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
+        if (realtimeWantNow) { realtimeArmed = true; realtimeArmedThisLink = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
     }
 
     // ====================================================================================
@@ -7656,7 +7683,7 @@ class WhoopBleClient(
                     flushCaptureLog()
                 }
                 if (connectedFamily == DeviceFamily.WHOOP4) {
-                    if (wantsRealtime) { realtimeArmed = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
+                    if (wantsRealtime) { realtimeArmed = true; realtimeArmedThisLink = true; send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(1)) }
                     // #battery: ~60 s normally, ~30 s while charging (see [batteryPollDue]).
                     if (batteryPollDue(keepAliveTick, s.charging == true)) send(CommandNumber.GET_BATTERY_LEVEL)
                 } else if (connectedFamily == DeviceFamily.WHOOP5 &&
@@ -7782,6 +7809,7 @@ class WhoopBleClient(
         if (want == realtimeArmed) return                          // no edge — nothing to send
         if (connectedFamily != DeviceFamily.WHOOP4 && !_state.value.bonded) return   // can't reach the strap yet
         realtimeArmed = want
+        if (want) realtimeArmedThisLink = true   // #1809: latch the per-link fact
         // Both families arm/disarm via TOGGLE_REALTIME_HR; send() frames it correctly per family (puffin
         // for 5/MG). A screen re-entry blanks its own smoothing window in the view-model, not here.
         send(CommandNumber.TOGGLE_REALTIME_HR, byteArrayOf(if (want) 1.toByte() else 0.toByte()))
@@ -8308,6 +8336,7 @@ class WhoopBleClient(
                 // cadence, not this drop path, so a persistently-busy stack retries once per tick, never in a loop.
                 if (shouldReArmRealtimeAfterDrop(item.cmd)) {
                     realtimeArmed = !realtimeArmed
+                    if (realtimeArmed) realtimeArmedThisLink = true   // #1809: per-link latch
                     log("realtime toggle dropped — reconciling on the next keep-alive tick (#312)")
                 }
                 writeRetries = 0
@@ -9772,6 +9801,25 @@ class WhoopBleClient(
         // Snapshot the hold time and clear it IMMEDIATELY: every drop log below reads the snapshot, and a
         // stale `linkUpSinceMs` surviving into the next drop would report a hold time for a link that never
         // reached STATE_CONNECTED — the diagnostic would then invent exactly the evidence it exists to find.
+        // #1809: the epitaph reads linkUpSinceMs BEFORE the snapshot below clears it, and realtimeArmed
+        // before the state reset further down. Twin of the Apple disconnect epitaph: it answers "did the
+        // strap send anything on this link", which no strap log could previously state as a measurement.
+        // Only for a link that actually reached STATE_CONNECTED. handleDisconnect also runs for a FAILED
+        // connect attempt and for the radio-off teardown, where linkUpSinceMs is null and the counters
+        // still hold the PREVIOUS link's traffic - emitting there would report "the strap sent NOTHING on
+        // this link" about a link that never existed, fabricating the very symptom #1809 is about. Same
+        // hazard the hold-time snapshot below already guards.
+        linkUpSinceMs?.let { since ->
+            log(ConnectionReadout.linkEpitaph(
+                upMillis = System.currentTimeMillis() - since,
+                inboundFrames = inboundFrames, inboundBytes = inboundBytes,
+                cmdChannelFrames = cmdChannelFrames, realtimeArmed = realtimeArmedThisLink,
+                ended = "status=$status",
+            ))
+        }
+        // Clear the tally with the link, so a second teardown for the same drop cannot re-report it.
+        inboundFrames = 0; inboundBytes = 0; cmdChannelFrames = 0
+
         val heldSuffix = heldForLogSuffix()
         linkUpSinceMs = null
         // Reboot trail: if a user reboot is in flight, this drop is the strap acting on it. Log how long the

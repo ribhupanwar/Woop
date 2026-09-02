@@ -252,6 +252,33 @@ object ConnectionReadout {
         return lead + "Charge the strap to 100% and reconnect so the clock latches."
     }
 
+    /** #1809: one-line account of a finished BLE link, logged on every disconnect. Twin of the Swift
+     *  formatter.
+     *
+     *  A strap log could not previously answer "did the strap send anything?". Inbound notifications only
+     *  stamped a liveness timestamp that was then discarded, so a reporter chasing a silent strap had to
+     *  infer silence from the fact that every LOGGED line happened to be outgoing - which measures NOOP's
+     *  logging, not the strap. This measures the strap.
+     *
+     *  [realtimeArmed] matters because the #80 marginal-radio fallback only counts a drop when the R10/R11
+     *  burst was actually armed; armed=no says up front that the detector cannot trip for this link,
+     *  however many times the loop repeats.
+     *
+     *  Milliseconds are printed raw: no float formatting, so the two platforms cannot round apart.
+     *  [upMillis] is Long, not Int: Swift's Int is 64-bit, so an Int here would be the NARROWER type and
+     *  a link held past ~24.8 days would wrap negative and print "up 0ms" - a dead-looking link that was
+     *  in fact the healthiest one we ever had. Rare, silent, and exactly backwards, so use the real twin. */
+    fun linkEpitaph(upMillis: Long, inboundFrames: Int, inboundBytes: Int, cmdChannelFrames: Int,
+                    realtimeArmed: Boolean, ended: String): String {
+        var line = "Link epitaph: up ${maxOf(0L, upMillis)}ms, inbound ${maxOf(0, inboundFrames)} frames / " +
+            "${maxOf(0, inboundBytes)} bytes (cmd-channel ${maxOf(0, cmdChannelFrames)}), " +
+            "realtime armed=${if (realtimeArmed) "yes" else "no"}, ended=$ended"
+        if (inboundFrames <= 0) {
+            line += " - the strap sent NOTHING on this link"
+        }
+        return line
+    }
+
     /** #987: freshness label for the "last frame" readout row ("12s ago" / "no frames yet"). [nowUnix]
      *  injected for testability. Twin of the Swift labeller. */
     fun lastFrameLabel(lastFrameUnix: Long?, nowUnix: Long): String {
