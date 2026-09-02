@@ -156,6 +156,32 @@ public final class FrameRouter {
                 let verdict = r == nil ? "no result byte" : (accepted ? "accepted" : "REJECTED")
                 state.append(log: "reboot: strap acked result=\(rhex) (\(verdict))")
             }
+            // #1823: the clock exchange, on BOTH families. NOOP wrote "clock synced" the instant it queued
+            // the writes and never read the answer, so a strap log asserted the clock was set while the
+            // readout said 1970/71 — two contradictory lines with nothing to separate them. Same
+            // accept/reject shape REBOOT_STRAP already uses: the family's own result offset and polarity
+            // (5/MG 1=SUCCESS, 4.0 0=SUCCESS). LOG-ONLY; it never gates behaviour.
+            if let cmd = parsed.cmdName, cmd.hasPrefix("SET_CLOCK") || cmd.hasPrefix("GET_CLOCK") {
+                // NO accept/reject verdict here, on EITHER family, and that is deliberate.
+                //
+                // 4.0's 0=accepted is the reboot probe's own explicitly UNVERIFIED reading. And on 5/MG
+                // the result byte may not exist at all for this command: the captured-frame fixture builds
+                // a puffin COMMAND_RESPONSE as [36, seq, cmd] + payload at offset 8, so @11 is already
+                // PAYLOAD and the @12 that `commandResultByte` reads is a payload byte, not a result code.
+                // REBOOT_STRAP's use of it was validated against reboot's own frames; nothing establishes
+                // it for the clock.
+                //
+                // Inventing a verdict from that is precisely the fault this line was added to fix - the
+                // old "clock synced" log asserted an outcome nobody had checked. So quote the evidence
+                // and let a maintainer decode it: the byte at the family's result offset, and the WHOLE
+                // frame (#900's format), uncapped. A truncated clock frame answers nothing, and the full
+                // frame is what makes a wrong offset assumption visible instead of silently misleading.
+                let r = Self.commandResultByte(in: frame, family: family)
+                let rhex = r.map { String(format: "0x%02x", UInt8(truncatingIfNeeded: $0)) } ?? "none"
+                state.append(log: "clock: \(cmd) reply byte@resultOffset=\(rhex) "
+                                + "frame=\(Self.fullFrameHex(frame))",
+                             domain: .connection)
+            }
             if family == .whoop4, let cmd = parsed.cmdName {
                 if cmd.hasPrefix("GET_ADVERTISING_NAME_HARVARD") {
                     if let name = Self.advertisingName(in: frame), !name.isEmpty {
@@ -462,8 +488,14 @@ public final class FrameRouter {
 
     /// Space-separated lowercase hex of a COMMAND_RESPONSE payload, for the raw-hex diagnostic fallback
     /// when a readback payload doesn't decode. nil when the frame carries no payload.
-    nonisolated static func commandResponsePayloadHex(in frame: [UInt8]) -> String? {
-        guard let payload = commandResponsePayload(in: frame), !payload.isEmpty else { return nil }
+    /// #1823: takes `family` because `commandResponsePayload` slices at a family-specific inner offset
+    /// (5/MG 8, 4.0 its own). This wrapper used to drop the argument and always slice at the 4.0 offset,
+    /// so a 5/MG payload came back shifted - the same fixed-offset mistake the REBOOT_STRAP comment
+    /// records, and it would have mis-read the clock payload on the family the clock diagnostic is for.
+    /// Defaulted to `.whoop4` so the existing WHOOP4-gated alarm caller is unchanged.
+    nonisolated static func commandResponsePayloadHex(in frame: [UInt8],
+                                                      family: DeviceFamily = .whoop4) -> String? {
+        guard let payload = commandResponsePayload(in: frame, family: family), !payload.isEmpty else { return nil }
         return payload.map { String(format: "%02x", $0) }.joined(separator: " ")
     }
 
