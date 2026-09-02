@@ -227,6 +227,39 @@ class ConnectionReadoutTest {
         assertNull(ConnectionReadout.rtcWarning(null, null))
     }
 
+    /** #1818: the remedy must track the battery. A charged strap told to "charge to 100%" is the bug
+     *  the field report hit - the user had already done it, twice. Twin of the Swift test. */
+    @Test fun rtcWarningRemedyTracksBattery() {
+        val flat = ConnectionReadout.rtcWarning(40_000_000L, null, batteryPct = 40.0)
+        assertTrue(flat!!.contains("Charge the strap to 100%"))
+
+        val charged = ConnectionReadout.rtcWarning(40_000_000L, null, batteryPct = 100.0)!!
+        assertFalse(charged.contains("Charge the strap to 100%"))
+        assertTrue(charged.contains("already charged"))
+        assertTrue(charged.contains("strap log"))
+        // The charged copy must stay true for EVERY strap. "NOOP re-sends the clock on every connect"
+        // holds on WHOOP4 but not on a 5/MG, where the write is gated behind didBond and an unbondable
+        // strap (#1635) is never clocked at all - the strap most likely to be showing this warning.
+        assertFalse(charged.contains("every connect"))
+
+        // Pin the VALUE, not just the symbol: feeding the constant back into the function under test
+        // can never catch a wrong threshold, and nothing else would catch it drifting away from the
+        // Swift twin - the two platforms would each keep passing while giving different advice.
+        assertEquals(95.0, ConnectionReadout.RTC_ALREADY_CHARGED_PCT, 0.0)
+
+        // Boundary, from both sides, with literals: inclusive at 95, charge advice at 94.
+        val atThreshold = ConnectionReadout.rtcWarning(40_000_000L, null, batteryPct = 95.0)!!
+        assertTrue(atThreshold.contains("already charged"))
+        val justBelow = ConnectionReadout.rtcWarning(40_000_000L, null, batteryPct = 94.0)!!
+        assertTrue(justBelow.contains("Charge the strap to 100%"))
+
+        // Battery not read yet: we only withdraw advice on evidence, so the default stands.
+        assertTrue(ConnectionReadout.rtcWarning(40_000_000L, null)!!.contains("Charge the strap to 100%"))
+
+        // A sane clock stays silent no matter how full the battery is.
+        assertNull(ConnectionReadout.rtcWarning(1_782_475_600L, 1_782_475_000L, batteryPct = 100.0))
+    }
+
     @Test fun lastFrameLabel() {
         assertEquals("12s ago", ConnectionReadout.lastFrameLabel(990L, nowUnix = 1_002L))
         assertEquals("no frames yet", ConnectionReadout.lastFrameLabel(null, nowUnix = 1_002L))

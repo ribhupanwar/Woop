@@ -233,17 +233,43 @@ public enum ConnectionReadout {
         return "no (waiting for the strap clock)"
     }
 
+    /// #1818: at or above this charge the "charge it" remedy is already satisfied, so repeating it is
+    /// noise. Twin of the Kotlin constant - the two must move together or the platforms give
+    /// different advice for the same strap.
+    public static let rtcAlreadyChargedPct: Double = 95
+
     /// #987: a plain-words warning when the strap RTC reads epoch-era (~1970/71), from EITHER signal we
     /// hold: the correlated device clock or the strap's newest banked-record timestamp. nil when both
     /// look sane (or neither was seen yet - we never fabricate a fault). One string, shown verbatim on
     /// the Devices / Test Centre connection readout, naming the consequence and the fix.
-    public static func rtcWarning(deviceClockUnix: Int?, strapNewestUnix: Int?) -> String? {
+    ///
+    /// #1818: the remedy is battery-dependent. A flat battery resets the RTC, so on a low strap
+    /// "charge it" is real advice. On an ALREADY-charged strap it is not, and the old copy sent users
+    /// at 100% round a loop they had already run.
+    ///
+    /// The charged branch deliberately states only what holds for EVERY strap - that charging again
+    /// will not change it - and asks for a log. It must NOT claim NOOP re-sends the clock on every
+    /// connect: that is true on WHOOP4 (`runConnectHandshake` calls SET_CLOCK unconditionally, both
+    /// payload forms, #120) but FALSE on a 5/MG, where the clock write is gated behind `didBond`, and
+    /// an unbondable 5/MG (#1635) is never clocked at all - precisely the strap most likely to be
+    /// showing this warning. Explaining the mechanism in the sentence is how the original bug happened.
+    /// `batteryPct` nil (not yet read) keeps the charge advice - we only withdraw it on evidence.
+    /// Callers MUST pass a reading from the CURRENT link (iOS: `batterySamples.last?.soc`, which is
+    /// cleared on disconnect) and not a last-known charge that outlives it - a stale 100% would
+    /// suppress the advice in the one case it is right, a strap that ran flat and reset its RTC.
+    public static func rtcWarning(deviceClockUnix: Int?, strapNewestUnix: Int?,
+                                  batteryPct: Double? = nil) -> String? {
         let ceiling = ConnectionTrace.rtcEpochCeilingUnix
         let clockBad = deviceClockUnix.map { $0 > 0 && $0 < ceiling } ?? false
         let newestBad = strapNewestUnix.map { $0 > 0 && $0 < ceiling } ?? false
         guard clockBad || newestBad else { return nil }
-        return "Strap clock reads 1970/71 (never set since its last reset), so it is not banking history. "
-            + "Charge the strap to 100% and reconnect so the clock latches."
+        let lead = "Strap clock reads 1970/71 (never set since its last reset), so it is not banking history. "
+        if let batteryPct, batteryPct >= rtcAlreadyChargedPct {
+            return lead
+                + "The strap is already charged, so charging again will not change this. Export a strap "
+                + "log from Test Centre so the clock exchange can be read."
+        }
+        return lead + "Charge the strap to 100% and reconnect so the clock latches."
     }
 
     /// #987: freshness label for the "last frame" readout row: how long ago the most recent strap frame
