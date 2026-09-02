@@ -255,8 +255,19 @@ class AiCoach(
             val sleepH = d.totalSleepMin?.let { fmt1(it / 60.0) + "h" } ?: "-"
             val hrv = d.avgHrv?.let { "${it.roundToInt()}ms" } ?: "-"
             val rhr = d.restingHr?.let { "${it}bpm" } ?: "-"
+            // The stage breakdown and efficiency, which the coach could not see at all: a user asked why
+            // it said it had no access to sleep stages, and it was answering honestly — `rest 7.8h` was
+            // every word it got about a night. These sit on the SAME DailyMetric this line already reads.
+            // Always emitted, "-" when absent, like every other field: a night with no staging then says
+            // so, rather than the schema changing shape between days and inviting the model to read a
+            // missing field as a zero. Twin of the Swift `AICoach.dayLine`.
+            val deep = d.deepMin?.let { fmt1(it / 60.0) + "h" } ?: "-"
+            val rem = d.remMin?.let { fmt1(it / 60.0) + "h" } ?: "-"
+            val light = d.lightMin?.let { fmt1(it / 60.0) + "h" } ?: "-"
+            val eff = effPctOrDash(d.efficiency)
             sb.append(
-                "  ${d.day}: charge $recovery, effort $strain, rest $sleepH, HRV $hrv, RHR $rhr\n"
+                "  ${d.day}: charge $recovery, effort $strain, rest $sleepH, " +
+                    "deep $deep, REM $rem, light $light, eff $eff, HRV $hrv, RHR $rhr\n"
             )
         }
 
@@ -720,6 +731,27 @@ class AiCoach(
     // Small numeric formatting helpers
     // ---------------------------------------------------------------------------------------
 
+    /**
+     * Efficiency as a percentage, NORMALISING the stored value first.
+     *
+     * `DailyMetric.efficiency` is not reliably a 0-1 fraction - it arrives as a percentage on some
+     * import paths, which SleepMetricDetailLogic and SleepModelLogic each guard against inline. A bare
+     * `* 100` would hand the coach "eff 9400%" for an imported night, and a model given a nonsense
+     * number reasons about it confidently rather than ignoring it.
+     *
+     * 1.5 rather than 1.0 because a genuine fraction can exceed 1.0 only by floating-point noise, while
+     * a genuine percentage is 30-100. The two existing Kotlin copies split at 1.0; matching the Swift
+     * twin here keeps the COACH line consistent across platforms, and the wider divergence between
+     * those thresholds is pre-existing and not this change's to settle.
+     */
+    private fun effPctOrDash(raw: Double?): String {
+        var e = raw ?: return "-"
+        if (e <= 0.0) return "-"
+        if (e > 1.5) e /= 100.0
+        if (e <= 0.0 || e > 1.0) return "-"
+        return "${(e * 100).roundToInt()}%"
+    }
+
     private fun fmt1(v: Double): String =
         if (v == v.roundToInt().toDouble()) v.roundToInt().toString()
         else String.format("%.1f", v)
@@ -905,7 +937,8 @@ class AiCoach(
         const val DEFAULT_SYSTEM_PROMPT =
             "You are an elite, supportive recovery and performance coach with a real training " +
                 "methodology. You may be given a summary of the user's own wearable data (charge " +
-                "0-100, effort 0-100, rest/sleep, HRV, resting heart rate) and recent workouts. " +
+                "0-100, effort 0-100, rest/sleep and its deep/REM/light breakdown, sleep " +
+                "efficiency, HRV, resting heart rate) and recent workouts. " +
                 "Charge is the daily recovery/readiness score; effort is the day's cardiovascular " +
                 "load. Coach using autoregulation: charge 67-100 = green light to build/push, " +
                 "higher effort is fine; 34-66 = maintain, quality over volume, keep it controlled; " +
