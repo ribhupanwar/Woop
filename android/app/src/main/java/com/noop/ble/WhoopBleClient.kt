@@ -9831,7 +9831,11 @@ class WhoopBleClient(
                 upMillis = System.currentTimeMillis() - since,
                 inboundFrames = inboundFrames, inboundBytes = inboundBytes,
                 cmdChannelFrames = cmdChannelFrames, realtimeArmed = realtimeArmedThisLink,
-                ended = "status=$status",
+                // #1820 parity: Apple's epitaph reports "intentional" for a deliberate teardown rather
+                // than an error code, and a field log showed Android printing "ended=status=0" for the
+                // same event. Two reports of the same drop should not read differently. The flag is set
+                // before handleDisconnect runs and is not reassigned above, so it is valid here.
+                ended = if (intentionalDisconnect) "intentional" else "status=$status",
             ))
         }
         // Clear the tally with the link, so a second teardown for the same drop cannot re-report it.
