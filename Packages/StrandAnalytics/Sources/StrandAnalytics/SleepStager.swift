@@ -514,10 +514,38 @@ public enum SleepStager {
     /// the value is always one the wearer actually recorded and the two platforms cannot disagree on a
     /// rounding rule.
     static func hrOnlyBaseline(_ hr: [HRSample]) -> Double? {
-        if hr.isEmpty { return nil }
-        let sorted = hr.map { Double($0.bpm) }.sorted()
-        let idx = min(max(Int(Double(sorted.count - 1) * hrOnlyAnchorPercentile), 0), sorted.count - 1)
+        hrPercentile(hr, hrOnlyAnchorPercentile)
+    }
+
+    /// The `p` percentile of `hr` by bpm, nearest-rank. Shared with `hrOnlyBaseline` so the spread the
+    /// trace reports is measured by the SAME rule as the anchor it is meant to be judged against.
+    static func hrPercentile(_ hr: [HRSample], _ p: Double) -> Double? {
+        percentileOfSorted(hr.map { Double($0.bpm) }.sorted(), p)
+    }
+
+    /// The `p` percentile of an ALREADY-SORTED bpm list, nearest-rank. Split out because the caller
+    /// needs three percentiles from the same window, and the obvious spelling sorts once per
+    /// percentile — ~160k samples sorted three times per scored day across a 21-day rescore.
+    static func percentileOfSorted(_ sorted: [Double], _ p: Double) -> Double? {
+        if sorted.isEmpty { return nil }
+        let idx = min(max(Int(Double(sorted.count - 1) * p), 0), sorted.count - 1)
         return sorted[idx]
+    }
+
+    /// How many distinct `hrOnlyEpochS` buckets `sortedByTs` spans.
+    ///
+    /// A single pass rather than a Set, because `hrS` is already sorted by timestamp so the bucket key
+    /// is non-decreasing. The obvious spelling (`Set(hrS.map { … })`) builds a full intermediate array
+    /// AND a set over every sample to end up with a few thousand distinct keys — per scored day, across
+    /// the 21-day rescore. A diagnostic must not cost what it is measuring.
+    static func distinctEpochs(_ sortedByTs: [HRSample]) -> Int {
+        var count = 0
+        var last = Int.min
+        for s in sortedByTs {
+            let key = s.ts / hrOnlyEpochS
+            if key != last { count += 1; last = key }
+        }
+        return count
     }
 
     /// Epoch for the HR-only spine, in seconds.
@@ -615,9 +643,18 @@ public enum SleepStager {
     /// and it lives outside this package. The spine and the anchor below it stay `internal` — the tests
     /// reach them with `@testable`, and nothing outside should be building its own spine.
     public static func hrOnlySessions(hr: [HRSample], rr: [RRInterval], resp: [RespSample],
-                                      minMinutes: Int = minSleepMin) -> [SleepSession] {
+                                      minMinutes: Int = minSleepMin,
+                                      traceSink: ((String) -> Void)? = nil) -> [SleepSession] {
         let hrS = hr.sorted { $0.ts < $1.ts }
-        guard let baseline = hrOnlyBaseline(hrS) else { return [] }
+        // ONE sort of the bpm axis, reused for the anchor and for the spread the trace reports.
+        let sortedBpm = hrS.map { Double($0.bpm) }.sorted()
+        guard let baseline = percentileOfSorted(sortedBpm, hrOnlyAnchorPercentile) else {
+            traceSink?(GateTrace.hrOnlyLine(anchorBpm: nil, bandBpm: nil, hrP50: nil, hrP90: nil,
+                                            epochs: 0, runs: 0,
+                                            mergedRuns: 0, sleepRuns: 0, longestSleepMin: 0,
+                                            staged: 0, kept: 0, minSleepMin: minMinutes))
+            return []
+        }
         let rrS = rr.sorted { $0.ts < $1.ts }
         var out: [SleepSession] = []
         // mergePeriods for the same reason the motion path calls it: a run boundary is a threshold
@@ -625,16 +662,40 @@ public enum SleepStager {
         // spine returns the night's minutes correctly but shredded into sub-mergeMin fragments, every one
         // of which then fails the minimum-duration gate below — 8 h of detected sleep yielding zero
         // sessions. Absorbing the short runs first is what turns a spine into a night.
-        for p in mergePeriods(hrOnlySleepRuns(hrS, baseline: baseline)) {
+        let rawRuns = hrOnlySleepRuns(hrS, baseline: baseline)
+        let merged = mergePeriods(rawRuns)
+        var staged = 0
+        var longestSleepS = 0
+        for p in merged {
             if p.stage != "sleep" { continue }
+            longestSleepS = max(longestSleepS, p.end - p.start)
             if (p.end - p.start) < minMinutes * 60 { continue }
             let stages = SleepStagerV2.stageSession(start: p.start, end: p.end, grav: [],
                                                     hr: hrS, rr: rrS, resp: resp)
+            staged += 1
             if stages.isEmpty { continue }
             out.append(SleepSession(start: p.start, end: p.end,
                                     efficiency: efficiency(start: p.start, end: p.end, stages: stages),
                                     stages: stages, restingHR: nil, avgHRV: nil, hrOnly: true))
         }
+        traceSink?(GateTrace.hrOnlyLine(
+            anchorBpm: baseline,
+            bandBpm: baseline * hrOnlyBandMult,
+            // The wearer's own spread. An anchor alone cannot be judged: p10 of 60 means one thing when
+            // the median is 63 and quite another when it is 74, and only the second leaves a night the
+            // band can separate.
+            hrP50: percentileOfSorted(sortedBpm, 0.50),
+            hrP90: percentileOfSorted(sortedBpm, 0.90),
+            // The real epoch count, not the sample count: the spine buckets by `hrOnlyEpochS` before it
+            // decides anything, so this is the axis every other number here is measured on.
+            epochs: distinctEpochs(hrS),
+            runs: rawRuns.count,
+            mergedRuns: merged.count,
+            sleepRuns: merged.filter { $0.stage == "sleep" }.count,
+            longestSleepMin: longestSleepS / 60,
+            staged: staged,
+            kept: out.count,
+            minSleepMin: minMinutes))
         return out
     }
 

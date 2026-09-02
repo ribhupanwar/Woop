@@ -560,11 +560,48 @@ object SleepStager {
      * the value is always one the wearer actually recorded and the two platforms cannot disagree on a
      * rounding rule.
      */
-    internal fun hrOnlyBaseline(hr: List<HrSample>): Double? {
-        if (hr.isEmpty()) return null
-        val sorted = hr.map { it.bpm.toDouble() }.sorted()
-        val idx = ((sorted.size - 1) * hrOnlyAnchorPercentile).toInt().coerceIn(0, sorted.size - 1)
+    internal fun hrOnlyBaseline(hr: List<HrSample>): Double? = hrPercentile(hr, hrOnlyAnchorPercentile)
+
+    /**
+     * The `p` percentile of `hr` by bpm, nearest-rank. Shared with [hrOnlyBaseline] so the spread the
+     * trace reports is measured by the SAME rule as the anchor it is meant to be judged against — a
+     * diagnostic computed a different way would invite exactly the wrong conclusion.
+     */
+    internal fun hrPercentile(hr: List<HrSample>, p: Double): Double? =
+        percentileOfSorted(hr.map { it.bpm.toDouble() }.sorted(), p)
+
+    /**
+     * The `p` percentile of an ALREADY-SORTED bpm list, nearest-rank.
+     *
+     * Split out because the caller needs three percentiles from the same window, and the obvious
+     * spelling sorts once per percentile. On a 5/MG day that is ~160k samples sorted three times, on
+     * every scored day, across the 21-day rescore window - a cost this file has been burned by before
+     * (#836, #841). One sort, three reads.
+     */
+    internal fun percentileOfSorted(sorted: List<Double>, p: Double): Double? {
+        if (sorted.isEmpty()) return null
+        val idx = ((sorted.size - 1) * p).toInt().coerceIn(0, sorted.size - 1)
         return sorted[idx]
+    }
+
+    /**
+     * How many distinct [hrOnlyEpochS] buckets `sortedByTs` spans.
+     *
+     * A single pass rather than a set, because `hrS` is already sorted by timestamp so the bucket key
+     * is non-decreasing and a running comparison is enough. The obvious spelling
+     * (`mapTo(HashSet()) { it.ts / hrOnlyEpochS }`) boxes EVERY sample to end up with a few thousand
+     * distinct keys - ~160k boxed longs per scored day across the 21-day rescore, which is the exact
+     * allocation shape #707 names as the heap-churn source under the OOM. A diagnostic must not cost
+     * what it is measuring.
+     */
+    internal fun distinctEpochs(sortedByTs: List<HrSample>): Int {
+        var count = 0
+        var last = Long.MIN_VALUE
+        for (s in sortedByTs) {
+            val key = s.ts / hrOnlyEpochS
+            if (key != last) { count++; last = key }
+        }
+        return count
     }
 
     /** Epoch for the HR-only spine, in seconds. */
@@ -674,9 +711,25 @@ object SleepStager {
         rr: List<RrInterval>,
         resp: List<RespSample>,
         minMinutes: Int = minSleepMin,
+        /**
+         * #1801 follow-up: this path shipped SILENT, and the first field log then showed
+         * `reason=no-motion` with no way to tell whether the spine ran and found nothing or never ran.
+         * Everything it decides is derived from the wearer's own window, so a report is unreadable
+         * without it. Optional, so pure-function callers and tests stay free of a sink.
+         */
+        traceSink: ((String) -> Unit)? = null,
     ): List<DetectedSleep> {
         val hrS = hr.sortedBy { it.ts }
-        val baseline = hrOnlyBaseline(hrS) ?: return emptyList()
+        // ONE sort of the bpm axis, reused for the anchor and for the spread the trace reports.
+        val sortedBpm = hrS.map { it.bpm.toDouble() }.sorted()
+        val baseline = percentileOfSorted(sortedBpm, hrOnlyAnchorPercentile)
+        if (baseline == null) {
+            traceSink?.invoke(SleepStagerTrace.hrOnlyLine(
+                anchorBpm = null, bandBpm = null, hrP50 = null, hrP90 = null, epochs = 0, runs = 0, mergedRuns = 0,
+                sleepRuns = 0, longestSleepMin = 0, staged = 0, kept = 0, minSleepMin = minMinutes,
+            ))
+            return emptyList()
+        }
         val rrS = rr.sortedBy { it.ts }
         val out = ArrayList<DetectedSleep>()
         // mergePeriods for the same reason the motion path calls it: a run boundary is a threshold
@@ -684,10 +737,16 @@ object SleepStager {
         // spine returns the night's minutes correctly but shredded into sub-mergeMin fragments, every one
         // of which then fails the minimum-duration gate below — 8 h of detected sleep yielding zero
         // sessions. Absorbing the short runs first is what turns a spine into a night.
-        for (p in mergePeriods(hrOnlySleepRuns(hrS, baseline))) {
+        val rawRuns = hrOnlySleepRuns(hrS, baseline)
+        val merged = mergePeriods(rawRuns)
+        var staged = 0
+        var longestSleepS = 0L
+        for (p in merged) {
             if (p.stage != "sleep") continue
+            longestSleepS = maxOf(longestSleepS, p.end - p.start)
             if ((p.end - p.start) < minMinutes * 60L) continue
             val stages = SleepStagerV2.stageSession(p.start, p.end, emptyList(), hrS, rrS, resp)
+            staged++
             if (stages.isEmpty()) continue
             out.add(
                 DetectedSleep(
@@ -701,6 +760,25 @@ object SleepStager {
                 )
             )
         }
+        traceSink?.invoke(SleepStagerTrace.hrOnlyLine(
+            anchorBpm = baseline,
+            bandBpm = baseline * hrOnlyBandMult,
+            // The wearer's own spread. An anchor alone cannot be judged: p10 of 60 means one thing when
+            // the median is 63 and quite another when it is 74, and only the second leaves a night the
+            // band can separate.
+            hrP50 = percentileOfSorted(sortedBpm, 0.50),
+            hrP90 = percentileOfSorted(sortedBpm, 0.90),
+            // The real epoch count, not the sample count: the spine buckets by [hrOnlyEpochS] before it
+            // decides anything, so this is the axis every other number here is measured on.
+            epochs = distinctEpochs(hrS),
+            runs = rawRuns.size,
+            mergedRuns = merged.size,
+            sleepRuns = merged.count { it.stage == "sleep" },
+            longestSleepMin = (longestSleepS / 60L).toInt(),
+            staged = staged,
+            kept = out.size,
+            minSleepMin = minMinutes,
+        ))
         return out
     }
 

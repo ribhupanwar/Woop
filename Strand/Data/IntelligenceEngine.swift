@@ -1178,10 +1178,32 @@ final class IntelligenceEngine: ObservableObject {
                     // Fall back to the HR-only spine ONLY when the device supplied nothing of its own: a
                     // hypnogram the device actually recorded is always better evidence than one inferred
                     // from heart rate.
-                    providedSleep = stored.isEmpty
-                        ? SleepStager.hrOnlySessions(hr: hr, rr: rr, resp: resp)
-                        : stored
+                    // Route the spine's funnel through the SAME `traceSink` the gate lines use, so one
+                    // report explains both halves rather than one going quiet — which is exactly what
+                    // shipping it silent cost on Android (#1801). That sink is nil unless Sleep test mode
+                    // is active, so this collects nothing on a normal pass; passing a closure of my own
+                    // here would have appended on every scored day regardless.
+                    if stored.isEmpty {
+                        traceSink?(SleepStager.GateTrace.hrOnlyGateLine(
+                            attempted: true, reason: "no-motion-no-hypnogram",
+                            gravRows: grav.count, storedNights: 0))
+                        providedSleep = SleepStager.hrOnlySessions(hr: hr, rr: rr, resp: resp,
+                                                                   traceSink: traceSink)
+                    } else {
+                        traceSink?(SleepStager.GateTrace.hrOnlyGateLine(
+                            attempted: false, reason: "stored-hypnogram",
+                            gravRows: grav.count, storedNights: stored.count))
+                        providedSleep = stored
+                    }
                 } else {
+                    // Only worth saying on a day with NO motion: there the spine was the remaining option
+                    // and something declined it, which a silent absence could not distinguish. A day WITH
+                    // motion skips this — the motion spine is the answer there.
+                    if grav.count < 2 {
+                        traceSink?(SleepStager.GateTrace.hrOnlyGateLine(
+                            attempted: false, reason: "imported-owner",
+                            gravRows: grav.count, storedNights: 0))
+                    }
                     providedSleep = []
                 }
                 let tScore0 = Date()
