@@ -773,8 +773,84 @@ public final class LiveState: ObservableObject {
     /// service base (…-8d6d-82b8-614a-1c8cb0f8dcc6) — those are public, identical on every strap, and
     /// are exactly the GATT diagnostics a shared log needs to be useful (#421). Thanks @ujix (#447) for
     /// catching the peripheral-UUID leak; this is a targeted form so we don't redact the service UUIDs.
+    /// #1833: mask a WHOOP serial that arrives as HEX rather than as text.
+    ///
+    /// Every rule in `redactPii` matches an identifier written as characters. None can see one encoded
+    /// as hex, because they are reading hex digits and not the ASCII those bytes decode to. On a 5/MG,
+    /// event 109 carries the strap serial as plain ASCII inside its payload, so any diagnostic that dumps
+    /// a frame or payload puts the serial into the log we ask people to attach to public issues — while
+    /// the MAC rule keeps firing, so the line still LOOKS redacted.
+    ///
+    /// Deliberately NOT keyed on a label. This side writes hex as `frame=…` (the clock diagnostic),
+    /// `[raw …]` and `(raw …)` (the alarm readback), and the #900 whole-frame dump carries none. A rule
+    /// enumerating today's phrasings is one the next diagnostic slips past. Matching the hex itself needs
+    /// no maintenance and covers dumps not yet written.
+    ///
+    /// Only bytes inside a serial-shaped ASCII run are masked; the rest of the dump survives, because the
+    /// payload is exactly where an undocumented field would be found. Twin of `redactHexDumpPii`.
+    nonisolated static func redactHexDump(_ hex: String) -> String {
+        let chars = Array(hex)
+        // NO even-length requirement, deliberately. The run regex matches consecutive hex characters, so
+        // a dump abutting other hex-valid text yields an ODD-length match — and bailing on that returned
+        // the serial UNREDACTED, while the Kotlin twin processed the even prefix and masked it. Swift was
+        // the weaker half of a pair that has to behave identically. Process what pairs up, ignore a
+        // trailing half-byte.
+        guard chars.count >= 16 else { return hex }
+        var bytes = [UInt8](); bytes.reserveCapacity(chars.count / 2)
+        var i = 0
+        while i + 1 < chars.count {
+            guard let b = UInt8(String(chars[i...(i + 1)]), radix: 16) else { return hex }
+            bytes.append(b); i += 2
+        }
+        var out = chars
+        var runStart = -1
+        func closeRun(_ end: Int) {
+            defer { runStart = -1 }
+            guard runStart >= 0 else { return }
+            // Anchor on the first LETTER with enough run left after it, mirroring the Kotlin regex
+            // `[A-Za-z][0-9A-Za-z]{8,}` — which finds a serial ANYWHERE inside an alphanumeric run, not
+            // only at its start. Testing just the run's first byte left the serial exposed whenever a
+            // digit happened to precede it with no separator, and Kotlin masked the same bytes. Two
+            // halves of one rule disagreeing about which payloads are safe is the failure to avoid.
+            var i = runStart
+            while i < end {
+                let b = bytes[i]
+                let isLetter = (b >= 65 && b <= 90) || (b >= 97 && b <= 122)
+                if isLetter, end - i >= 9 {
+                    for k in i..<end { out[k * 2] = "•"; out[k * 2 + 1] = "•" }
+                    return
+                }
+                i += 1
+            }
+        }
+        for (idx, b) in bytes.enumerated() {
+            let alnum = (b >= 48 && b <= 57) || (b >= 65 && b <= 90) || (b >= 97 && b <= 122)
+            if alnum { if runStart < 0 { runStart = idx } } else { closeRun(idx) }
+        }
+        closeRun(bytes.count)
+        return String(out)
+    }
+
+    private static let hexRunRegex = try? NSRegularExpression(pattern: "[0-9a-fA-F]{16,}")
+
     nonisolated static func redactPii(_ s: String) -> String {
         var out = s
+        // Hex first: the text rules below must not see (or mangle) a run we are about to mask.
+        if let re = Self.hexRunRegex {
+            let ns = out as NSString
+            let matches = re.matches(in: out, range: NSRange(location: 0, length: ns.length))
+            if !matches.isEmpty {
+                var rebuilt = ""
+                var last = 0
+                for m in matches {
+                    rebuilt += ns.substring(with: NSRange(location: last, length: m.range.location - last))
+                    rebuilt += Self.redactHexDump(ns.substring(with: m.range))
+                    last = m.range.location + m.range.length
+                }
+                rebuilt += ns.substring(from: last)
+                out = rebuilt
+            }
+        }
         out = out.replacingOccurrences(
             of: "([0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:([0-9A-Fa-f]{2})",
             with: "$1:••:••:••:••:$2", options: .regularExpression)
