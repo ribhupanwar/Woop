@@ -823,7 +823,8 @@ object IntelligenceEngine {
                 // per-day anchor block below is a no-op — byte-identical anchor either way. A 5/MG banks
                 // skin-temp centidegrees directly — no per-device anchor — so its anchor slot stays null.
                 if (cacheOwnerFamily == DeviceFamily.WHOOP4 && !skinAnchorResolvedOwners.contains(owner)) {
-                    val windowSkin = repo.skinTempSamples(owner, skinAnchorScanFrom, skinAnchorScanTo, STREAM_LIMIT)
+                    val windowSkin = repo.skinTempSamples(owner, skinAnchorScanFrom, skinAnchorScanTo,
+                        StreamReadCap.SKIN)
                     Whoop4SkinTemp.deviceAnchorRaw(windowSkin.map { it.raw })?.let { skinAnchorByOwner[owner] = it }
                     skinAnchorResolvedOwners.add(owner)
                 }
@@ -1226,7 +1227,7 @@ object IntelligenceEngine {
                     sleepDetectNoNightLogLine(
                         day = day, hrCount = hr.size, rrCount = rr.size, respCount = resp.size,
                         gravCount = grav.size, stepCount = steps.size, providedCount = providedSleep.size,
-                        windowHours = windowHours,
+                        windowHours = windowHours, skinCount = skin.size,
                     ),
                 )
             }
@@ -2736,7 +2737,7 @@ object IntelligenceEngine {
         skinAnchorScanFrom: Long,
         skinAnchorScanTo: Long,
     ): DaySkinReads {
-        val skin = repo.skinTempSamples(owner, from, to, STREAM_LIMIT)
+        val skin = repo.skinTempSamples(owner, from, to, StreamReadCap.SKIN)
         // #93: WHOOP 4.0 raw SpO2 PPG samples for the night; analyzeDay banks the nightly red/IR ADC
         // means on the DailyMetric. Empty on a 5/MG (no v24 spo2 channels) → the raw means stay null.
         val spo2 = repo.spo2Samples(owner, from, to, STREAM_LIMIT)
@@ -2765,7 +2766,8 @@ object IntelligenceEngine {
         // identical to today). Computed here once per owner alongside the family resolution.
         val skinAnchorRaw = if (skinFamily == DeviceFamily.WHOOP4) {
             if (!skinAnchorResolvedOwners.contains(owner)) {
-                val windowSkin = repo.skinTempSamples(owner, skinAnchorScanFrom, skinAnchorScanTo, STREAM_LIMIT)
+                val windowSkin = repo.skinTempSamples(owner, skinAnchorScanFrom, skinAnchorScanTo,
+                    StreamReadCap.SKIN)
                 Whoop4SkinTemp.deviceAnchorRaw(windowSkin.map { it.raw })?.let { skinAnchorByOwner[owner] = it }
                 skinAnchorResolvedOwners.add(owner)
             }
@@ -2936,7 +2938,7 @@ object IntelligenceEngine {
      */
     internal fun sleepDetectNoNightLogLine(
         day: String, hrCount: Int, rrCount: Int, respCount: Int, gravCount: Int,
-        stepCount: Int, providedCount: Int, windowHours: Int,
+        stepCount: Int, providedCount: Int, windowHours: Int, skinCount: Int,
     ): String {
         // `reason` names WHICH absence this is, because grav=0 is printed but its consequence is not.
         //
@@ -2951,9 +2953,39 @@ object IntelligenceEngine {
         // With motion present the inputs were there and staging still produced nothing, which remains the
         // case most worth investigating.
         val reason = if (gravCount == 0) "no-motion" else "staged-none"
+        // #1118 follow-up: name any stream that came back AT its read cap. A read that returns exactly
+        // the limit is the definition of truncated everywhere else here (`full.count >= limit`), and it
+        // is the one thing a reader cannot infer from the counts alone - `grav=192698` looks healthy
+        // until you know the cap it is 96% of.
+        //
+        // GRAVITY is why this exists. HR and R-R ride a SlidingStreamWindow, which counts its own
+        // truncations; gravity is a plain read with no counter at all, so a night clipped of its newest
+        // motion staged badly and said nothing. That is the difference between "this release fixes your
+        // night" and "your offload never ran", and a log could not tell them apart.
+        // ONLY the plain reads. Gravity and skin are read whole, so a result of exactly the cap IS the
+        // truncation — the same `size >= limit` test used everywhere else here, and neither stream has a
+        // counter of its own, which is why this marker exists.
+        //
+        // HR and R-R are deliberately absent even though their counts are printed. They arrive through
+        // `SlidingStreamWindow.rows`, which returns `full.filter { ts in from..to }` — a SLICE of a read
+        // that usually spans more than this night. A spliced window that WAS truncated still hands back a
+        // slice under the cap, so the marker would silently fail to fire: a false negative on a line whose
+        // only value is that its absence means "not clipped". Their exact truncation count is already
+        // printed unconditionally once per pass by `WindowedStreamPlan.logLine` (`hrTruncated=`), so
+        // nothing is lost by declining to guess it per night.
+        //
+        // resp and steps are plain reads too, and equally judgeable, but stay unmarked on purpose: neither
+        // is a staging input, so clipping one cannot be the reason a night is missing. Their counts are
+        // printed as context. The marker answers "did a stream that could explain this get cut short",
+        // not "was every read complete".
+        val atCap = buildList {
+            if (gravCount >= StreamReadCap.GRAVITY) add("grav")
+            if (skinCount >= StreamReadCap.SKIN) add("skin")
+        }
+        val capNote = if (atCap.isEmpty()) "" else " atCap=${atCap.joinToString(",")}"
         return "sleep-detect day=$day NO-NIGHT hr=$hrCount rr=$rrCount resp=$respCount " +
-            "grav=$gravCount steps=$stepCount provided=$providedCount window=${windowHours}h " +
-            "reason=$reason"
+            "grav=$gravCount skin=$skinCount steps=$stepCount provided=$providedCount " +
+            "window=${windowHours}h reason=$reason$capNote"
     }
 
     /**
