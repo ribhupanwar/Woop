@@ -32,7 +32,10 @@ final class BackgroundTaskIdentityTests: XCTestCase {
         guard let line else { return XCTFail("a mismatched bundle id must be reported") }
         XCTAssertTrue(line.contains("com.example.noop.resigned"), line)
         XCTAssertTrue(line.contains("com.noopapp.noop"), "it must name the id Info.plist permits: \(line)")
-        XCTAssertTrue(line.contains("CANNOT REGISTER"), line)
+        // Tracks the copy on purpose: the wording IS the diagnostic, so a reader has to be able to tell
+        // at a glance that nothing will run. It was "CANNOT REGISTER" until that read as a tested outcome
+        // rather than what it is, an inference from the plist. A future rewording updates this with it.
+        XCTAssertTrue(line.contains("WILL NOT REGISTER"), line)
     }
 
     /// A build that declares no background tasks is not broken, and must not be told it is.
