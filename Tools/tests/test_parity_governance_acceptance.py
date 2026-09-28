@@ -919,6 +919,33 @@ class GovernanceRatchetTests(unittest.TestCase):
         }]})
         self.assertEqual([], parity_ratchet.compare_metadata(self.root, base, offline=True))
 
+    def test_inherited_disposition_can_name_excluded_twin_without_changing_authority(self) -> None:
+        kotlin = self.root / "android/app/src/main/java/com/noop/analytics/Engine.kt"
+        swift = self.root / "Strand/Data/Engine.swift"
+        kotlin.parent.mkdir(parents=True, exist_ok=True)
+        swift.parent.mkdir(parents=True, exist_ok=True)
+        kotlin.write_text("object Engine { fun counterpart() = Unit }\n", encoding="utf-8")
+        swift.write_text("enum Engine { static func counterpart() {} }\n", encoding="utf-8")
+        compact = parity_ledger.build_compact_twin_map(self.root)
+        identity = next(item for item in parity_ledger.semantic_authority(self.root)["unpaired_functions"]
+                        if "counterpart" in item)
+        self.write("Tools/parity_twin_map.json", compact)
+        self.write("Tools/parity_ledger_baseline.json",
+                   parity_ledger.build_compact_baseline(parity_ledger.scan(self.root, compact)))
+        old = {
+            "type": "platform_specific", "kind": "add-unpaired-function",
+            "identity": identity, "platform": "kotlin",
+            "identity_sha256": parity_ledger._canonical_sha256(identity),
+            "rationale": "The Swift counterpart lives outside the scanned packages.",
+        }
+        self.write("Tools/parity_dispositions.json", {"schema_version": 1, "dispositions": [old]})
+        base = self.commit()
+        current = {**old, "type": "out_of_scope_twin",
+                   "twin_path": "Strand/Data/Engine.swift"}
+        self.write("Tools/parity_dispositions.json", {"schema_version": 1, "dispositions": [current]})
+        self.assertEqual([], parity_ratchet.compare_metadata(self.root, base, offline=True))
+        self.assertEqual([], parity_ratchet.repository_consistency_errors(self.root))
+
     def test_debt_decrease_needs_no_metadata_rewrite_and_warns(self) -> None:
         swift = self.root / "Packages/StrandAnalytics/Sources/StrandAnalytics/Engine.swift"
         kotlin = self.root / "android/app/src/main/java/com/noop/analytics/Engine.kt"
