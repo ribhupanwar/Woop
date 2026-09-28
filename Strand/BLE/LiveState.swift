@@ -947,7 +947,12 @@ public final class LiveState: ObservableObject {
     /// routinely asked to confirm they are on a particular staging build, and the version alone cannot say.
     /// The bundle id matters because the `.ipa` ships unsigned and a re-signer can rewrite it, which changes
     /// how Apple Health identifies this app as a source and which background-task identifiers iOS accepts.
-    /// Neither is personal.
+    ///
+    /// The version and build identify nobody. The bundle id is the app's own identifier and normally does
+    /// not either, but `Config/BundleId.xcconfig` exists so someone building from source can set their own
+    /// `BUNDLE_ID_PREFIX`, and that string is whatever they chose. It is printed anyway, and NOT routed
+    /// through `redactPii`, because seeing the real id IS the diagnostic and masking it would defeat the
+    /// point on exactly the builds most likely to need it.
     ///
     /// Shared by both header builders on purpose: the two used to construct the same `App:` line
     /// independently, which is how a field goes into one export and not the other.

@@ -123,9 +123,14 @@ struct IOSDiagnostics {
         // actually runs as, nothing can register.
         guard !permitted.contains(where: { $0.hasPrefix(runtimeID + ".") }) else { return nil }
         let baked = permitted.first.map { String($0.dropLast(($0.split(separator: ".").last?.count ?? 0) + 1)) }
-        return "Background tasks: CANNOT REGISTER - this build runs as \(runtimeID) but Info.plist permits "
-            + "identifiers under \(baked ?? "a different id") - re-signing rewrote the bundle id and not the "
-            + "permitted list, so scheduled re-score, Health write-back, Coach brief and scheduled export are inert"
+        // States the MISMATCH and what follows from it, and stops there. Re-signing is the likeliest way a
+        // build reaches this state, but a mis-set BUNDLE_ID_PREFIX or a hand-edited Info.plist produce an
+        // identical one and this cannot tell them apart. Naming a cause it did not observe is the #1635
+        // mistake, where "the strap refused" was printed for a local SecurityException.
+        return "Background tasks: WILL NOT REGISTER - this build runs as \(runtimeID), Info.plist permits "
+            + "identifiers under \(baked ?? "a different prefix") - the derived identifiers are not in the "
+            + "permitted list, so scheduled re-score, Health write-back, Coach brief and scheduled export "
+            + "cannot start"
     }
 
     /// A formatted, multi-line block describing the environment. Empty on macOS (the macOS strap-log
