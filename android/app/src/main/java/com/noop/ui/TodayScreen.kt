@@ -7990,7 +7990,6 @@ private fun KeyMetricsEditorDialog(
     onDismiss: () -> Unit,
     onSave: (List<KeyMetric>, Boolean, Int) -> Unit,
 ) {
-    val context = LocalContext.current
     val titles = KeyMetric.entries.associateWith { uiString(it.titleRes) }
     // Today shows only the selected day's values; Trends adds the graph over the chosen window.
     // Keep the existing detailed preference so saved layouts retain their behavior.
@@ -8024,9 +8023,10 @@ private fun KeyMetricsEditorDialog(
                 SegmentedPillControl(
                     items = listOf(false, true),
                     selection = detailed,
-                    label = { if (it) context.getString(R.string.nav_trends) else context.getString(R.string.nav_today) },
+                    label = { if (it) uiString(R.string.nav_trends) else uiString(R.string.nav_today) },
                     onSelect = { detailed = it },
                     modifier = Modifier.fillMaxWidth(),
+                    accessibilityLabel = uiString(R.string.l10n_today_screen_edit_key_metrics_f95e61a4),
                 )
                 // The detailed graphs' trailing window — 1 week / 2 weeks / 1 month (the NOOP signature
                 // segmented pill, same control the trend screens use). Only shown while Detailed is on.
@@ -8035,12 +8035,13 @@ private fun KeyMetricsEditorDialog(
                         items = listOf(7, 14, 30),
                         selection = windowDays,
                         label = { when (it) {
-                            7 -> context.getString(R.string.today_range_1_week)
-                            14 -> context.getString(R.string.today_range_2_weeks)
-                            else -> context.getString(R.string.today_range_1_month)
+                            7 -> uiString(R.string.today_range_1_week)
+                            14 -> uiString(R.string.today_range_2_weeks)
+                            else -> uiString(R.string.today_range_1_month)
                         } },
                         onSelect = { windowDays = it },
                         modifier = Modifier.fillMaxWidth(),
+                        accessibilityLabel = uiString(R.string.nav_trends),
                     )
                 }
                 HorizontalDivider(color = Palette.hairline, thickness = 1.dp)
