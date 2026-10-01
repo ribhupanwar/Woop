@@ -15,6 +15,7 @@ import SwiftUI
 import StrandDesign
 import WhoopStore
 import StrandAnalytics
+import WhoopProtocol
 
 struct LiquidTodayView: View {
     @AppStorage(DayCycleMode.storageKey) private var dayCycleModeRaw = DayCycleMode.sleepOnset.rawValue
