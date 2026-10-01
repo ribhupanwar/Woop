@@ -2022,7 +2022,7 @@ struct TodayView: View {
             // scorable beats at all, the Deep-window note would name a window that was never reached and
             // send the wearer to a setting that cannot help.
             if chargeLegacyRRGap {
-                chargeLegacyRRGapNote
+                ChargeLegacyRRGapNote()
             } else if chargeDeepWindowGap {
                 chargeDeepWindowGapNote
             } else if selectedDayOffset == 0 && !chargeScoreState.isCalibrating {
@@ -2070,31 +2070,6 @@ struct TodayView: View {
                                               firstRecordedDay: firstRecordedRRDay,
                                               firstScorableDay: firstScorableRRDay,
                                               avgHrv: d.avgHrv, totalSleepMin: d.totalSleepMin)
-    }
-
-    /// #1505: the note shown instead of a bare "-" when this night's beats predate transport labelling.
-    /// Same card shape as the #233 note it sits beside, on today AND a navigated past day alike, since a
-    /// past day is where this one is almost always read.
-    private var chargeLegacyRRGapNote: some View {
-        NoopCard(padding: 14, tint: StrandPalette.chargeColor) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "waveform.path.ecg")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(StrandPalette.chargeColor)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(ChargeBreakdownFormat.chargeLegacyRRGapTitle)
-                        .font(StrandFont.headline)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    Text(ChargeBreakdownFormat.chargeLegacyRRGapDetail)
-                        .font(StrandFont.subhead)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(ChargeBreakdownFormat.chargeLegacyRRGapAccessibility)
     }
 
     /// #233: whether the SELECTED day's empty Charge is explained by the Deep-sleep HRV window finding no
