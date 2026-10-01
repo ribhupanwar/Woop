@@ -391,21 +391,23 @@ func vitalReadingRows(readings: [VitalReading], unit: String, strapDeviceId: Str
     }
 }
 
-/// "9 Jun" for a "YYYY-MM-DD" reading day (today / yesterday read as words to match the hero "as of"
-/// line); the verbatim string if it doesn't parse. UTC-fixed and localized, matching this file's other date
-/// labels. Swift twin of Android's `vitalReadingDateLabel`.
-func vitalReadingDateLabel(_ day: String, now: Date = Date()) -> String {
+/// Include the weekday so recovery readings can be matched to training days. UTC-fixed and localized;
+/// Today/Yesterday remain visible beside the date. Swift twin of Android's `vitalReadingDateLabel`.
+func vitalReadingDateLabel(_ day: String, now: Date = Date(), locale: Locale = AppLanguage.activeLocale) -> String {
     guard let date = parseDay(day) else { return day }
     var cal = Calendar(identifier: .gregorian)
     cal.timeZone = TimeZone(identifier: "UTC")!
-    if cal.isDate(date, inSameDayAs: now) { return String(localized: "Today") }
-    if let yesterday = cal.date(byAdding: .day, value: -1, to: now),
-       cal.isDate(date, inSameDayAs: yesterday) { return String(localized: "Yesterday") }
     let formatter = DateFormatter()
-    formatter.locale = AppLanguage.activeLocale
+    formatter.locale = locale
     formatter.timeZone = TimeZone(identifier: "UTC")
-    formatter.dateFormat = "d MMM"
-    return formatter.string(from: date)
+    formatter.dateFormat = "EEE d MMM"
+    let dated = formatter.string(from: date)
+    formatter.dateFormat = "EEE"
+    let weekday = formatter.string(from: date)
+    if cal.isDate(date, inSameDayAs: now) { return "\(String(localized: "Today")) · \(weekday)" }
+    if let yesterday = cal.date(byAdding: .day, value: -1, to: now),
+       cal.isDate(date, inSameDayAs: yesterday) { return "\(String(localized: "Yesterday")) · \(weekday)" }
+    return dated
 }
 
 // MARK: - Skin-temp explorer notes (#1847 / #1848)
