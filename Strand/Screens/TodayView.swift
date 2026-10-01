@@ -2180,7 +2180,7 @@ struct TodayView: View {
                         // taps through to its own explanation rather than the generic empty note. Same
                         // precedence as the note above the rings: no scorable beats outranks no deep sleep.
                         if chargeLegacyRRGap {
-                            chargeLegacyRRGapNote
+                            ChargeLegacyRRGapNote()
                         } else if chargeDeepWindowGap {
                             chargeDeepWindowGapNote
                         } else if let banked = recoveryCalibration {
