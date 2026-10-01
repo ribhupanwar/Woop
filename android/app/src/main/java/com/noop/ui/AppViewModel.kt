@@ -1006,12 +1006,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val localKey = java.time.LocalDate.now().toString()
                 _today.value = resolveTodayRow(days, logicalKey, localKey)
                 _healthAlert.value =
-                    if (_illnessWatchEnabled.value) IllnessWatch.evaluate(days) else null
+                    (if (_illnessWatchEnabled.value) IllnessWatch.evaluate(days) else null)
+                        ?.let { IllnessAlertNotifier.withWindow(appContext, it, days) }
                 // EVERY evaluation is reported, raised or clear. The clear-to-raised edge now lives in
                 // the notifier's PERSISTED state (#2586): `_healthAlert` starts null on every ViewModel
                 // build, so gating here made a cold start look like a transition, and the day gate then
                 // allowed a notification about an alert that had simply stayed raised.
-                IllnessAlertNotifier.onEvaluated(appContext, _healthAlert.value)
+                // A loading/error emission with fewer than 14 days cannot establish a real clear.
+                if (days.size >= 14) IllnessAlertNotifier.onEvaluated(appContext, _healthAlert.value)
                 // Morning recap (#517) — opt-in, default OFF. Once today's row carries a banked night
                 // (totalSleepMin != null), post a one-per-day Charge + Rest recap. recovery == Charge;
                 // Rest is recomputed from the night's totals via RestScorer (the same single source of
@@ -2833,13 +2835,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _illnessWatchEnabled.value = enabled
         NoopPrefs.setIllnessWatch(appContext, enabled)
         // Recompute now — the recentDays collector only fires on data changes.
-        _healthAlert.value = if (enabled) IllnessWatch.evaluate(recentDays.value) else null
+        val days = recentDays.value
+        _healthAlert.value = (if (enabled) IllnessWatch.evaluate(days) else null)
+            ?.let { IllnessAlertNotifier.withWindow(appContext, it, days) }
         // Reported like any other evaluation, because the persisted edge (#2586) is only correct if
         // EVERY change of state reaches it. Switching the watch off while an alert was raised used to
         // clear the banner here and leave the stored flag raised, so the next genuine transition —
         // possibly months later, after switching the watch back on — would be read as "already raised"
         // and silently suppressed.
-        IllnessAlertNotifier.onEvaluated(appContext, _healthAlert.value)
+        if (days.size >= 14) IllnessAlertNotifier.onEvaluated(appContext, _healthAlert.value)
     }
 
     /** #hide-cycle: hide/show the cycle-awareness offer. Hiding also stops active tracking, so "hidden"
