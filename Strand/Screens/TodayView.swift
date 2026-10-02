@@ -95,7 +95,7 @@ struct ActiveWorkoutIndicatorModel: Equatable {
     }
 }
 
-private struct ActiveWorkoutIndicatorCard: View {
+struct ActiveWorkoutIndicatorCard: View {
     let model: ActiveWorkoutIndicatorModel
     let onReturn: () -> Void
 
