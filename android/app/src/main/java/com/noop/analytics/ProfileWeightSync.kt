@@ -21,10 +21,17 @@ object ProfileWeightSync {
      * The newest reading, or null when there is none. Days are ISO `yyyy-MM-dd`, which sorts
      * chronologically, so the lexically greatest day is the most recent and no date parsing is needed.
      *
-     * Resolution is day-granular, not timestamp-granular: two readings on the same day (a morning and
-     * an evening weigh-in) are separated only by input order, since `maxByOrNull` keeps the first
-     * maximal element, so the pick between them is not necessarily the later one. Anything that needs
-     * the latest weigh-in within a day must carry the reading's time and resolve on that instead.
+     * Resolution is day-granular, and on a tie `maxByOrNull` keeps the FIRST maximal element, so input
+     * order decides. That ordering is load-bearing, not incidental: the Weight tile's default path
+     * passes `apple + healthConnect`, two different `deviceId`s that each hold at most one `appleDaily`
+     * row per day (natural key `(deviceId, day)`), so both sources CAN carry the same day. Prepending
+     * Apple Health makes it win that day, which is the behaviour the tile had before this resolver
+     * existed. Reversing the concatenation would silently change which source the tile names.
+     *
+     * Two weigh-ins on ONE day from one source never reach here: `HealthConnectImporter` already keeps
+     * the day's latest by timestamp (`r.time.epochSecond >= b.weightTs`) before the row is stored, so
+     * each `deviceId` contributes one already-latest reading per day. The profile sync is narrower
+     * still, reading only the `health-connect` bucket, so it sees no same-day tie at all.
      */
     fun newest(readings: List<WeightReading>): WeightReading? = readings.maxByOrNull { it.day }
 
