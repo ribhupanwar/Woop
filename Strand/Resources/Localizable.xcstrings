@@ -1172,7 +1172,36 @@
     "1 month · averages per observed day": {"localizations":{"de":{"stringUnit":{"state":"translated","value":"1 Monat · Durchschnitt je erfasstem Tag"}},"es":{"stringUnit":{"state":"translated","value":"1 mes · promedios por día registrado"}},"fr":{"stringUnit":{"state":"translated","value":"1 mois · moyennes par jour enregistré"}},"pt-PT":{"stringUnit":{"state":"translated","value":"1 mês · médias por dia registado"}},"pl":{"stringUnit":{"state":"translated","value":"1 miesiąc · średnie na zarejestrowany dzień"}},"ru":{"stringUnit":{"state":"translated","value":"1 месяц · средние за день с данными"}},"it":{"stringUnit":{"state":"translated","value":"1 mese · medie per giorno registrato"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"1 个月 · 有记录日的平均值"}},"zh-Hant":{"stringUnit":{"state":"translated","value":"1 個月 · 有紀錄日的平均值"}}}},
     "%lld months · averages per observed day": {"localizations":{"de":{"stringUnit":{"state":"translated","value":"%lld Monate · Durchschnitt je erfasstem Tag"}},"es":{"stringUnit":{"state":"translated","value":"%lld meses · promedios por día registrado"}},"fr":{"stringUnit":{"state":"translated","value":"%lld mois · moyennes par jour enregistré"}},"pt-PT":{"stringUnit":{"state":"translated","value":"%lld meses · médias por dia registado"}},"pl":{"stringUnit":{"state":"translated","value":"Liczba miesięcy: %lld · średnie na zarejestrowany dzień"}},"ru":{"stringUnit":{"state":"translated","value":"Месяцев: %lld · средние за день с данными"}},"it":{"stringUnit":{"state":"translated","value":"%lld mesi · medie per giorno registrato"}},"zh-Hans":{"stringUnit":{"state":"translated","value":"%lld 个月 · 有记录日的平均值"}},"zh-Hant":{"stringUnit":{"state":"translated","value":"%lld 個月 · 有紀錄日的平均值"}}}},
     "%lld working sets · compare when you repeat this program": { "localizations": {
-      "de": {"stringUnit": {"state": "translated", "value": "%lld Arbeitssätze · vergleichbar, wenn du dieses Programm wiederholst"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld series efectivas · compara al repetir este programa"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld séries de travail · à comparer quand tu refais ce programme"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld serie di lavoro · confronta quando ripeti questo programma"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld serii roboczych · porównuj, gdy powtarzasz ten program"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld séries de trabalho · compara quando repetires este programa"}}, "ru": {"stringUnit": {"state": "translated", "value": "%lld рабочих подходов · сравнивай при повторе этой программы"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 个正式组 · 重复同一计划时才可比较"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 個正式組 · 重複同一計畫時才可比較"}}
+      "de": {"stringUnit": {"state": "translated", "value": "%lld Arbeitssätze · vergleichbar, wenn du dieses Programm wiederholst"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld series efectivas · compara al repetir este programa"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld séries de travail · à comparer quand tu refais ce programme"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld serie di lavoro · confronta quando ripeti questo programma"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld serii roboczych · porównuj, gdy powtarzasz ten program"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld séries de trabalho · compara quando repetires este programa"}}, "ru": {
+        "variations": {
+          "plural": {
+            "one": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld рабочий подход · сравнивай при повторе этой программы"
+              }
+            },
+            "few": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld рабочих подхода · сравнивай при повторе этой программы"
+              }
+            },
+            "many": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld рабочих подходов · сравнивай при повторе этой программы"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld рабочих подходов · сравнивай при повторе этой программы"
+              }
+            }
+          }
+        }
+      }, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 个正式组 · 重复同一计划时才可比较"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 個正式組 · 重複同一計畫時才可比較"}}
     } },
     "%@ in sets": { "localizations": {
       "de": {"stringUnit": {"state": "translated", "value": "%@ in Sätzen"}}, "es": {"stringUnit": {"state": "translated", "value": "%@ en series"}}, "fr": {"stringUnit": {"state": "translated", "value": "%@ en séries"}}, "it": {"stringUnit": {"state": "translated", "value": "%@ nelle serie"}}, "pl": {"stringUnit": {"state": "translated", "value": "%@ w seriach"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%@ em séries"}}, "ru": {"stringUnit": {"state": "translated", "value": "%@ в подходах"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%@ 在组内"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%@ 在組內"}}
@@ -1715,13 +1744,71 @@
       "de": {"stringUnit": {"state": "translated", "value": "%@ Wdh."}}, "en": {"stringUnit": {"state": "translated", "value": "%@ reps"}}, "es": {"stringUnit": {"state": "translated", "value": "%@ reps"}}, "fr": {"stringUnit": {"state": "translated", "value": "%@ répétitions"}}, "it": {"stringUnit": {"state": "translated", "value": "%@ ripetizioni"}}, "pl": {"stringUnit": {"state": "translated", "value": "%@ powtórzeń"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%@ repetições"}}, "ru": {"stringUnit": {"state": "translated", "value": "%@ повторений"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%@ 次"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%@ 次"}}
     } },
     "%lld reps": { "localizations": {
-      "de": {"stringUnit": {"state": "translated", "value": "%lld Wdh."}}, "en": {"stringUnit": {"state": "translated", "value": "%lld reps"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld reps"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld répétitions"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld ripetizioni"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld powtórzeń"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld repetições"}}, "ru": {"stringUnit": {"state": "translated", "value": "%lld повторений"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 次"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 次"}}
+      "de": {"stringUnit": {"state": "translated", "value": "%lld Wdh."}}, "en": {"stringUnit": {"state": "translated", "value": "%lld reps"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld reps"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld répétitions"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld ripetizioni"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld powtórzeń"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld repetições"}}, "ru": {
+        "variations": {
+          "plural": {
+            "one": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld повторение"
+              }
+            },
+            "few": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld повторения"
+              }
+            },
+            "many": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld повторений"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld повторений"
+              }
+            }
+          }
+        }
+      }, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 次"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 次"}}
     } },
     "%@ rest": { "localizations": {
       "de": {"stringUnit": {"state": "translated", "value": "%@ Pause"}}, "es": {"stringUnit": {"state": "translated", "value": "%@ de descanso"}}, "fr": {"stringUnit": {"state": "translated", "value": "%@ de repos"}}, "it": {"stringUnit": {"state": "translated", "value": "%@ di recupero"}}, "pl": {"stringUnit": {"state": "translated", "value": "%@ przerwy"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%@ de descanso"}}, "ru": {"stringUnit": {"state": "translated", "value": "отдых %@"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "休息 %@"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "休息 %@"}}
     } },
     "%lld sets": { "localizations": {
-      "de": {"stringUnit": {"state": "translated", "value": "%lld Sätze"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld series"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld séries"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld serie"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld serii"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld séries"}}, "ru": {"stringUnit": {"state": "translated", "value": "%lld подходов"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 组"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 組"}}
+      "de": {"stringUnit": {"state": "translated", "value": "%lld Sätze"}}, "es": {"stringUnit": {"state": "translated", "value": "%lld series"}}, "fr": {"stringUnit": {"state": "translated", "value": "%lld séries"}}, "it": {"stringUnit": {"state": "translated", "value": "%lld serie"}}, "pl": {"stringUnit": {"state": "translated", "value": "%lld serii"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "%lld séries"}}, "ru": {
+        "variations": {
+          "plural": {
+            "one": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld подход"
+              }
+            },
+            "few": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld подхода"
+              }
+            },
+            "many": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld подходов"
+              }
+            },
+            "other": {
+              "stringUnit": {
+                "state": "translated",
+                "value": "%lld подходов"
+              }
+            }
+          }
+        }
+      }, "zh-Hans": {"stringUnit": {"state": "translated", "value": "%lld 组"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "%lld 組"}}
     } },
     "Anything you want to remember": { "localizations": {
       "de": {"stringUnit": {"state": "translated", "value": "Alles, was du dir merken willst"}}, "es": {"stringUnit": {"state": "translated", "value": "Cualquier cosa que quieras recordar"}}, "fr": {"stringUnit": {"state": "translated", "value": "Tout ce que tu veux retenir"}}, "it": {"stringUnit": {"state": "translated", "value": "Qualsiasi cosa tu voglia ricordare"}}, "pl": {"stringUnit": {"state": "translated", "value": "Cokolwiek chcesz zapamiętać"}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "Tudo o que queiras recordar"}}, "ru": {"stringUnit": {"state": "translated", "value": "Всё, что хочешь запомнить"}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "任何你想记住的内容"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "任何你想記住的內容"}}
