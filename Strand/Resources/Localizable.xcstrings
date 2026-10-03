@@ -29411,64 +29411,8 @@
         }
       }
     },
-    "Adds a simple fluid log with a daily goal that adjusts to your effort. Tap to add a sip, cup or bottle and watch a progress ring fill. On %@ only. Nothing is synced.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fügt ein einfaches Flüssigkeitsprotokoll mit einem Tagesziel hinzu, das sich deiner Belastung anpasst. Tippe, um einen Schluck, eine Tasse oder eine Flasche zu erfassen, und sieh zu, wie sich der Fortschrittsring füllt. Nur auf %@. Nichts wird synchronisiert."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añade un registro simple de líquidos con una meta diaria que se ajusta a tu esfuerzo. Toca para añadir un sorbo, taza o botella y mira cómo se llena un anillo de progreso. Solo en %@. No se sincroniza nada."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajoute un journal de liquides simple avec un objectif quotidien qui s'adapte à votre effort. Touchez pour ajouter une gorgée, une tasse ou une bouteille et regardez un anneau de progression se remplir. Sur %@ uniquement. Rien n'est synchronisé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiunge un semplice registro dei liquidi con un obiettivo giornaliero che si adatta al tuo sforzo. Tocca per aggiungere un sorso, una tazza o una bottiglia e guarda riempirsi l'anello di avanzamento. Solo su %@, niente viene sincronizzato."
-          }
-        },
-        "pt-PT": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adiciona um registo simples e fluido com um objetivo diário que se ajusta ao teu esforço. Toque para adicionar um gole, copo ou garrafa e observe o enchimento do anel de progresso. Apenas em %@. Nada está sincronizado."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавляет простой журнал жидкости с дневной целью, которая подстраивается под ваше усилие. Нажмите, чтобы добавить глоток, чашку или бутылку, и смотрите, как заполняется кольцо прогресса. Только на %@. Ничего не синхронизируется."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加一个简单的水分记录，其每日目标会根据你的消耗进行调整。点击以添加一口、一杯或一瓶，并看着进度环填满。仅在 %@ 上，不会同步任何内容。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增一個簡單的水分記錄，其每日目標會根據你的消耗進行調整。點擊以新增一口、一杯或一瓶，並看著進度環填滿。僅在 %@ 上，不會同步任何內容。"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaje prosty dziennik płynów z codziennym celem, który dostosowuje się do Twojego wysiłku. Stuknij, aby dodać łyk, filiżankę lub butelkę i obserwować napełnianie pierścienia postępu. Tylko w %@. Nic nie jest zsynchronizowane."
-          }
-        }
-      }
-    },
+    "Adds a fluid log and an effort-adjusted daily goal. Log a sip, cup or bottle to fill your progress ring. Data stays on this device.": {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Adds a fluid log and an effort-adjusted daily goal. Log a sip, cup or bottle to fill your progress ring. Data stays on this device."}}, "de": {"stringUnit": {"state": "translated", "value": "Fügt ein Trinkprotokoll und ein Tagesziel hinzu, das sich deiner Belastung anpasst. Erfasse einen Schluck, eine Tasse oder eine Flasche, um den Fortschrittsring zu füllen. Die Daten bleiben auf diesem Gerät."}}, "es": {"stringUnit": {"state": "translated", "value": "Añade un registro de líquidos y una meta diaria ajustada a tu esfuerzo. Registra un sorbo, taza o botella para llenar el anillo de progreso. Los datos permanecen en este dispositivo."}}, "fr": {"stringUnit": {"state": "translated", "value": "Ajoute un journal de boissons et un objectif quotidien adapté à votre effort. Enregistrez une gorgée, une tasse ou une bouteille pour remplir votre anneau de progression. Les données restent sur cet appareil."}}, "it": {"stringUnit": {"state": "translated", "value": "Aggiunge un registro dei liquidi e un obiettivo giornaliero adattato al tuo sforzo. Registra un sorso, una tazza o una bottiglia per riempire l’anello di avanzamento. I dati restano su questo dispositivo."}}, "pl": {"stringUnit": {"state": "translated", "value": "Dodaje dziennik płynów i dzienny cel dostosowany do Twojego wysiłku. Zapisz łyk, filiżankę lub butelkę, aby wypełnić pierścień postępu. Dane pozostają na tym urządzeniu."}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "Adiciona um registo de líquidos e um objetivo diário ajustado ao teu esforço. Regista um gole, copo ou garrafa para preencher o anel de progresso. Os dados ficam neste dispositivo."}}, "ru": {"stringUnit": {"state": "translated", "value": "Добавляет журнал жидкости и дневную цель с учётом нагрузки. Запишите глоток, чашку или бутылку, чтобы заполнить кольцо прогресса. Данные остаются на этом устройстве."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "添加饮水记录和根据消耗调整的每日目标。记录一口、一杯或一瓶水来填满进度环。数据保留在此设备上。"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "新增飲水記錄和根據消耗調整的每日目標。記錄一口、一杯或一瓶水來填滿進度環。資料保留在此裝置上。"}}}},
+    "Also imports water from Apple Health when connected and allowed to read water data. Drinks logged in NOOP are not written to Apple Health.": {"localizations": {"en": {"stringUnit": {"state": "translated", "value": "Also imports water from Apple Health when connected and allowed to read water data. Drinks logged in NOOP are not written to Apple Health."}}, "de": {"stringUnit": {"state": "translated", "value": "Importiert auch Wasser aus Apple Health, wenn die Verbindung besteht und der Lesezugriff auf Wasserdaten erlaubt ist. In NOOP erfasste Getränke werden nicht in Apple Health geschrieben."}}, "es": {"stringUnit": {"state": "translated", "value": "También importa agua de Apple Health cuando está conectado y tiene permiso para leer los datos de agua. Las bebidas registradas en NOOP no se escriben en Apple Health."}}, "fr": {"stringUnit": {"state": "translated", "value": "Importe aussi l’eau depuis Apple Health lorsque la connexion est active et que la lecture des données d’eau est autorisée. Les boissons enregistrées dans NOOP ne sont pas écrites dans Apple Health."}}, "it": {"stringUnit": {"state": "translated", "value": "Importa anche l’acqua da Apple Health quando è connesso e la lettura dei dati sull’acqua è consentita. Le bevande registrate in NOOP non vengono scritte in Apple Health."}}, "pl": {"stringUnit": {"state": "translated", "value": "Importuje też wodę z Apple Health po połączeniu i uzyskaniu zgody na odczyt danych o wodzie. Napoje zapisane w NOOP nie są zapisywane w Apple Health."}}, "pt-PT": {"stringUnit": {"state": "translated", "value": "Também importa água do Apple Health quando está ligado e tem permissão para ler dados de água. As bebidas registadas no NOOP não são gravadas no Apple Health."}}, "ru": {"stringUnit": {"state": "translated", "value": "Также импортирует воду из Apple Health при подключении и разрешении на чтение данных о воде. Напитки, записанные в NOOP, не записываются в Apple Health."}}, "zh-Hans": {"stringUnit": {"state": "translated", "value": "连接 Apple Health 并获得读取饮水数据的权限后，也会导入其中的饮水记录。在 NOOP 中记录的饮品不会写入 Apple Health。"}}, "zh-Hant": {"stringUnit": {"state": "translated", "value": "連接 Apple Health 並取得讀取飲水資料的權限後，也會匯入其中的飲水記錄。在 NOOP 中記錄的飲品不會寫入 Apple Health。"}}}},
     "Adds a water-log card to your dashboard": {
       "localizations": {
         "de": {
