@@ -654,7 +654,11 @@ struct OverviewDashboardView: View {
         let d = displayDay
         NoopCard(padding: Self.cardPadding) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Today at a glance").strandOverline()
+                Text("Today at a glance")
+                    .font(WhoopReferenceFont.label())
+                    .tracking(1.1)
+                    .textCase(.uppercase)
+                    .foregroundStyle(StrandPalette.textSecondary)
                 HStack(alignment: .top, spacing: 0) {
                     // Charge resolves through `ChargeDisplay` (see load()): today's own score, else the
                     // carried last-scored night drawn DIMMED with its date as the detail line (#802/#543),
@@ -736,14 +740,14 @@ struct OverviewDashboardView: View {
                               dimmed: Bool = false,
                               emptyTitle: String? = nil, emptySubtitle: String? = nil) -> some View {
         VStack(spacing: 6) {
-            Text(label).font(StrandFont.footnote.weight(.semibold)).foregroundStyle(color.legibleText)
+            Text(label).font(WhoopReferenceFont.label(11)).foregroundStyle(color.legibleText)
             if let value {
                 ZStack {
                     GlowRing(fraction: value / 100, value: value, format: { _ in "" },
                              color: color, diameter: Self.ringDiameter, lineWidth: 6)
                     VStack(spacing: 0) {
-                        (Text(mainFormat(value)).font(StrandFont.rounded(Self.ringDiameter * 0.34, weight: .bold))
-                            + Text(suffix).font(StrandFont.rounded(Self.ringDiameter * 0.15, weight: .semibold)))
+                        (Text(mainFormat(value)).font(WhoopReferenceFont.score(Self.ringDiameter * 0.34))
+                            + Text(suffix).font(WhoopReferenceFont.metric(Self.ringDiameter * 0.15)))
                             .monospacedDigit()
                             .foregroundStyle(StrandPalette.textPrimary)
                             .lineLimit(1)
@@ -787,7 +791,7 @@ struct OverviewDashboardView: View {
                     .background(Capsule().fill(color.opacity(0.16)))
             }
             Text(detail)
-                .font(StrandFont.footnote)
+                .font(WhoopReferenceFont.body(11))
                 .foregroundStyle(StrandPalette.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
