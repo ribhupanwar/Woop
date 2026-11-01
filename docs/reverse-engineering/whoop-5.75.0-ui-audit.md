@@ -102,3 +102,57 @@ For each screen, keep paired reference/candidate screenshots and a short discrep
 - [ ] iOS build and installable IPA verified.
 
 This document records a verified static audit, not a claim that the UI has already been ported. The remaining visual implementation cannot be honestly certified from static IPA metadata alone.
+
+
+## Cross-repository comparison: DSTA experiments vs Woop (2026-11-02)
+
+### What exists in DSTA
+
+The DSTA repository contains several earlier clean-room SwiftUI experiments on separate branches:
+
+- `feature/woop-reference-ui-port`: `PulseForge/WoopReferenceHomeScreen.swift`, `WoopReferenceRecoveryScreen.swift`, and `WoopReferenceSleepScreen.swift`.
+- `feature/whoop-style-home-dashboard`: `PulseForge/WhoopStyleTodayDashboard.swift`.
+- `ui/whoop-native-shell-v1`: the reference screens plus additional history/recovery experiments.
+- DSTA main includes a separate PulseForge BLE/metrics app and the WHOOP archive inspection workflow.
+
+These files are DSTA-authored reference implementations, not recovered WHOOP source. They are useful as prior UI experiments and as a record of which visual ideas were tried. Their standalone data bindings and design tokens are not drop-in Woop components.
+
+### Archive identity and access finding
+
+DSTA `Whoop.zip` is stored through Git LFS. The GitHub contents endpoint returns only its LFS pointer (OID `80a3ac0667195b2203da79c4d859d0280f0e49fc8b320bbe26e5e0e058bbe9fd`, declared size 306,384,126 bytes), not the archive bytes. The separately verified 5.75.0 IPA extraction artifact described above is the available static UI evidence for this comparison. Do not treat the LFS pointer as a source-code archive or claim that the original WHOOP source is available.
+
+### Reuse vs rebuild map
+
+| Area | DSTA experiment | Woop current source | Decision |
+|---|---|---|---|
+| Home dashboard | `WoopReferenceHomeScreen`, `WhoopStyleTodayDashboard` | `Strand/Screens/TodayView.swift` (large, mature dashboard) | Rebuild presentation in the existing Woop screen; reuse only composition ideas such as a compact metric strip, score hero and drill-down affordances. Do not transplant DSTA model/environment objects. |
+| Recovery | `WoopReferenceRecoveryScreen` | Today recovery hero plus recovery detail/contributor surfaces in `HealthView.swift` | Recompose existing Woop recovery readouts into a dedicated WHOOP-like detail hierarchy; preserve Woop score calculation, calibration and provenance. |
+| Sleep | `WoopReferenceSleepScreen` | `Strand/Screens/SleepView.swift` | Woop already has substantially richer sleep history, hypnogram, need/debt ledger and trends. Rework hierarchy/navigation only; do not replace it with the smaller DSTA screen. |
+| Health / live HR | DSTA PulseForge has its own BLE manager and live-HR components | `Strand/Screens/HealthView.swift` | Keep Woop's live-HR chart and state handling; reorganize into WHOOP-like Health surface and metric detail routes. Never connect DSTA's Bluetooth manager to Woop. |
+| Strain / coaching | DSTA dashboard displays a provisional cardio-load value and leaves unsupported strain blank | `Strand/Screens/TrainingLoadView.swift`, Today strain surfaces, Coach UI | Build a local strain/coach presentation around Woop's existing transparent load lanes. Do not present DSTA cardio-load points as WHOOP strain or copy proprietary coaching logic. |
+| Navigation | DSTA screens are sheet-driven from a single Home prototype | `StrandiOS/App/RootTabView.swift` owns five independent NavigationStacks and routes | Navigation needs deliberate Woop-native restructuring, not a wholesale shell replacement. WHOOP's extracted tab vocabulary is Home / Health / Coaching / Community / More; Community/cloud features remain out of Woop's offline-first scope. |
+| Typography | DSTA reference screens use many direct `.system(size:)` declarations and a separate replica palette | `Packages/StrandDesign/Sources/StrandDesign/Typography.swift` | Do not port DSTA font declarations or WHOOP font assets. Keep Woop's existing `StrandFont` and tokens unchanged. |
+| Data source | DSTA prototype reads its own `HealthKit` and PulseForge insight objects | Woop uses its own Repository, stores, local strap data and provenance | Bind all redesigned views to Woop's existing data owners. No Apple Health substitution for strap-derived metrics and no duplicate parallel model. |
+
+### Confirmed implementation order
+
+1. **Navigation map first:** map WHOOP Home/Health/Coaching/More destinations to existing Woop routes. Keep Community explicitly out of scope unless a local, non-social equivalent is justified. Preserve the current independent navigation paths, quick-action sheet and device routing.
+2. **Home composition second:** use TodayView as the data-owning screen; consolidate its existing hero/metrics/activity surfaces into one canonical home layout. Avoid maintaining Today and Overview as competing home implementations.
+3. **Health third:** promote the existing HealthView/live-HR/vitals content into the primary Health destination, keeping high-frequency live-HR observation isolated from static cards.
+4. **Recovery and Strain drill-down fourth:** reuse current score and load models; add visual hierarchy and navigation, not new scoring formulas.
+5. **Sleep fifth:** preserve SleepView's existing analytical depth and tune its hero, stages, need/debt and history navigation to the reference.
+6. **Activities and device settings sixth:** map existing workout/activity and device-manager screens to the corresponding WHOOP feature roles without touching BLE command behavior.
+7. **Validation last:** paired screenshots on the same device/appearance, tap-flow checks, then local tests and an iOS build/IPA check.
+
+### Specific code boundaries
+
+- Woop iOS UI: SwiftUI in `StrandiOS/` and `Strand/Screens/`; preserve each module's existing language and ownership.
+- Woop shared logic: retain the current `Strand` / package APIs; no new scoring math is implied by this visual comparison.
+- Woop typography: protected file `Packages/StrandDesign/Sources/StrandDesign/Typography.swift`; no edits.
+- DSTA PulseForge BLE/protocol files (including `WhoopBluetoothManager.swift`) are not UI dependencies for Woop.
+- Do not copy WHOOP binaries, decompiled implementation, fonts, images, logos, or proprietary coaching text. Use the reference only for screen roles, state vocabulary and interaction inventory.
+- Presentation-only implementation records `Analysis migration required: no`; changes to metric meaning, source precedence or stored derivations must be separately reviewed for migration impact.
+
+### Comparison conclusion
+
+DSTA's reference UI branches are useful prototypes, but the production Woop codebase already has deeper screen functionality and a more mature shared design/data architecture. The correct path is **selective visual learning, then native Woop refactoring**—not replacing Woop screens with DSTA prototypes and not merging DSTA's standalone app. Runtime WHOOP screenshots are still required before claiming pixel-level parity.
