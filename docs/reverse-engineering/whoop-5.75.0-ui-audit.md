@@ -156,3 +156,54 @@ DSTA `Whoop.zip` is stored through Git LFS. The GitHub contents endpoint returns
 ### Comparison conclusion
 
 DSTA's reference UI branches are useful prototypes, but the production Woop codebase already has deeper screen functionality and a more mature shared design/data architecture. The correct path is **selective visual learning, then native Woop refactoring**—not replacing Woop screens with DSTA prototypes and not merging DSTA's standalone app. Runtime WHOOP screenshots are still required before claiming pixel-level parity.
+
+
+## Binary-level reverse-engineering pass (2026-11-02)
+
+### What the original executable actually exposes
+
+A second pass inspected the extracted executable-symbols.txt, objc-metadata.txt, executable-strings.txt and localized strings from the exact 5.75.0 build. The Mach-O is not a source archive: most useful Swift implementation bodies are not recoverable from these reports. However, Objective-C runtime metadata and retained Swift type names expose a meaningful internal type map.
+
+Verified original-app types / fields include:
+
+- Cycle/domain layer: Cycle, CycleRecovery, CycleSleep, CycleStrain, CyclesManager, CycleConverter, NewCyclesService, and CycleProgressViewModel.
+- Strain processing: StrainAccumulator, BackfillingStrainAccumulator, HeartRateBucket, rawStrainScore, scaledStrainScore, and calibration-packet counters.
+- Recovery: currentRecovery, recoveryScore, greenRecoveryScore, yellowRecoveryScore, redRecoveryScore, recoveryCalibrating, and a dedicated CycleRecovery model.
+- Sleep: WhoopSleepCoach types including SleepCoachManager, SleepCoachService, SleepCoachViewModel, SleepNeedBreakdown, SleepNeedReceiptViewModel, SleepNeedGraphsViewModel, OptimalSleepEndpoints, RecommendedTimeInBed, and smart-alarm services.
+- Live HR: a separate WhoopLiveHeartRate module with LiveHRStrapInteractor, LiveHRCombineInteractor, LiveHRViewModel, StreamProcessingState, AccumulatedStateStore, ConnectionSnapshot, and WhoopLiveHeartRateAccumulator.
+- HR settings/validation: HeartRateValidator, plus original model fields for hrv, leaderboardHRV, leaderboardRHR, and currentHRValues.
+- Original executable retains step-related names including HealthKitStepCountRequest, HealthKitStepCountSubmissionDTO, delayedStepCountProcessingWorkItem, lastStepCount, currentStep, and stepValues.
+
+These are architecture/type/field observations, not reconstructed algorithms. Runtime metadata method IMP offsets and stripped Swift symbols are not enough to safely recreate proprietary method bodies.
+
+### Critical step-counter finding
+
+The exact 5.75.0 executable's retained string table does not expose the literal keys step_motion_counter or activity_class. It does expose the HealthKit step request/submission types and step-processing fields above. Therefore the IPA metadata alone does not prove that WHOOP's displayed daily step total is computed from the strap's step_motion_counter@57, nor does it reveal the counter-to-steps coefficient.
+
+Woop currently has two distinct step paths:
+
+1. WHOOP 5/MG classed historical counter path: HistoricalStreams.swift extracts step_motion_counter and activity_class; StepsCounter.swift treats the counter as a cumulative wrap-aware u16, filters class 1/2 when classes exist, rejects implausible deltas and applies per-user tick calibration. Its own comments explicitly call the result an estimate and note that the field's semantics were previously unverified against the app.
+2. WHOOP 4.0 sparse-motion path: StepsEstimateEngine.swift estimates daily steps from motion volume, calibrated against phone step history. This is explicitly not a true pedometer because 4.0's sparse motion records do not expose individual footfalls.
+
+For WHOOP 5/MG, Whoop5RawImu.swift separately decodes a 1244-byte raw 6-axis frame into 100 accelerometer + 100 gyroscope samples per second. This is a high-rate signal suitable for independent gait research, but it is not proof that the original app uses this exact frame for its displayed step total.
+
+What remains to crack: determine, with paired real-device captures and app-visible step totals, whether 5/MG daily steps come from the classed cumulative counter, raw IMU processing, HealthKit, or a fused/server-supplied value; identify reset/wrap semantics, calibration, and day-boundary attribution. Keep competing hypotheses separate until data discriminates them. Do not change production step scoring based only on metadata names.
+
+### DSTA vs Woop implementation comparison
+
+- DSTA main has Gen5R21IMUDecoder.swift for 1244-byte 5/MG raw IMU frames, and a large WhoopBluetoothManager.swift that owns its separate PulseForge BLE path. Woop's Whoop5RawImu.swift already implements the same 1244-byte / 100+100 sample structure with a more explicit frame-layout and scale contract. Do not port DSTA's BLE manager into Woop.
+- DSTA RecoveryScoreCalculator.swift is a small 3-day median-baseline heuristic (60/40 HRV/RHR blend). Woop RecoveryScorer.swift is a broader baseline-normalized transparent model with additional inputs and extensive regression coverage. Do not replace Woop's recovery engine with DSTA's smaller prototype.
+- DSTA SleepNeedCalculator.swift is an explicit baseline/debt/nap/strain heuristic. Woop's SleepStager, sleep need/debt and analysis pipeline are substantially broader. Do not replace them with DSTA calculator code.
+- DSTA's reference screens are separate UI prototypes; they are not the source of Woop's shared analytics or protocol packages.
+- Woop already has dedicated StepsCounter, StepsEstimateEngine, SleepAwareStepCounter, StepsMotionCache, Whoop5RawImu, and historical-stream extraction. This is the better engineering home for continued step investigation; DSTA remains useful for independent capture/decoder experiments.
+
+### Next reverse-engineering sequence
+
+1. Preserve the original IPA and extraction hashes as immutable evidence.
+2. Extract and inspect original app's step-related localized strings and all references to HealthKit step request/submission, step fields and any available DTO schemas. Treat server/HealthKit references as a separate possible source.
+3. On an owned 5/MG strap, collect synchronized raw offload frames, live raw IMU frames, counter/class samples, and the official app's displayed step total over controlled walk / run / wrist-motion / rest intervals.
+4. Compare counter deltas, IMU gait events, and displayed totals at the same timestamps. Include midnight/day-boundary and reconnect/offload cases.
+5. Implement only a discriminated, tested local interpretation in Woop's existing protocol/analytics layers; keep original BLE, storage, scoring and fonts untouched until evidence warrants a change.
+6. Run focused protocol/analytics tests and the repository-required Tools/local-tests.sh on the committed tree before pushing any app/package code.
+
+This is a reverse-engineering evidence update only. No app source, BLE behavior, analytics or typography was modified. Analysis migration required: no.
