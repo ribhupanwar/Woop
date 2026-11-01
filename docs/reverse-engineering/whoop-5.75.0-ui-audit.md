@@ -207,3 +207,8 @@ What remains to crack: determine, with paired real-device captures and app-visib
 6. Run focused protocol/analytics tests and the repository-required Tools/local-tests.sh on the committed tree before pushing any app/package code.
 
 This is a reverse-engineering evidence update only. No app source, BLE behavior, analytics or typography was modified. Analysis migration required: no.
+
+
+### Additional localized evidence about step provenance
+
+The English 5.75.0 localized resources include HealthKit settings copy explicitly describing Apple Health connection as importing metrics “from Sleep to Steps”, plus `RockyWidget.title` = “Today’s Step Count”. This makes Apple Health ingestion a concrete original-app data-source candidate, alongside the strap/offload and server-derived possibilities. It still does not prove which source supplies the primary in-app daily step total or how duplicates are reconciled. The exact precedence must be established by controlled source toggles and paired observations; never merge HealthKit and strap totals blindly.
