@@ -38,7 +38,7 @@ struct RecoveryDetailView: View {
                                 .font(WhoopReferenceFont.heading(16))
                                 .foregroundStyle(StrandPalette.textPrimary)
                             Text("HRV, resting heart rate, respiratory rate and skin temperature appear when that scored night has matching readings.")
-                                .font(StrandFont.footnote)
+                                .font(WhoopReferenceFont.body(12))
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,12 +67,12 @@ struct RecoveryDetailView: View {
                     // RecoveryRing already renders the score's state word inside its gauge.
                     if let caption = display.carriedCaption {
                         Text(caption)
-                            .font(StrandFont.footnote)
+                            .font(WhoopReferenceFont.body(12))
                             .foregroundStyle(StrandPalette.textSecondary)
                             .multilineTextAlignment(.center)
                     } else if let day = scoredNight?.day {
                         Text(dateLabel(day))
-                            .font(StrandFont.footnote)
+                            .font(WhoopReferenceFont.body(12))
                             .foregroundStyle(StrandPalette.textTertiary)
                     }
                 } else {
@@ -84,11 +84,11 @@ struct RecoveryDetailView: View {
                         .foregroundStyle(StrandPalette.textPrimary)
                     if case .calibrating(let nights) = display {
                         Text("\(nights) of \(Baselines.minNightsSeed) nights")
-                            .font(StrandFont.footnote)
+                            .font(WhoopReferenceFont.body(12))
                             .foregroundStyle(StrandPalette.textSecondary)
                     } else {
                         Text("A recovery score will appear when a valid scored night is available.")
-                            .font(StrandFont.footnote)
+                            .font(WhoopReferenceFont.body(12))
                             .foregroundStyle(StrandPalette.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -120,7 +120,7 @@ struct RecoveryDetailView: View {
                           unit: "°C vs baseline", symbol: "thermometer.medium")
             }
             Text("All values shown are from \(dateLabel(night.day)) and belong to the same scored night.")
-                .font(StrandFont.caption)
+                .font(WhoopReferenceFont.body(11))
                 .foregroundStyle(StrandPalette.textTertiary)
         }
     }
@@ -169,7 +169,7 @@ struct RecoveryDetailView: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: max(4, CGFloat(day.recovery ?? 0) * 0.92))
                                     Text(day.day.suffix(2))
-                                        .font(StrandFont.caption)
+                                        .font(WhoopReferenceFont.body(11))
                                         .foregroundStyle(StrandPalette.textTertiary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .bottom)
@@ -178,7 +178,7 @@ struct RecoveryDetailView: View {
                         }
                         .frame(height: 112, alignment: .bottom)
                         Text("Daily scores · latest 30 recorded nights")
-                            .font(StrandFont.caption)
+                            .font(WhoopReferenceFont.body(11))
                             .foregroundStyle(StrandPalette.textTertiary)
                     }
                 }
