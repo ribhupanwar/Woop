@@ -34,20 +34,20 @@ public enum NoopVisualStyle {
             let light: String
             let dark: String
         }
-        static let canvas = Pair(light: "#E7EBF3", dark: "#03050A")
-        static let surface = Pair(light: "#FFFFFF", dark: "#151B2A")
-        static let surfaceTop = Pair(light: "#FFFFFF", dark: "#181F30")
-        static let surfaceBottom = Pair(light: "#F9FAFD", dark: "#121724")
-        static let inset = Pair(light: "#E8ECF5", dark: "#212B3D")
-        static let border = Pair(light: "#98A3B6", dark: "#374861")
-        static let borderHighlight = Pair(light: "#FFFFFF", dark: "#4C5F83")
-        static let divider = Pair(light: "#98A3B6", dark: "#374861")
-        static let primaryText = Pair(light: "#0B0F18", dark: "#F4F7FC")
+        static let canvas = Pair(light: "#E7EBF3", dark: "#121518")
+        static let surface = Pair(light: "#FFFFFF", dark: "#25292C")
+        static let surfaceTop = Pair(light: "#FFFFFF", dark: "#31363A")
+        static let surfaceBottom = Pair(light: "#F9FAFD", dark: "#25292C")
+        static let inset = Pair(light: "#E8ECF5", dark: "#1F252A")
+        static let border = Pair(light: "#98A3B6", dark: "#1C1F22")
+        static let borderHighlight = Pair(light: "#FFFFFF", dark: "#31363A")
+        static let divider = Pair(light: "#98A3B6", dark: "#1C1F22")
+        static let primaryText = Pair(light: "#0B0F18", dark: "#FFFFFF")
         // Translucent, NOT opaque: cards and the Liquid hero are partly transparent, so secondary and
         // tertiary copy composites over whatever is actually behind it. Only the opacity rose — enough
         // to clear 4.5:1 over canvas, surface and inset alike.
-        static let secondaryText = Pair(light: "#28313FCC", dark: "#E6EDFAC4")
-        static let tertiaryText = Pair(light: "#28313FB8", dark: "#E6EDFA96")
+        static let secondaryText = Pair(light: "#28313FCC", dark: "#9AA4AC")
+        static let tertiaryText = Pair(light: "#28313FB8", dark: "#6B7177")
     }
 
     private static func token(_ pair: ChromeHex.Pair) -> Color {
@@ -79,13 +79,13 @@ public enum NoopVisualStyle {
     public static let panelRimHighlightOpacity: Double = 0.92
     public static let panelRimBorderOpacity: Double = 0.80
 
-    public static let cardRadius: CGFloat = 22
+    public static let cardRadius: CGFloat = 18
     public static let compactRadius: CGFloat = 16
     public static let pillRadius: CGFloat = 999
     public static let pagePadding: CGFloat = 16
     public static let cardPadding: CGFloat = 16
     public static let itemGap: CGFloat = 12
-    public static let sectionGap: CGFloat = 26
+    public static let sectionGap: CGFloat = 16
 }
 
 /// Shared card/panel treatment: a quiet vertical gradient, a top-lit rim, and deep soft elevation.
