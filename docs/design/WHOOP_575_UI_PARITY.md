@@ -236,3 +236,14 @@ A scoped clean-room typography pass was committed to `Strand/Screens/SleepView.s
 - Static source verification confirms these roles are present in the current branch. No Xcode compile, automated test run, simulator render, or screenshot comparison has been performed; the visual result is not yet certified.
 
 This is a targeted typography implementation, not a claim of full Sleep-screen parity.
+
+## Health typography pass — 2026-11-02
+
+A scoped presentation-only typography pass was applied to `Strand/Screens/HealthView.swift`:
+
+- The live heart-rate fallback numeral now uses the dedicated reference score role; its bpm unit uses the compact reference label role.
+- Recovery contributor labels, values and state words use the reference label/metric/body roles while retaining their existing layout and fixed value column.
+- Vital-sign values and state captions use the reference metric/body roles; all formatters, units, colours, accessibility labels, data sources and nil states are unchanged.
+- Static source verification confirms the edited call sites are present and the targeted legacy font calls are absent.
+
+This is a typography consistency pass, not a verified visual match. No Health calculations, live-HR sampling, BLE, persistence, or routing changed. Xcode compilation, simulator/device review and screenshot comparison remain unrun.
