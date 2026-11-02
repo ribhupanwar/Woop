@@ -203,3 +203,24 @@ A read-only pass traced the current visible composition and the controls that ca
 - Sleep layout persistence and dashboard layout state already have focused pure-logic tests. Recovery score-state behavior also has existing DashboardChargeHeroTests; a dedicated SwiftUI navigation/UI test for RecoveryDetailView was not found.
 - The next safe code task is focused route/state test coverage, not a broad layout rewrite. Any pixel-level adjustments must be grounded in a rendered WHOOP reference screen and a matching Woop device screenshot.
 - This audit changed documentation only. No app source, BLE, sensor decoding, persistence, scoring, or workout behavior changed; no local tests, Xcode build, simulator run, or device QA was executed.
+
+
+## Follow-up source audit — 2026-11-02 (continued)
+
+The current branch was re-checked after the earlier status notes above. These corrections supersede any stale statements in the preceding audit:
+
+- Dedicated Recovery route coverage **does exist**: `StrandTests/RecoveryRoutePolicyTests.swift` pins the unscoped Recovery route, WHOOP-source-only routing, and negative cases for other metrics/sources. `HeroRingDetailRouteTests.swift` also pins the hero metric keys and catalog uniqueness. The earlier statement that no Recovery route test file was found was incorrect.
+- Sleep layout persistence coverage exists in `StrandTests/SleepLayoutPrefsTests.swift`; it pins default order, migration, visibility, uniqueness and raw keys. It does not test rendered typography or chart geometry.
+- Current direct typography usage is uneven: `OverviewDashboardView.swift` uses `WhoopReferenceFont` (10 call sites in the inspected source), and `HealthView.swift` has a small scoped pass (1 direct font call plus six reference overlines). `SleepView.swift` currently has **no direct** `WhoopReferenceFont` or `whoopReferenceOverline` calls. Therefore the earlier note that Sleep hero/stage labels were aligned to the dedicated typography layer is not verified by current source and must not be treated as complete.
+- `RecoveryDetailView.swift` currently uses the dedicated reference roles and displays HRV, Resting HR, Respiratory Rate and Sleep Performance. The score state still comes from `ChargeDisplay.resolve`; the contributor values are read from the same selected scored-night row.
+- The repository tree has no files under `.github/workflows/` on this branch. `Tools/local-tests.sh` is the documented local validation path, but requires macOS, XcodeGen and Xcode. No build/test pass is claimed here.
+
+### Remaining implementation / verification
+
+1. Apply a scoped typography pass to Sleep's pinned hero, night navigator and hypnogram labels using the existing clean-room roles, without changing sleep calculations, stored chart-style preferences, or section ordering.
+2. Re-check Health's primary live-HR hero and vital tiles for consistent typography hierarchy; retain existing Health information architecture unless a WHOOP reference proves a different structure.
+3. Review the Recovery detail and overview ring as separate screens; keep the exact scored-night data alignment and empty/calibrating/carry states.
+4. Run `Tools/local-tests.sh` and the iOS simulator build on macOS. This environment has not executed those commands.
+5. Compare same-device WHOOP 5.75 and Woop screenshots before making pixel-level claims. The extracted IPA artifact provides static metadata, not actual screenshot pixels or compiled SwiftUI layout constraints.
+
+This follow-up is a source audit and documentation correction only. No app code, sensor pipeline, scoring, BLE, persistence, or workout behavior was changed by this note.
