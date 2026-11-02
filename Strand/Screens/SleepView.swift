@@ -669,7 +669,7 @@ struct SleepView: View {
                     .font(WhoopReferenceFont.label(11))
                     .tracking(1.1)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
-                Text("Sleep performance")
+                Text("SLEEP\nPERFORMANCE")
                     .font(WhoopReferenceFont.heading(22))
                     .foregroundStyle(StrandPalette.onDarkPrimary)
             }
