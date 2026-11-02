@@ -133,8 +133,8 @@ targets:
     info:
       path: Strand/Resources/Info.plist
       properties:
-        CFBundleName: NOOP Forge
-        CFBundleDisplayName: NOOP Forge
+        CFBundleName: Woop
+        CFBundleDisplayName: Woop
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "198"
         LSMinimumSystemVersion: "13.0"
@@ -289,9 +289,9 @@ targets:
     info:
       path: StrandiOS/Resources/Info.plist
       properties:
-        CFBundleName: NOOP Forge
-        # NOOP Forge fork: home-screen name (upstream: NOOP; called NOOP AI / NOOP Grit before).
-        CFBundleDisplayName: NOOP Forge
+        CFBundleName: Woop
+        # Woop home-screen name; bundle identifiers remain unchanged.
+        CFBundleDisplayName: Woop
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # Surfaces APP_GROUP_ID to runtime (WidgetSnapshot.suiteName) so the App Group id isn't
@@ -473,7 +473,7 @@ targets:
     info:
       path: StrandiOSWidgets/Info.plist
       properties:
-        CFBundleDisplayName: NOOP Forge
+        CFBundleDisplayName: Woop
         # Version keys MUST live here in the generated-Info.plist properties — NOT hand-edited into the
         # file — because xcodegen regenerates StrandiOSWidgets/Info.plist on every `xcodegen generate`
         # (which every release runs for the version bump) and would otherwise rewrite them to its
@@ -526,8 +526,8 @@ targets:
     info:
       path: NOOPWatch/Info.plist
       properties:
-        CFBundleName: NOOP Forge
-        CFBundleDisplayName: NOOP Forge
+        CFBundleName: Woop
+        CFBundleDisplayName: Woop
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # Surfaces APP_GROUP_ID to runtime (WatchScoreStore.suiteName) so the App Group id isn't
@@ -589,7 +589,7 @@ targets:
     info:
       path: NOOPWatchComplications/Info.plist
       properties:
-        CFBundleDisplayName: NOOP Forge
+        CFBundleDisplayName: Woop
         # Version keys live here as generated-plist properties so xcodegen keeps them lockstep with the
         # parent watch app on every regenerate (mirrors the NOOPiOSWidgets rationale, #416).
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
