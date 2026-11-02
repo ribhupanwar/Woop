@@ -1218,7 +1218,7 @@ struct TrainingLoadView: View {
                     if let display = model.vo2display, let latest = display.primary {
                         HStack(alignment: .firstTextBaseline, spacing: NoopMetrics.space2) {
                             TrainingCountUp(value: shownVO2, decimals: 1)
-                                .font(StrandFont.number(40, weight: .bold))
+                                .font(WhoopReferenceFont.score(40))
                                 .foregroundStyle(StrandPalette.textPrimary)
                                 .accessibilityLabel(Text(latest.value, format: .number.precision(.fractionLength(1))))
                                 .task(id: latest.value) {
@@ -1510,7 +1510,7 @@ struct TrainingLoadView: View {
                     }
                 }
                 Text(value(lane))
-                    .font(StrandFont.number(28))
+                    .font(WhoopReferenceFont.metric(28))
                     .foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
