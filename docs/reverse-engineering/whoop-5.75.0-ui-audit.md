@@ -274,3 +274,11 @@ Start with the Today root and shared visual primitives, then reuse those primiti
 - Updated Swift and Kotlin regression expectations for missing-card insertion under the new default.
 - Analysis migration required: no.
 - Tests/build not run in this environment; `Tools/local-tests.sh`, Android tests, iOS simulator validation, screenshots, and IPA remain outstanding.
+
+
+### Sleep hero default alignment (2026-11-02)
+
+- Updated `SleepView`'s missing-preference fallback from Liquid to Overview. The Sleep tab's hero gauge now follows the same fresh-install dashboard default: only an explicitly selected Liquid dashboard enables the Liquid sleep gauge.
+- Existing stored `liquid` values remain unchanged and continue to select the Liquid gauge.
+- Analysis migration required: no. Display-only preference fallback; no score, source, storage, BLE, or analytics behavior changed.
+- Validation pending: local test script, Xcode build, simulator/physical-device screenshots, and IPA build have not been run.
