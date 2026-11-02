@@ -258,3 +258,10 @@ Start with the Today root and shared visual primitives, then reuse those primiti
 - Corrected the migration: an explicit legacy boolean still maps to the user's prior Liquid/Classic choice; when no legacy key exists, the new style key is initialized to Overview. An already-saved four-way style remains untouched.
 - This is a presentation-preference migration only. Analysis migration required: no.
 - Validation remains pending: no macOS/Xcode runner was available here, so `Tools/local-tests.sh` and the iOS simulator build have not been executed.
+
+
+### Dashboard migration regression coverage (2026-11-02)
+
+- Added `StrandTests/TodayDashboardStyleTests.swift` with isolated-UserDefaults tests for: fresh install → Overview; legacy true → Liquid; legacy false → Classic; existing Trends selection preserved; and migration idempotence.
+- These tests are committed but have not been executed here. Required local test script and simulator/IPA build remain outstanding.
+- Analysis migration required: no.
