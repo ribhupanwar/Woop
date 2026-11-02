@@ -65,3 +65,16 @@ Followed the Overview Recovery tap through the production route:
 - The detail hero is currently driven by the latest point in the selected metric's history, while the Overview ring uses `ChargeDisplay.resolve` (including calibration/carry provenance). These are separate presentation paths; do not assume the generic detail hero reproduces the Overview carry/calibration state.
 - This confirms a concrete implementation distinction, not a pixel-level WHOOP mismatch: no verified WHOOP Recovery detail screenshot is present in the repository to ground exact section order, spacing, or chart/card styling.
 - No app source, route, metric calculation, BLE, or stored data was changed. This audit adds documentation only; it does not constitute an Xcode build or device test.
+
+
+## Recovery data-source audit — 2026-11-02
+
+A further read-only pass traced the score and supporting-series contracts before proposing a dedicated detail view:
+
+- `ChargeDisplay.resolve` is a presentation-state resolver, not a scoring engine. It selects the selected day's real `DailyMetric.recovery`, an eligible prior scored day, a calibration state, or no-data; it never creates a score.
+- `RecoveryScorer.recovery(...)` requires a usable personal HRV baseline and a real nightly HRV input. RHR, respiration, Rest quality, skin-temperature deviation, recovery-index slope and prior-day Effort are optional terms; absent optional drivers are dropped rather than replaced with synthetic values. The scorer's cold-start gate returns nil when the HRV baseline is not usable.
+- The metric catalog exposes separate WHOOP-source series for `recovery`, `hrv`, `rhr`, `resp_rate`, `spo2` and `skin_temp`. The source label alone is not a guarantee that every series has a reading for every day.
+- `Repository.exploreSeries` is the established history read path. Its WHOOP-source resolution can combine imported and computed source rows and a daily-column fallback; a dedicated detail should use this repository resolver rather than querying one raw store partition or assuming the catalog key maps one-to-one to a physical table.
+- Supporting HRV/RHR values must be date-aligned to the score's actual scored night. The repository has a separate recovery-independent overnight-vitals carry; that selector is intentionally not a source for Charge/Effort/Rest. A detail must preserve this separation and label any carried value/provenance rather than silently pairing today's score with an unrelated prior vital.
+
+**Safe implementation boundary:** the existing model contracts support a dedicated Recovery presentation, but the next implementation must first confirm the exact scored-day selection and date alignment for each supporting series. No source/data behavior was changed in this audit. Documentation only; no Xcode build or device test was run.
