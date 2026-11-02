@@ -60,7 +60,9 @@ struct RecoveryDetailView: View {
         }
         .background(StrandPalette.surfaceBase.ignoresSafeArea())
         .navigationTitle("Recovery")
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .task(id: repo.refreshSeq) { await load() }
     }
 
