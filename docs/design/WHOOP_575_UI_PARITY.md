@@ -146,3 +146,21 @@ The dedicated Recovery screen now presents HRV, resting HR, respiratory rate and
 - This is a typography-only presentation adjustment. The sleep score, sleep-night selection, chart-style preference, hypnogram intervals, stage totals, motion trace, and sleep persistence are unchanged.
 - Navigation review confirms the current iPhone shell has five native tabs (Today, Trends, Training, Sleep, More), each with its own bound navigation stack. Without a matching WHOOP 5.75 screenshot, changing tab order or iconography would be speculative, so those remain unchanged pending visual QA.
 - Validation remains source review only: no Xcode build, simulator run, or device screenshot was available in this environment.
+
+
+## Extracted IPA artifact re-inspection — 2026-11-02
+
+The previously generated DSTA Actions artifact was recovered and inspected directly; no user screenshots were needed to continue the static comparison.
+
+- Source: DSTA workflow run [41341431589](https://github.com/ribhupanwar/dsta/actions/runs/41341431589), artifact `whoop-5.75.0-ipa-ui-reference` (artifact ID `13098150114`), pinned WHOOP iOS 5.75.0 / build 738478. The artifact contains 2,873 extracted files. Its extraction log records 6,706 files in the app bundle.
+- The artifact contains localized strings, NIB class/wiring reports, executable strings/symbols, Objective-C metadata and asset-catalog metadata. It does not contain the compiled SwiftUI source or the actual pixels for the `OverviewScreenshot`, `RecoveryScreenshot`, `SleepScreenshot` and `StrainScreenshot` asset renditions; those image entries are metadata only (315×683 at 3x). Therefore it supports structural and copy comparison, not pixel-perfect screen measurement.
+- WHOOP's Home onboarding copy explicitly describes a daily dashboard with swipe access to the Sleep, Recovery and Strain pillars.
+- `OverviewGauge` strings expose the pillar labels Recovery, Sleep, Strain, HRV and Performance, plus explicit empty-value forms (`--%`, `--`, Not Available).
+- Recovery contributor strings identify HRV, Resting Heart Rate, Respiratory Rate and Sleep Performance. Woop's Recovery detail previously showed skin temperature in the fourth slot; that slot is now same-day Sleep Performance, resolved through `DashboardRestScore.value(day:days:importedSleep:)`, the same imported-first/on-device composite resolver used by Sleep and Today. It never borrows a score from another date. The section is labelled Recovery contributors.
+- Sleep Performance strings expose the title, Hours of Sleep, Sleep Needed and Share. Woop's existing Sleep view already has a per-night performance score, sleep-stage timeline/hypnogram, and sleep-need/debt sections; no duplicate Sleep implementation was added.
+- Navigation symbols identify `MainViewTabBarController`, `MainViewTabNavigationRouter`, `BottomNavigationType`, `TabBarConfiguration` and `TabBarConfigurationService`. The BFF tab-bar adapter accepts Strain, Health, Community, Menu and Shop controllers, while the actual tab configuration is fetched/cached dynamically. Static extraction does not reveal the user's runtime tab payload, so changing Woop's five tab labels/order based on an assumed fixed WHOOP configuration would be guesswork. Keep the existing five independent Woop navigation stacks until a grounded runtime configuration is available.
+- The Home storyboard NIB is only a `HomeViewController` host/root view; the main pillar/dashboard UI is represented by compiled SwiftUI symbols and strings, not recoverable storyboard constraints.
+
+**Code change from this re-inspection:** `Strand/Screens/RecoveryDetailView.swift` now shows the four WHOOP-aligned contributors (HRV, Resting HR, Respiratory Rate, Sleep Performance) with all values aligned to the selected scored-night date. Recovery scoring, BLE, persistence and sensor decoding are unchanged.
+
+**Remaining validation:** run `Tools/local-tests.sh`, compile the iOS target on macOS, then install and capture a device screenshot for visual QA. The extracted metadata alone cannot certify pixel parity or an IPA.
