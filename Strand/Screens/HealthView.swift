@@ -414,7 +414,7 @@ private struct HeartRateSection: View {
                                     format: { "\(Int($0.rounded()))" },
                                     font: WhoopReferenceFont.score(64),
                                     color: hasLiveHR ? StrandPalette.hrZoneColor(zone) : StrandPalette.textTertiary)
-                            .tracking(StrandFont.displayTracking(72))
+                            .tracking(WhoopReferenceFont.scoreTracking(72))
                     } else {
                         Text("—")
                             .font(WhoopReferenceFont.score(64))
