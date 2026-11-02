@@ -297,7 +297,7 @@ struct HRVSnapshotView: View {
     private func resultCard(_ result: HRVAnalyzer.HRVResult) -> some View {
         StrandCard(padding: 18, tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: 14) {
-                Text("YOUR READING").strandOverline()
+                Text("YOUR READING").whoopReferenceOverline()
 
                 if result.rmssd == nil {
                     HStack(spacing: 10) {
@@ -323,7 +323,7 @@ struct HRVSnapshotView: View {
 
     private func metricTile(_ label: String, _ value: String, _ unit: String, _ accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(label.uppercased()).strandOverline()
+            Text(label.uppercased()).whoopReferenceOverline()
             Spacer(minLength: 6)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value)
@@ -350,7 +350,7 @@ struct HRVSnapshotView: View {
     private var methodologyCard: some View {
         StrandCard(tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("How this is measured").strandOverline()
+                Text("How this is measured").whoopReferenceOverline()
                 Text("A 60-second snapshot of your beat-to-beat (R-R) intervals from the strap, cleaned (range and ectopic-beat filtering) before computing RMSSD the same way your overnight HRV is computed.")
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textTertiary)
