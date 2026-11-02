@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build-unsigned-ipa:
     name: Build Woop for iPhone and package unsigned IPA
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     steps:
       - name: Check out UI parity branch
@@ -26,9 +26,11 @@ jobs:
           ref: feature/whoop-575-ui-parity
           fetch-depth: 1
 
-      - name: Select Xcode and install XcodeGen
+      - name: Select Xcode 26 SDK and install XcodeGen
         run: |
+          set -euo pipefail
           xcodebuild -version
+          xcodebuild -version | grep -Eq '^Xcode 26\.' || { echo "::error::This project uses iOS 26 Liquid Glass APIs; Xcode 26 or newer is required."; exit 1; }
           if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
           xcodegen --version
 
