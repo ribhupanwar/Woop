@@ -90,6 +90,23 @@ fi
 # Android is intentionally not part of this fork's release surface (see docs/BUILD.md).
 # Do not invoke the upstream Android Swift SDK build from the iOS/macOS validation gate.
 
+# Xcode 26 may rewrite generated build-version metadata in the checked-in app plists.
+# The script starts from a clean tree, so discard only these known build side effects before
+# checking for unexpected mutations and stamping the tested commit.
+GENERATED_PLISTS=(
+  NOOPWatch/Info.plist
+  NOOPWatchComplications/Info.plist
+  Strand/Resources/Info.plist
+  StrandiOS/Resources/Info.plist
+  StrandiOSWidgets/Info.plist
+)
+for path in "${GENERATED_PLISTS[@]}"; do
+  if [ -f "$path" ] && ! git diff --quiet -- "$path"; then
+    echo "local-tests: restoring build-generated $path"
+    git checkout -- "$path"
+  fi
+done
+
 # Builds rewrite the String Catalogs; a stamp over a tree the build itself changed would be a lie.
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   echo "local-tests: the build changed tracked files (String Catalogs?); restore them and run again:" >&2
