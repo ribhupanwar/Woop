@@ -52,14 +52,14 @@ struct SleepView: View {
     @AppStorage(SleepChartStyle.storageKey) private var sleepChartStyleRaw = SleepChartStyle.classic.rawValue
     /// The Today dashboard style. Only `.liquid` keeps the liquid sleep gauge; every other style draws the
     /// same ring Classic Today does, so turning Liquid off is not undone by the Sleep tab.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.liquid.rawValue
+    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
     @AppStorage(SceneBackgroundPrefs.enabledKey) private var showDayCycleBackground = SceneBackgroundPrefs.defaultEnabled
     @AppStorage(SkyBehindCardsPrefs.enabledKey) private var skyBehindCards = false
     /// "Sky behind cards": the Sleep tab's own night scene reaches behind the whole page, as the day-cycle
     /// sky does on Today, so Card transparency shows it under every card.
     private var nightBehindCards: Bool { showDayCycleBackground && skyBehindCards }
     private var heroUsesLiquidStyle: Bool {
-        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .liquid) == .liquid
+        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
     }
     /// Which night the hero hypnogram shows: 0 = last night, N = N sleep-sessions back.
     /// Snaps back to 0 whenever the data key changes — a stale offset would silently point
@@ -666,11 +666,11 @@ struct SleepView: View {
             // Scheme-following text tokens turn black in Light mode, so use the fixed on-dark pair.
             VStack(alignment: .leading, spacing: 2) {
                 Text(nightRelativeLabel)
-                    .font(WhoopReferenceFont.label())
+                    .font(StrandFont.overline)
                     .tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
                 Text("Sleep performance")
-                    .font(WhoopReferenceFont.heading(21))
+                    .font(StrandFont.title2)
                     .foregroundStyle(StrandPalette.onDarkPrimary)
             }
             .padding(.horizontal, NoopMetrics.screenHPadding)
@@ -920,7 +920,7 @@ struct SleepView: View {
 
     private func napSummaryCell(label: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).whoopReferenceOverline()
+            Text(label).strandOverline()
             Text(value).font(StrandFont.number(18)).foregroundStyle(StrandPalette.textPrimary)
         }
     }
@@ -936,7 +936,7 @@ struct SleepView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(napWindowText(nap)).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
                 Text(durationText(Double(nap.endTs - nap.effectiveStartTs) / 60.0))
-                    .whoopReferenceOverline()
+                    .strandOverline()
             }
             Spacer(minLength: 8)
             Menu {
@@ -1083,7 +1083,7 @@ struct SleepView: View {
         NoopCard(tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: NoopMetrics.space3) {
                 VStack(alignment: .leading, spacing: NoopMetrics.spaceHalf) {
-                    Text("Stage breakdown").whoopReferenceOverline()
+                    Text("Stage breakdown").strandOverline()
                     Text(subtitle)
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
@@ -1399,7 +1399,7 @@ struct SleepView: View {
                 .foregroundStyle(StrandPalette.restColor)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(label).whoopReferenceOverline()
+                Text(label).strandOverline()
                 Text(value).font(StrandFont.number(22)).foregroundStyle(StrandPalette.textPrimary)
             }
         }
@@ -1532,7 +1532,7 @@ struct SleepView: View {
                 .frame(width: 12, height: 12)
                 .accessibilityHidden(true)
             Text(stage.label.uppercased())
-                .font(WhoopReferenceFont.label())
+                .font(StrandFont.overline)
                 .tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.textPrimary)
                 .frame(width: 56, alignment: .leading)
@@ -1630,10 +1630,12 @@ struct SleepView: View {
         HStack(alignment: .top, spacing: NoopMetrics.space6) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(durationText(s.asleep))
-                    .font(WhoopReferenceFont.score(26))
+                    .font(StrandFont.number(26))
                     .foregroundStyle(StrandPalette.textPrimary)
                 Text("HOURS OF SLEEP")
-                    .whoopReferenceOverline()
+                    .font(StrandFont.overline)
+                    .tracking(StrandFont.overlineTracking)
+                    .foregroundStyle(StrandPalette.textTertiary)
                 if let t = stageTypical(nil) {
                     Text("typically \(durationText(t.mean))")
                         .font(StrandFont.footnote)
@@ -1642,10 +1644,12 @@ struct SleepView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(durationText(restorative))
-                    .font(WhoopReferenceFont.score(26))
+                    .font(StrandFont.number(26))
                     .foregroundStyle(StrandPalette.sleepREM)
                 Text("RESTORATIVE SLEEP")
-                    .whoopReferenceOverline()
+                    .font(StrandFont.overline)
+                    .tracking(StrandFont.overlineTracking)
+                    .foregroundStyle(StrandPalette.textTertiary)
                 if let t = restorativeTypical() {
                     Text("typically \(durationText(t))")
                         .font(StrandFont.footnote)
@@ -1747,7 +1751,7 @@ struct SleepView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(stage.label.uppercased())
-                    .font(WhoopReferenceFont.label())
+                    .font(StrandFont.overline)
                     .tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.textPrimary)
                 Text("\(percent)%")
@@ -1990,14 +1994,14 @@ struct SleepView: View {
 
                 HStack(alignment: .bottom, spacing: NoopMetrics.space3) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Sleep").whoopReferenceOverline()
+                        Text("Sleep").strandOverline()
                         Text(title)
-                            .font(WhoopReferenceFont.heading(20))
+                            .font(StrandFont.title2)
                             .foregroundStyle(StrandPalette.textPrimary)
                     }
                     Spacer(minLength: NoopMetrics.space2)
                     Text(trailing)
-                        .font(WhoopReferenceFont.label(11))
+                        .font(StrandFont.caption.weight(.semibold))
                         .foregroundStyle(StrandPalette.textSecondary)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
