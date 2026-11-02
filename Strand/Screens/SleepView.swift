@@ -52,14 +52,14 @@ struct SleepView: View {
     @AppStorage(SleepChartStyle.storageKey) private var sleepChartStyleRaw = SleepChartStyle.classic.rawValue
     /// The Today dashboard style. Only `.liquid` keeps the liquid sleep gauge; every other style draws the
     /// same ring Classic Today does, so turning Liquid off is not undone by the Sleep tab.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.liquid.rawValue
+    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
     @AppStorage(SceneBackgroundPrefs.enabledKey) private var showDayCycleBackground = SceneBackgroundPrefs.defaultEnabled
     @AppStorage(SkyBehindCardsPrefs.enabledKey) private var skyBehindCards = false
     /// "Sky behind cards": the Sleep tab's own night scene reaches behind the whole page, as the day-cycle
     /// sky does on Today, so Card transparency shows it under every card.
     private var nightBehindCards: Bool { showDayCycleBackground && skyBehindCards }
     private var heroUsesLiquidStyle: Bool {
-        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .liquid) == .liquid
+        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
     }
     /// Which night the hero hypnogram shows: 0 = last night, N = N sleep-sessions back.
     /// Snaps back to 0 whenever the data key changes — a stale offset would silently point
