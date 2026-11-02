@@ -218,9 +218,17 @@ final class LongTermGoalReaderTests: XCTestCase {
                              templateId: GoalTemplateID.trainingWeekly.rawValue,
                              measure: .init(metric: .weeklyAdherence, adherenceTarget: 0.8,
                                             fixedEnd: daysAgo(1), weeklyGoalId: weeklyId))
-        let history = (0..<12).map {
-            PeriodGoalSnapshot.HistoryEntry(periodStart: PeriodGoalTracker.dayKey(daysAgo(Double((12 - $0) * 7)), calendar: calendar),
-                                            target: 3, value: $0 < 4 ? 1 : 3, outcome: $0 < 4 ? .missed : .achieved)
+        let history: [PeriodGoalSnapshot.HistoryEntry] = (0..<12).map { index in
+            let daysBack = Double((12 - index) * 7)
+            let periodStart = PeriodGoalTracker.dayKey(daysAgo(daysBack), calendar: calendar)
+            let outcome: PeriodOutcome = index < 4 ? .missed : .achieved
+            let value = index < 4 ? 1.0 : 3.0
+            return PeriodGoalSnapshot.HistoryEntry(
+                periodStart: periodStart,
+                target: 3,
+                value: value,
+                outcome: outcome
+            )
         }
         let reading = LongTermGoalReader.consistency(goal: goal, spec: goal.measure!, weeklyGoalId: weeklyId,
                                                      history: history, thisWeek: 0, weeklyTarget: 3,
