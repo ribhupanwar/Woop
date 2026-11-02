@@ -2,9 +2,10 @@ name: Woop iOS unsigned IPA
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/whoop-575-ui-parity]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
+      - "Packages/StrandDesign/Sources/StrandDesign/WhoopReferenceTypography.swift"
   workflow_dispatch:
 
 permissions:
