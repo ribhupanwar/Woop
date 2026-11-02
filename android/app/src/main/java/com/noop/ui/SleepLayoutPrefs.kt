@@ -50,7 +50,7 @@ enum class SleepSection(val raw: String, val title: String) {
          *  rides with Stages for now — drawn inside the stages hero; making it an independently arrangeable
          *  card is a follow-up that requires hoisting the hero's edit/delete callbacks.) */
         val defaultOrder: List<SleepSection> = listOf(
-            SLEEP_MARKS, STAGES, BODY_CLOCK, NIGHT_DETAIL, SLEEP_DEBT, STAGES_VS_TYPICAL, ASLEEP_DURATION,
+            SLEEP_DEBT, STAGES, BODY_CLOCK, NIGHT_DETAIL, STAGES_VS_TYPICAL, ASLEEP_DURATION, SLEEP_MARKS,
             HOURS_VS_NEEDED, CONSISTENCY,
         )
     }
