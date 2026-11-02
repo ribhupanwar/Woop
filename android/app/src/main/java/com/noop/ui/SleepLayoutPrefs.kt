@@ -10,8 +10,7 @@ import com.noop.R
 // The Sleep tab's analytical cards — Sleep marks, the Stages hypnogram, Naps, Night detail, the Sleep-debt
 // ledger, Stages-vs-typical, and the Asleep-duration trend — render in one fixed order below the pinned
 // Sleep-performance hero + date navigator. This lets the user REORDER or HIDE those cards, mirroring the
-// Today tab's Arrange sheet (see TodayLayoutPrefs), with the default being the original order so nothing
-// changes for anyone who never customizes Sleep. Display-only — no metric is computed or stored
+// Today tab's Arrange sheet (see TodayLayoutPrefs), with the default prioritizing sleep balance and stages; existing saved orders stay intact. Display-only — no metric is computed or stored
 // differently; this only decides which already-built cards render and in what sequence.
 //
 // Stored as a single comma-joined string of section keys in SharedPreferences ("sleep.sectionOrder"), the
@@ -45,7 +44,7 @@ enum class SleepSection(val raw: String, val title: String) {
     companion object {
         fun fromRaw(raw: String?): SleepSection? = entries.firstOrNull { it.raw == raw }
 
-        /** The original, hard-coded card order — the default when the layout isn't customised. Matches the
+        /** The default card order — sleep balance and stages lead; input-oriented sleep marks sit last. Matches the
          *  pre-customisation render order in SleepScreen below the pinned Sleep-performance hero. (Naps
          *  rides with Stages for now — drawn inside the stages hero; making it an independently arrangeable
          *  card is a follow-up that requires hoisting the hero's edit/delete callbacks.) */
