@@ -37,7 +37,7 @@ struct RecoveryDetailView: View {
                             Text("Overnight metrics")
                                 .font(WhoopReferenceFont.heading(16))
                                 .foregroundStyle(StrandPalette.textPrimary)
-                            Text("HRV and resting heart rate will appear when a scored night has matching readings.")
+                            Text("HRV, resting heart rate, respiratory rate and skin temperature appear when that scored night has matching readings.")
                                 .font(StrandFont.footnote)
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
