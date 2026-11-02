@@ -107,7 +107,7 @@ struct RecoveryDetailView: View {
     private func vitalSection(_ night: DailyMetric) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Overnight metrics")
-                .font(StrandFont.title3)
+                .font(StrandFont.headline)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: 10) {
                 vitalCard(title: "HRV", value: night.avgHrv.map { "\(Int($0.rounded()))" } ?? "—",
@@ -144,7 +144,7 @@ struct RecoveryDetailView: View {
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Recent recovery")
-                .font(StrandFont.title3)
+                .font(StrandFont.headline)
                 .foregroundStyle(StrandPalette.textPrimary)
             if !loaded {
                 ProgressView().tint(StrandPalette.accent)
@@ -165,7 +165,7 @@ struct RecoveryDetailView: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: max(4, CGFloat(day.recovery ?? 0) * 0.92))
                                     Text(day.day.suffix(2))
-                                        .font(StrandFont.caption2)
+                                        .font(StrandFont.caption)
                                         .foregroundStyle(StrandPalette.textTertiary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .bottom)
