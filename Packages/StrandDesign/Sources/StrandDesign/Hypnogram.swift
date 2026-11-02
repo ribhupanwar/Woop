@@ -386,7 +386,7 @@ public struct Hypnogram: View {
                         Text(timeLabel(origin + span / 2)).frame(maxWidth: .infinity, alignment: .center)
                         Text(timeLabel(origin + span)).frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                    .font(StrandFont.footnote)
+                    .font(WhoopReferenceFont.label(10))
                     .foregroundStyle(StrandPalette.textTertiary)
                     .accessibilityHidden(true)
                 }
@@ -416,7 +416,7 @@ public struct Hypnogram: View {
         VStack(alignment: .trailing, spacing: 0) {
             ForEach(stagesTopToBottom, id: \.self) { stage in
                 Text(stage.label)
-                    .font(StrandFont.footnote)
+                    .font(WhoopReferenceFont.label(10))
                     .foregroundStyle(StrandPalette.textTertiary)
                     .frame(maxHeight: .infinity, alignment: .center)
             }
