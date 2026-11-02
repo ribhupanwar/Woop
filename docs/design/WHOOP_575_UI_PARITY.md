@@ -42,3 +42,14 @@ The archive and executable were inspected statically. The extracted report is a 
 - Woop implementation: clean-room typography pass is underway on the WHOOP-reference dashboard branch. The dedicated typography roles are applied to Today, Overview, Sleep, Health, Training Load and HRV snapshot labels/selected metrics; Overview ring labels and Sleep hero/stage labels are aligned. Overview metric rings were increased from 74pt to 80pt, and the Sleep hypnogram's stage/time axes now use compact reference label typography. This remains a partial presentation pass, not a complete screen replica.
 - Remaining visual work: Recovery hero/card geometry, full Sleep chart/detail comparison against device screenshots, tab/navigation parity, and screenshot-based device review.
 - Validation still required: run `Tools/local-tests.sh` on the branch and compile/install on macOS/iOS; no IPA is certified by these source-only commits.
+
+
+## Recovery surface audit — 2026-11-02
+
+A source-only pass traced the Overview Recovery entry without changing app code:
+
+- `Strand/Screens/OverviewDashboardView.swift` resolves the displayed value through `ChargeDisplay.resolve(days:displayDay:selectedDayKey:isToday:)`; the ring reads the resolved `pct`, and carried scores retain their provenance caption. Calibration and no-data remain distinct empty states.
+- The Overview Recovery row is an 80pt compact metric ring in the three-metric stack and navigates to the WHOOP-sourced `recovery` metric route. It is not the standalone Recovery detail/hero screen.
+- `Packages/StrandDesign/Sources/StrandDesign/RecoveryRing.swift` supports a 240pt default hero gauge, but also layers Woop's own NOOP wordmark and glyph core behavior. `BevelGauge.swift` owns the shared 240-degree arc, track, center readout and tip.
+- The current source therefore proves that a reusable large Recovery gauge exists; it does **not** prove that the dedicated Recovery detail screen matches WHOOP 5.75.0. The exact detail layout, surrounding cards, and spacing still require a user-provided WHOOP Recovery screenshot or another verified visual reference.
+- No Swift source, sensor pipeline, score logic, or app behavior was changed in this audit. This is documentation only; it is not a build or device-validation result.
