@@ -80,7 +80,7 @@ extension View {
             case .metric(let key):
                 // Recovery has a dedicated score-state-aware detail; other catalog metrics retain
                 // the shared explorer dossier.
-                if key == "recovery" {
+                if RecoveryRoutePolicy.usesDedicatedDetail(metricKey: key) {
                     RecoveryDetailView()
                 } else if let m = MetricCatalog.all.first(where: { $0.key == key }) {
                     MetricDetailView(metric: m)
@@ -94,7 +94,7 @@ extension View {
             case .metricSourced(let key, let source):
                 // WHOOP Recovery uses its dedicated score-state-aware detail. Keep other sourced
                 // metrics on the generic explorer, preserving their exact source resolution.
-                if key == "recovery", source == Repository.whoopSource {
+                if RecoveryRoutePolicy.usesDedicatedDetail(metricKey: key, source: source) {
                     RecoveryDetailView()
                 } else if let m = MetricCatalog.metric(key: key, source: source)
                     ?? MetricCatalog.all.first(where: { $0.key == key }) {
@@ -165,5 +165,19 @@ extension CoachCardContext {
     static func purposes(forDashboard route: TabRoute) -> Set<CoachPurpose> {
         if case .stress = route { return [.coreBiometrics, .stress] }
         return [.coreBiometrics]
+    }
+}
+
+
+/// Keeps the two Recovery entry points on the score-state-aware detail screen.
+/// The sourced overload is deliberately strict: only WHOOP Recovery gets that
+/// screen; identically named metrics from other providers retain their own detail.
+enum RecoveryRoutePolicy {
+    static func usesDedicatedDetail(metricKey: String) -> Bool {
+        metricKey == "recovery"
+    }
+
+    static func usesDedicatedDetail(metricKey: String, source: String) -> Bool {
+        metricKey == "recovery" && source == Repository.whoopSource
     }
 }
