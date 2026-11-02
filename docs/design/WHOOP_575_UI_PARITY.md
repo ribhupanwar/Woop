@@ -178,3 +178,28 @@ The earlier Recovery navigation audit above describes the route state at the tim
 - This source audit was performed through GitHub's text/API view; the reference ZIP was not unpacked or visually inspected in this pass. No Xcode build, simulator run, install, or device QA was performed.
 
 The remaining evidence-based work is to add focused route/state coverage, run `Tools/local-tests.sh` in a supported macOS environment, then compare actual iPhone screenshots for Home, Recovery and Sleep against the extracted reference. Do not label the UI pixel-complete until those checks pass.
+
+
+## Sleep / Home / tab-shell source audit — 2026-11-02
+
+A read-only pass traced the current visible composition and the controls that can change it:
+
+### Sleep
+- The Sleep tab is a primary iOS tab (SleepView) and its hero is pinned; it is not part of the reorderable card list.
+- With a resolved night, the top-level sequence is: freshness/deleted/undo context, the full-width Rest hero, alarms entry, optional sleep-goal context, then the saved analytical sections. The analytical default order is Sleep marks, Stages, Body clock, Night detail, Sleep-debt ledger, Stages vs typical, Asleep duration.
+- The analytical order and hidden set are persisted separately (sleep.sectionOrder, sleep.hiddenSections). SleepLayoutPrefsTests already pins default order, migration of missing sections, explicit reversible hiding, uniqueness and stable raw keys.
+- The actual hero and chart variants depend on the saved chart style, dashboard style, scene-background preferences, selected night offset, and available sleep-session data. A source-only read cannot certify the rendered chart geometry or exact reference colors.
+
+### Home / Overview
+- Overview is one selectable Today dashboard style, not a separate tab. Its root pins the header, health alert, active-workout indicator and morning suggestion above the configurable dashboard sections; Plan Today is below them.
+- Its Recovery ring uses ChargeDisplay.resolve, so scored/carry/calibration/no-data states are shared with the other Today presentations. The sleep-performance value is resolved from the selected day using imported sleep first, then the daily composite, with the repository series as the freshness fallback.
+- The layout has its own saved section order/visibility and compact spacing. The code comments describe a one-screen reference target, but the implementation remains a scroll view and optional/customized sections can extend it.
+
+### iOS tab shell
+- Current primary tabs are Today, Trends, Training, Sleep and More, in that order. Each has its own NavigationStack path. Re-tapping the selected tab refreshes; if pushed, it pops to root; if already at root, it sends a scroll-to-top signal.
+- This is a five-tab native iOS shell. It is not evidence of WHOOP's exact tab order or iconography; no visual comparison was made in this pass.
+
+### Validation / next implementation boundary
+- Sleep layout persistence and dashboard layout state already have focused pure-logic tests. Recovery score-state behavior also has existing DashboardChargeHeroTests; a dedicated SwiftUI navigation/UI test for RecoveryDetailView was not found.
+- The next safe code task is focused route/state test coverage, not a broad layout rewrite. Any pixel-level adjustments must be grounded in a rendered WHOOP reference screen and a matching Woop device screenshot.
+- This audit changed documentation only. No app source, BLE, sensor decoding, persistence, scoring, or workout behavior changed; no local tests, Xcode build, simulator run, or device QA was executed.
