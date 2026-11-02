@@ -98,6 +98,14 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist"
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           ditto "$APP" "$RUNNER_TEMP/ipa/Payload/Woop.app"
+          # Free Apple ID / SideStore installs append the team suffix to the iPhone
+          # bundle identifier. An embedded Watch app keeps its unsuffixed companion
+          # identifier and makes iOS reject the install (InvalidCompanionAppBundleIdentifier).
+          # This sideload IPA intentionally excludes Watch + extensions; the full archive
+          # and source-build targets retain them for paid-team / Xcode distribution.
+          rm -rf "$RUNNER_TEMP/ipa/Payload/Woop.app/Watch" "$RUNNER_TEMP/ipa/Payload/Woop.app/PlugIns"
+          test ! -e "$RUNNER_TEMP/ipa/Payload/Woop.app/Watch"
+          test ! -e "$RUNNER_TEMP/ipa/Payload/Woop.app/PlugIns"
           (cd "$RUNNER_TEMP/ipa" && /usr/bin/zip -qry "$GITHUB_WORKSPACE/Woop-unsigned.ipa" Payload)
           test -s Woop-unsigned.ipa
           unzip -t Woop-unsigned.ipa
