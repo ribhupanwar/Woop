@@ -255,6 +255,7 @@ The previously generated GitHub Actions artifact is now retrieved and inspected 
 - Workflow run: [Inspect WHOOP 5.75.0 IPA UI reference](https://github.com/ribhupanwar/dsta/actions/runs/41341431589), run #2.
 - Artifact: `whoop-5.75.0-ipa-ui-reference` (artifact ID `13098150114`; 7.19 MB compressed; SHA-256 `696e1b2896fa4c1fe2dee38c21c74c5df0fa8a250fdbf630500275308f140937`).
 - The extraction README identifies the pinned `pulseforge.ipa` release asset as the WHOOP 5.75.0 iOS reference. The archive itself was not included in this small report artifact; the report contains static resource, string, symbol and metadata inventories.
+- The downloaded report ZIP contains 2,873 files. Its manifest records 6,708 entries in the original IPA bundle and 4,509 UI/resource inventory records; the bundle identity is `com.whoop.iphone`, version `5.75.0`, build `738478`.
 - The report exposes compiled view/model names including `HomeMyDashboardView`, `HomeView`, `OverviewGauge`, `RecoveryDetails`, `SleepPerformance`, `StrainCoachView`, `HealthMonitorView`, `HealthMonitorGridView` and `HealthMonitorMetricView`. These are metadata identifiers, not recovered SwiftUI source.
 
 ### Additional reference details confirmed by the extraction
