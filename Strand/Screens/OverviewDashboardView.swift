@@ -1000,7 +1000,7 @@ struct OverviewDashboardView: View {
 
     private var healthList: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            Text("Your health").strandOverline()
+            Text("Your health").whoopReferenceOverline()
             NoopCard(padding: 0) {
                 VStack(spacing: 0) {
                     ForEach(Array(healthCards.enumerated()), id: \.element) { index, card in
@@ -1041,7 +1041,7 @@ struct OverviewDashboardView: View {
         if !recentWorkouts.isEmpty {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                 HStack {
-                    Text("Recent activity").strandOverline()
+                    Text("Recent activity").whoopReferenceOverline()
                     Spacer()
                     NavigationLink(value: TabRoute.workouts) {
                         Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
@@ -1100,7 +1100,7 @@ struct OverviewDashboardView: View {
     private var energyDetailSection: some View {
         if let e = todayEnergySummary {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                Text("Energy").strandOverline()
+                Text("Energy").whoopReferenceOverline()
                 NoopCard(padding: Self.cardPadding) {
                     HStack {
                         energyStat(label: "Basal", kcal: e.basalBurnedSoFar)
@@ -1131,7 +1131,7 @@ struct OverviewDashboardView: View {
             let keys = Self.journalDayKeys(anchor: selectedLogicalDay)
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
                 HStack {
-                    Text("Journal").strandOverline()
+                    Text("Journal").whoopReferenceOverline()
                     Spacer()
                     Text("\(logged.count)/\(keys.count)").font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                 }
@@ -1161,7 +1161,7 @@ struct OverviewDashboardView: View {
     private var menstrualCycleSection: some View {
         if shouldShowCycle {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                Text("Menstrual cycle").strandOverline()
+                Text("Menstrual cycle").whoopReferenceOverline()
                 NoopCard(padding: Self.cardPadding) {
                     DashboardCycleReadout(compact: true)
                 }
