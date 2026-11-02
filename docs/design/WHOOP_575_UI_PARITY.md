@@ -224,3 +224,15 @@ The current branch was re-checked after the earlier status notes above. These co
 5. Compare same-device WHOOP 5.75 and Woop screenshots before making pixel-level claims. The extracted IPA artifact provides static metadata, not actual screenshot pixels or compiled SwiftUI layout constraints.
 
 This follow-up is a source audit and documentation correction only. No app code, sensor pipeline, scoring, BLE, persistence, or workout behavior was changed by this note.
+
+
+## Sleep typography implementation — 2026-11-02
+
+A scoped clean-room typography pass was committed to `Strand/Screens/SleepView.swift`:
+
+- Pinned hero: night-relative overline, “Sleep performance” heading, score-state label, and the unscored-night caption now use the existing `WhoopReferenceFont` roles.
+- Stage detail: the stage-breakdown overline, stage names, percentage/duration values, and movement-strip caption now use the same scoped reference roles.
+- No sleep score calculation, selected-night logic, chart-style preference, hypnogram intervals, stage totals, persistence, BLE, or workout behavior was changed.
+- Static source verification confirms these roles are present in the current branch. No Xcode compile, automated test run, simulator render, or screenshot comparison has been performed; the visual result is not yet certified.
+
+This is a targeted typography implementation, not a claim of full Sleep-screen parity.
