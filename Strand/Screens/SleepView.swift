@@ -920,7 +920,7 @@ struct SleepView: View {
 
     private func napSummaryCell(label: LocalizedStringKey, value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label).strandOverline()
+            Text(label).whoopReferenceOverline()
             Text(value).font(StrandFont.number(18)).foregroundStyle(StrandPalette.textPrimary)
         }
     }
@@ -936,7 +936,7 @@ struct SleepView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(napWindowText(nap)).font(StrandFont.body).foregroundStyle(StrandPalette.textPrimary)
                 Text(durationText(Double(nap.endTs - nap.effectiveStartTs) / 60.0))
-                    .strandOverline()
+                    .whoopReferenceOverline()
             }
             Spacer(minLength: 8)
             Menu {
@@ -1083,7 +1083,7 @@ struct SleepView: View {
         NoopCard(tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: NoopMetrics.space3) {
                 VStack(alignment: .leading, spacing: NoopMetrics.spaceHalf) {
-                    Text("Stage breakdown").strandOverline()
+                    Text("Stage breakdown").whoopReferenceOverline()
                     Text(subtitle)
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
@@ -1399,7 +1399,7 @@ struct SleepView: View {
                 .foregroundStyle(StrandPalette.restColor)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(label).strandOverline()
+                Text(label).whoopReferenceOverline()
                 Text(value).font(StrandFont.number(22)).foregroundStyle(StrandPalette.textPrimary)
             }
         }
@@ -1994,7 +1994,7 @@ struct SleepView: View {
 
                 HStack(alignment: .bottom, spacing: NoopMetrics.space3) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Sleep").strandOverline()
+                        Text("Sleep").whoopReferenceOverline()
                         Text(title)
                             .font(StrandFont.title2)
                             .foregroundStyle(StrandPalette.textPrimary)
