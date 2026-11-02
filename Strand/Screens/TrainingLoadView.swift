@@ -885,7 +885,7 @@ struct TrainingLoadView: View {
         return NoopCard(tint: advice.color) {
             VStack(alignment: .leading, spacing: NoopMetrics.space2) {
                 Text("What it means")
-                    .strandOverline()
+                    .whoopReferenceOverline()
                 HStack(alignment: .top, spacing: NoopMetrics.space2) {
                     StatusBadge(symbol: advice.symbol, color: advice.color, size: 40,
                                 bounceTrigger: adviceBounce)
@@ -949,7 +949,7 @@ struct TrainingLoadView: View {
         if !outlook.isEmpty {
             NoopCard {
                 VStack(alignment: .leading, spacing: NoopMetrics.space2) {
-                    Text("Personal range").strandOverline()
+                    Text("Personal range").whoopReferenceOverline()
                     Text("Room today").font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
                     roomRow(.strength, room: outlook.strengthRoom, settles: outlook.strengthSettles,
                             unit: String(localized: "weighted sets"))
