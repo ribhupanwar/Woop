@@ -666,7 +666,7 @@ struct SleepView: View {
             // Scheme-following text tokens turn black in Light mode, so use the fixed on-dark pair.
             VStack(alignment: .leading, spacing: 2) {
                 Text(nightRelativeLabel)
-                    .font(StrandFont.overline)
+                    .font(WhoopReferenceFont.label())
                     .tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
                 Text("Sleep performance")
@@ -1532,7 +1532,7 @@ struct SleepView: View {
                 .frame(width: 12, height: 12)
                 .accessibilityHidden(true)
             Text(stage.label.uppercased())
-                .font(StrandFont.overline)
+                .font(WhoopReferenceFont.label())
                 .tracking(StrandFont.overlineTracking)
                 .foregroundStyle(StrandPalette.textPrimary)
                 .frame(width: 56, alignment: .leading)
@@ -1747,7 +1747,7 @@ struct SleepView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(stage.label.uppercased())
-                    .font(StrandFont.overline)
+                    .font(WhoopReferenceFont.label())
                     .tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.textPrimary)
                 Text("\(percent)%")
