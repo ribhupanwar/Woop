@@ -35,14 +35,9 @@ TREE="$(git rev-parse 'HEAD^{tree}')"
 CHANGED="$(git diff --name-only "$BASE" HEAD)"
 
 APP=0
-ANDROID=0
 PACKAGES=()
 while IFS= read -r path; do
   [ -n "$path" ] || continue
-  case "$path" in
-    android/*|.github/workflows/android.yml|project.yml|Tools/parity_cases/*|Packages/*)
-      ANDROID=1 ;;
-  esac
   case "$path" in
     Strand/*|StrandTests/*|StrandiOS/*|StrandiOSShared/*|StrandiOSWidgets/*|StrandiOSTests/*|NOOPWatch*/*|project.yml)
       APP=1 ;;
@@ -53,8 +48,8 @@ while IFS= read -r path; do
   esac
 done <<< "$CHANGED"
 
-if [ "$APP" = 0 ] && [ "$ANDROID" = 0 ] && [ "${#PACKAGES[@]}" = 0 ]; then
-  echo "local-tests: nothing app-, package- or Android-side changed since $BASE; no stamp needed."
+if [ "$APP" = 0 ] && [ "${#PACKAGES[@]}" = 0 ]; then
+  echo "local-tests: nothing app- or package-side changed since $BASE; no stamp needed."
   exit 0
 fi
 
@@ -92,17 +87,8 @@ if [ "$APP" = 1 ]; then
   RAN+=("app")
 fi
 
-if [ "$ANDROID" = 1 ]; then
-  echo "local-tests: Android full and demo debug builds + unit tests"
-  export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
-  export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-  # Two invocations, as in android.yml: in one, the unit-test task can be configured before the Room schema
-  # snapshot it reads exists on a fresh build directory.
-  (cd android && ./gradlew --quiet assembleFullDebug assembleDemoDebug assembleFullDebugAndroidTest &&
-    python3 swift-core/check-apk-resources.py app/build/outputs/apk/full/debug/*.apk app/build/outputs/apk/demo/debug/*.apk &&
-    ./gradlew --quiet testFullDebugUnitTest)
-  RAN+=("android")
-fi
+# Android is intentionally not part of this fork's release surface (see docs/BUILD.md).
+# Do not invoke the upstream Android Swift SDK build from the iOS/macOS validation gate.
 
 # Builds rewrite the String Catalogs; a stamp over a tree the build itself changed would be a lie.
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
