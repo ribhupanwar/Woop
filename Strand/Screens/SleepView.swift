@@ -670,7 +670,7 @@ struct SleepView: View {
                     .tracking(StrandFont.overlineTracking)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
                 Text("Sleep performance")
-                    .font(StrandFont.title2)
+                    .font(WhoopReferenceFont.heading(21))
                     .foregroundStyle(StrandPalette.onDarkPrimary)
             }
             .padding(.horizontal, NoopMetrics.screenHPadding)
@@ -1992,12 +1992,12 @@ struct SleepView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Sleep").whoopReferenceOverline()
                         Text(title)
-                            .font(StrandFont.title2)
+                            .font(WhoopReferenceFont.heading(20))
                             .foregroundStyle(StrandPalette.textPrimary)
                     }
                     Spacer(minLength: NoopMetrics.space2)
                     Text(trailing)
-                        .font(StrandFont.caption.weight(.semibold))
+                        .font(WhoopReferenceFont.label(11))
                         .foregroundStyle(StrandPalette.textSecondary)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
