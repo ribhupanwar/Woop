@@ -119,3 +119,24 @@ The first app-source implementation is now present on the parity branch:
 - The new file is included by the iOS XcodeGen target's existing `Strand` source directory, so no project-file registration was needed.
 
 **Validation status:** source and route were reviewed against the existing resolver/model APIs, but this environment has not run `Tools/local-tests.sh`, Xcode compilation, simulator, or device screenshot QA. This is an implementation milestone, not a completed WHOOP visual replica or verified IPA. Exact Recovery screen geometry still needs a trusted reference screenshot for pixel-level comparison.
+
+## Sleep and navigation UI audit — 2026-11-02
+
+### Sleep surface findings
+
+- `SleepView` already pins a night-performance hero and date navigation above its reorderable analytical sections. Its score and source badge are derived from the displayed `Night`; no separate UI-side score is needed.
+- With timestamped intervals, the stage card supports the WHOOP-style stepped hypnogram (`filled` / `ribbon`) as well as the detailed per-stage timeline. When intervals cannot be reconstructed, it falls back to the proportional stage bar rather than inventing a timeline.
+- The detailed stage rows already use compact reference labels, colour-coded percentages, duration bars, and tap-to-highlight interaction. The remaining gap is visual comparison against a real WHOOP screenshot/device capture, not absence of a hypnogram implementation.
+- The chart-style preference deliberately defaults to `classic` and is shared with Android. This pass does not silently override a stored user preference or create an iOS-only default divergence.
+
+### iPhone navigation findings
+
+- `RootTabView` uses the native iOS `TabView` with Today, Trends, Training, Sleep and More. Each primary tab owns a bound `NavigationStack`; this preserves independent back stacks and root re-tap behavior.
+- The previous custom floating tab bar was replaced by native navigation because the app's floating Coach action moved to the header. The native bar preserves safe-area handling, Dynamic Type and iOS 26 Liquid Glass.
+- No tab labels/icons were changed without a WHOOP 5.75 screenshot to ground the comparison. Tab order and icon parity remain a screenshot-review item.
+
+### Recovery detail follow-up
+
+The dedicated Recovery screen now presents HRV, resting HR, respiratory rate and skin-temperature deviation from the exact scored-night row. Missing fields remain dashes; none are carried from another night. The new text uses the clean-room `WhoopReferenceFont` roles already used by the parity pass. No scorer, BLE decoder, or data persistence code changed.
+
+**Validation remains pending:** the branch's `Tools/local-tests.sh` requires macOS, XcodeGen and Xcode for the app leg. No Xcode build, simulator/device screenshot, or IPA was produced in this session.
