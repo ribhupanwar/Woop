@@ -18,14 +18,12 @@ struct RecoveryDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("RECOVERY")
-                        .font(StrandFont.overline)
-                        .foregroundStyle(StrandPalette.textTertiary)
+                    Text("RECOVERY").whoopReferenceOverline()
                     Text("How ready is your body?")
-                        .font(StrandFont.title2)
+                        .font(WhoopReferenceFont.heading(22))
                         .foregroundStyle(StrandPalette.textPrimary)
                     Text("Based on your recorded overnight recovery data.")
-                        .font(StrandFont.footnote)
+                        .font(WhoopReferenceFont.body())
                         .foregroundStyle(StrandPalette.textSecondary)
                 }
 
@@ -37,7 +35,7 @@ struct RecoveryDetailView: View {
                     NoopCard {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Overnight metrics")
-                                .font(StrandFont.headline)
+                                .font(WhoopReferenceFont.heading(16))
                                 .foregroundStyle(StrandPalette.textPrimary)
                             Text("HRV and resting heart rate will appear when a scored night has matching readings.")
                                 .font(StrandFont.footnote)
@@ -82,7 +80,7 @@ struct RecoveryDetailView: View {
                         .font(.system(size: 30, weight: .light))
                         .foregroundStyle(StrandPalette.textTertiary)
                     Text(display.stateLabel)
-                        .font(StrandFont.title2)
+                        .font(WhoopReferenceFont.heading(22))
                         .foregroundStyle(StrandPalette.textPrimary)
                     if case .calibrating(let nights) = display {
                         Text("\(nights) of \(Baselines.minNightsSeed) nights")
@@ -105,7 +103,7 @@ struct RecoveryDetailView: View {
     private func vitalSection(_ night: DailyMetric) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Overnight metrics")
-                .font(StrandFont.headline)
+                .font(WhoopReferenceFont.heading(17))
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: 10) {
                 vitalCard(title: "HRV", value: night.avgHrv.map { "\(Int($0.rounded()))" } ?? "—",
@@ -131,14 +129,14 @@ struct RecoveryDetailView: View {
         NoopCard {
             VStack(alignment: .leading, spacing: 8) {
                 Label(title, systemImage: symbol)
-                    .font(StrandFont.footnote)
+                    .font(WhoopReferenceFont.body(12))
                     .foregroundStyle(StrandPalette.textSecondary)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(value)
-                        .font(StrandFont.rounded(28))
+                        .font(WhoopReferenceFont.score(28))
                         .foregroundStyle(StrandPalette.textPrimary)
                     Text(unit)
-                        .font(StrandFont.caption)
+                        .font(WhoopReferenceFont.body(11))
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
             }
@@ -150,14 +148,14 @@ struct RecoveryDetailView: View {
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Recent recovery")
-                .font(StrandFont.headline)
+                .font(WhoopReferenceFont.heading(17))
                 .foregroundStyle(StrandPalette.textPrimary)
             if !loaded {
                 ProgressView().tint(StrandPalette.accent)
             } else if history.isEmpty {
                 NoopCard {
                     Text("No recovery history recorded yet.")
-                        .font(StrandFont.footnote)
+                        .font(WhoopReferenceFont.body())
                         .foregroundStyle(StrandPalette.textSecondary)
                 }
             } else {
