@@ -996,7 +996,7 @@ private struct FitnessAgeSection: View {
                             .allowsHitTesting(false)
                     }
                     VStack(alignment: .leading, spacing: NoopMetrics.space1) {
-                        Text("Fitness Age").strandOverline()
+                        Text("Fitness Age").whoopReferenceOverline()
                         Text(ageDeltaLine(years: years, younger: younger, bound: bound))
                             .font(StrandFont.subhead)
                             .foregroundStyle(younger ? StrandPalette.statusPositive : StrandPalette.statusWarningForeground)
@@ -1004,7 +1004,7 @@ private struct FitnessAgeSection: View {
                     Spacer(minLength: 0)
                     if let vo2 = vo2max {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("VO₂max").strandOverline()
+                            Text("VO₂max").whoopReferenceOverline()
                             Text(String(format: "%.0f", vo2))
                                 .font(StrandFont.number(30))
                                 .foregroundStyle(StrandPalette.metricCyan)
@@ -1195,7 +1195,7 @@ private struct ReadinessChecklistCard: View {
     private func group(title: LocalizedStringKey, items: [FitnessReadinessItem]) -> some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: NoopMetrics.rowSpacing) {
-                Text(title).strandOverline()
+                Text(title).whoopReferenceOverline()
                 ForEach(items, id: \.key) { item in
                     readinessRow(item)
                 }
@@ -1332,7 +1332,7 @@ private struct VitalitySection: View {
                 // Charge world, filled to the score, with the number counting up over it (Today's
                 // HeroScoreCell idiom). Taps splash the gauge; the number is hit-transparent.
                 VStack(alignment: .leading, spacing: NoopMetrics.space1) {
-                    Text("Vitality").strandOverline()
+                    Text("Vitality").whoopReferenceOverline()
                     ZStack {
                         LiquidVessel(value: max(0, min(1, v / 100)), tint: StrandPalette.chargeColor, animated: true)
                             .frame(width: 108, height: 108)
@@ -1349,7 +1349,7 @@ private struct VitalitySection: View {
                 }
                 Spacer(minLength: 0)
                 VStack(alignment: .trailing, spacing: NoopMetrics.space1) {
-                    Text("Body Age").strandOverline()
+                    Text("Body Age").whoopReferenceOverline()
                     CountUpText(value: ba,
                                 format: { "\(Int($0.rounded()))" },
                                 font: StrandFont.number(34),
@@ -1491,7 +1491,7 @@ private struct LiquidVitalTile: View {
     var body: some View {
         NoopCard(padding: 14, tint: reading.accent) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("\(reading.label)").strandOverline()
+                Text("\(reading.label)").whoopReferenceOverline()
                 Spacer(minLength: 8)
                 HStack(alignment: .center, spacing: 10) {
                     // The signature liquid gauge — static (posed) so a grid of them doesn't each run a live
