@@ -1633,9 +1633,7 @@ struct SleepView: View {
                     .font(WhoopReferenceFont.score(26))
                     .foregroundStyle(StrandPalette.textPrimary)
                 Text("HOURS OF SLEEP")
-                    .font(StrandFont.overline)
-                    .tracking(StrandFont.overlineTracking)
-                    .foregroundStyle(StrandPalette.textTertiary)
+                    .whoopReferenceOverline()
                 if let t = stageTypical(nil) {
                     Text("typically \(durationText(t.mean))")
                         .font(StrandFont.footnote)
@@ -1647,9 +1645,7 @@ struct SleepView: View {
                     .font(WhoopReferenceFont.score(26))
                     .foregroundStyle(StrandPalette.sleepREM)
                 Text("RESTORATIVE SLEEP")
-                    .font(StrandFont.overline)
-                    .tracking(StrandFont.overlineTracking)
-                    .foregroundStyle(StrandPalette.textTertiary)
+                    .whoopReferenceOverline()
                 if let t = restorativeTypical() {
                     Text("typically \(durationText(t))")
                         .font(StrandFont.footnote)
