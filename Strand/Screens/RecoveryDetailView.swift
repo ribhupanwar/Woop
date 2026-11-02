@@ -113,6 +113,14 @@ struct RecoveryDetailView: View {
                 vitalCard(title: "Resting HR", value: night.restingHr.map(String.init) ?? "—",
                           unit: "bpm", symbol: "heart")
             }
+            HStack(spacing: 10) {
+                vitalCard(title: "Respiratory rate",
+                          value: night.respRateBpm.map { String(format: "%.1f", $0) } ?? "—",
+                          unit: "breaths/min", symbol: "wind")
+                vitalCard(title: "Skin temp",
+                          value: night.skinTempDevC.map { String(format: "%+.1f", $0) } ?? "—",
+                          unit: "°C vs baseline", symbol: "thermometer.medium")
+            }
             Text("Readings from \(dateLabel(night.day)); values are not carried across nights.")
                 .font(StrandFont.caption)
                 .foregroundStyle(StrandPalette.textTertiary)
