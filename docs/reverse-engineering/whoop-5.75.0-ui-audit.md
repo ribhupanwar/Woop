@@ -239,3 +239,14 @@ Start with the Today root and shared visual primitives, then reuse those primiti
 - `TodayView.swift` contains existing score states, provenance, live-session state, daily steps, HR trace and data-source disclosures. Keep these behaviors when changing presentation.
 - No production UI source was changed in this kickoff pass. No screenshot-based visual comparison or iOS build has been performed in this pass.
 - Analysis migration required: no (planning/documentation only).
+
+
+### First production UI change (2026-11-02)
+
+- Updated `StrandiOS/App/RootTabView.swift` so fresh installs default to the existing `OverviewDashboardView` rather than `LiquidTodayView`.
+- Existing `@AppStorage` selections remain respected; no forced reset or overwrite of a wearer's saved dashboard preference.
+- The Overview screen already binds the existing Recovery/Strain/Sleep values, supports metric drill-downs, and retains the health list/focus cards. This makes the most WHOOP-like existing Home composition the starting default without introducing mock metrics or duplicate stores.
+- All five independent tab NavigationStacks, quick actions, deep links, device sheets, and workout presentation remain untouched.
+- No typography, BLE, protocol, storage, scoring, or metric provenance code changed.
+- Analysis migration required: no (presentation default only).
+- Validation status: source edit committed; repository-required `Tools/local-tests.sh`, simulator screenshots, and IPA build have **not** been run in this environment. Do not treat this commit as a verified build or completed UI conversion.
