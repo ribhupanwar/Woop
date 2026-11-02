@@ -1006,7 +1006,7 @@ private struct FitnessAgeSection: View {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("VO₂max").whoopReferenceOverline()
                             Text(String(format: "%.0f", vo2))
-                                .font(StrandFont.number(30))
+                                .font(WhoopReferenceFont.score(30))
                                 .foregroundStyle(StrandPalette.metricCyan)
                             Text("ml/kg/min")
                                 .font(StrandFont.footnote)
