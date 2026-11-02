@@ -754,7 +754,7 @@ struct OverviewDashboardView: View {
                             .minimumScaleFactor(0.5)
                         if let denominatorCaption {
                             Text(denominatorCaption)
-                                .font(StrandFont.rounded(max(8, Self.ringDiameter * 0.11), weight: .semibold))
+                                .font(WhoopReferenceFont.label(max(8, Self.ringDiameter * 0.11)))
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
                     }
@@ -785,7 +785,7 @@ struct OverviewDashboardView: View {
             }
             if let word {
                 Text(word)
-                    .font(StrandFont.footnote.weight(.semibold))
+                    .font(WhoopReferenceFont.label(10))
                     .foregroundStyle(color.legibleText)
                     .padding(.horizontal, 6).padding(.vertical, 1.5)
                     .background(Capsule().fill(color.opacity(0.16)))
