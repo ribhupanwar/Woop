@@ -21,3 +21,14 @@ public enum WhoopReferenceFont {
         .system(size: size, weight: .regular, design: .default)
     }
 }
+
+
+/// Compact WHOOP-reference section label, scoped to screens being ported.
+public extension Text {
+    func whoopReferenceOverline() -> some View {
+        self.font(WhoopReferenceFont.label())
+            .tracking(1.1)
+            .textCase(.uppercase)
+            .foregroundStyle(StrandPalette.textSecondary)
+    }
+}
