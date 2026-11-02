@@ -93,3 +93,17 @@ The follow-up source trace located the generic detail implementation inside `Str
 **Implementation sequence:** (1) add a dedicated Recovery route/view while keeping the existing generic dossier available for other metrics; (2) resolve the selected score with the same `ChargeDisplay` rules used by the dashboard; (3) join supporting vitals on the exact scored day, with explicit unavailable/carry provenance states; (4) use `exploreSeries` for chart history and `resolvedSeries` only for source attribution; (5) add tests for scored, carried, calibrating, no-data, and missing-vital combinations. Exact visual geometry still needs a WHOOP Recovery detail screenshot; do not claim pixel parity without that reference.
 
 This commit records the verified code paths and safe implementation contract only. It does not change app source, BLE, scoring, persistence, or sensor behavior, and no Xcode build/device test was run.
+
+
+## Recovery data join contract — 2026-11-02
+
+The underlying row model was verified in `Packages/WhoopStore/Sources/WhoopStore/MetricsCache.swift`:
+
+- `DailyMetric` carries `day`, `recovery`, `avgHrv`, `restingHr`, `respRateBpm`, `spo2Pct`, `skinTempDevC`, `skinTempC`, and the sleep/activity fields as nullable values. These are real daily observations, not presentation placeholders.
+- The model documents its `days` ordering as oldest-to-newest. Date matching for a Recovery detail can therefore use the selected scored row's `day` and must not substitute the latest vital row when that exact day is missing.
+- The generic detail's history/provenance split is confirmed in `Strand/Screens/MetricExplorerView.swift`: values come from `repo.exploreSeries`, while `repo.resolvedSeries` supplies per-day source attribution. The generic screen currently renders the 0–100 score as a `LiquidVessel` and uses its generic chart/statistics stack.
+- `RecoveryRing` is a reusable large gauge, but it includes Woop branding layers and is not currently called by `MetricDetailView`. Reuse must be deliberate; do not mistake its existing preview for a production Recovery detail.
+
+**Next UI implementation boundary:** add the dedicated Recovery route/view without changing `RecoveryScorer`, `ChargeDisplay`, BLE, or persistence. The view must keep the four truthful score states (scored, carried with date caption, calibrating, no data), align HRV/RHR to the selected score day, and show missing values as missing. Continue using the generic metric detail for all non-Recovery metrics. Until a WHOOP Recovery screenshot is available, match the established Woop design language and label the result as a structural implementation—not pixel-verified parity.
+
+This additional audit is documentation-only; no app source or runtime behavior changed, and no Xcode build/device test was run.
