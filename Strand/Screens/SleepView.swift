@@ -1083,7 +1083,7 @@ struct SleepView: View {
         NoopCard(tint: StrandPalette.restColor) {
             VStack(alignment: .leading, spacing: NoopMetrics.space3) {
                 VStack(alignment: .leading, spacing: NoopMetrics.spaceHalf) {
-                    Text("Stage breakdown").strandOverline()
+                    Text("Stage breakdown").whoopReferenceOverline()
                     Text(subtitle)
                         .font(StrandFont.footnote)
                         .foregroundStyle(StrandPalette.textTertiary)
@@ -1149,7 +1149,7 @@ struct SleepView: View {
             // compare between nights. The strap calibrates no absolute magnitude, so naming the scale
             // is the honest axis label rather than a number. Twin of the Kotlin `MotionStrip` label.
             Text("Move, relative to tonight")
-                .font(StrandFont.footnote)
+                .font(WhoopReferenceFont.body(12))
                 .foregroundStyle(StrandPalette.textTertiary)
             if night.motionEpochs.count >= 2 {
                 MotionTrace(epochs: night.motionEpochs, height: 40, tint: StrandPalette.restColor)
@@ -1532,19 +1532,19 @@ struct SleepView: View {
                 .frame(width: 12, height: 12)
                 .accessibilityHidden(true)
             Text(stage.label.uppercased())
-                .font(StrandFont.overline)
-                .tracking(StrandFont.overlineTracking)
+                .font(WhoopReferenceFont.label(11))
+                .tracking(1.1)
                 .foregroundStyle(StrandPalette.textPrimary)
                 .frame(width: 56, alignment: .leading)
             Text("\(percent)%")
-                .font(StrandFont.captionNumber)
+                .font(WhoopReferenceFont.metric(12))
                 .foregroundStyle(color)
                 .frame(width: 38, alignment: .leading)
             // The NOOP signature: a segmented PipBar that counts up to the share-of-night fraction,
             // tinted in the stage colour over the canonical inset track. Flat, crisp, no glow.
             PipBar(value: fraction * 100, segments: 20, tint: color, height: 8)
             Text(durationText(minutes))
-                .font(StrandFont.captionNumber)
+                .font(WhoopReferenceFont.metric(12))
                 .foregroundStyle(StrandPalette.textPrimary)
                 .frame(width: 60, alignment: .trailing)
         }
