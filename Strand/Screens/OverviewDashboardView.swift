@@ -850,7 +850,7 @@ struct OverviewDashboardView: View {
 
     private var importantRow: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            Text("Today's focus").strandOverline()
+            Text("Today's focus").whoopReferenceOverline()
             HStack(alignment: .top, spacing: 10) {
                 ForEach(focusItems) { focusMiniCard($0) }
             }
@@ -868,7 +868,7 @@ struct OverviewDashboardView: View {
                                                    appleDay: appleDays.last(where: { $0.day == selectedDayKey }))) {
                 miniCard(icon: item.icon, tint: item.tint, title: LocalizedStringKey(item.title)) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(healthValueText(card)).font(StrandFont.number(16)).foregroundStyle(StrandPalette.textPrimary)
+                        Text(healthValueText(card)).font(WhoopReferenceFont.metric(16)).foregroundStyle(StrandPalette.textPrimary)
                         Text(card.unit).font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                         Spacer(minLength: 0)
                     }
@@ -900,7 +900,7 @@ struct OverviewDashboardView: View {
         return miniCard(icon: "figure.walk", tint: StrandPalette.chargeColor, title: "Activity") {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text(steps.map { "\($0)" } ?? "—").font(StrandFont.number(16)).foregroundStyle(StrandPalette.textPrimary)
+                    Text(steps.map { "\($0)" } ?? "—").font(WhoopReferenceFont.metric(16)).foregroundStyle(StrandPalette.textPrimary)
                     // An estimated day says so. A WHOOP 4.0 sends no step counter, so the on-device
                     // estimate is the only figure available — but it must never be read as a count.
                     if reading?.isEstimated == true {
@@ -945,7 +945,7 @@ struct OverviewDashboardView: View {
         NavigationLink(value: TabRoute.sleep) { miniCard(icon: "moon.stars.fill", tint: StrandPalette.restColor, title: "Sleep insight") {
             VStack(alignment: .leading, spacing: 5) {
                 Text(restScore.map { "\(Int($0.rounded()))%" } ?? "—")
-                    .font(StrandFont.number(16)).foregroundStyle(StrandPalette.textPrimary)
+                    .font(WhoopReferenceFont.metric(16)).foregroundStyle(StrandPalette.textPrimary)
                 Text("Sleep quality").font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                 Text(restScore.map { $0 >= 70 ? String(localized: "Well rested") : String(localized: "Under-slept") } ?? "—")
                     .font(StrandFont.footnote.weight(.semibold)).foregroundStyle(StrandPalette.restColor)
