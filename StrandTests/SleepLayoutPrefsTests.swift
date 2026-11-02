@@ -30,7 +30,7 @@ final class SleepLayoutPrefsTests: XCTestCase {
         let decoded = SleepLayoutPrefs.decodeOrder("asleepDuration,sleepMarks")
         XCTAssertEqual(decoded.count, SleepSection.allCases.count)
         XCTAssertEqual(decoded, [
-            .stages, .bodyClock, .nightDetail, .sleepDebt, .stagesVsTypical, .asleepDuration, .sleepMarks,
+            .sleepDebt, .stages, .bodyClock, .nightDetail, .stagesVsTypical, .asleepDuration, .sleepMarks,
         ])
     }
 
