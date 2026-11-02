@@ -412,15 +412,15 @@ private struct HeartRateSection: View {
                     if let hr = displayHR {
                         CountUpText(value: Double(hr),
                                     format: { "\(Int($0.rounded()))" },
-                                    font: StrandFont.display(72),
+                                    font: WhoopReferenceFont.score(64),
                                     color: hasLiveHR ? StrandPalette.hrZoneColor(zone) : StrandPalette.textTertiary)
                             .tracking(StrandFont.displayTracking(72))
                     } else {
                         Text("—")
-                            .font(StrandFont.display(72))
+                            .font(WhoopReferenceFont.score(64))
                             .foregroundStyle(StrandPalette.textTertiary)
                     }
-                    Text("bpm").font(StrandFont.subhead).foregroundStyle(StrandPalette.textTertiary)
+                    Text("bpm").font(WhoopReferenceFont.label(12)).foregroundStyle(StrandPalette.textTertiary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -737,7 +737,7 @@ private struct ContributorBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             Text(label)
-                .font(StrandFont.subhead.weight(.medium))
+                .font(WhoopReferenceFont.label(12))
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(alignment: .center, spacing: NoopMetrics.space3) {
                 Canvas { context, size in
@@ -763,12 +763,12 @@ private struct ContributorBar: View {
                 .frame(height: 20)
                 VStack(alignment: .trailing, spacing: 0) {
                     Text(detail)
-                        .font(StrandFont.number(20).monospacedDigit())
+                        .font(WhoopReferenceFont.metric(18).monospacedDigit())
                         .foregroundStyle(StrandPalette.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(word)
-                        .font(StrandFont.caption)
+                        .font(WhoopReferenceFont.body(11))
                         .foregroundStyle(strength == nil ? StrandPalette.textTertiary : tint.legibleText)
                 }
                 // A fixed column keeps every bar the same length whatever the reading's width.
@@ -1503,12 +1503,12 @@ private struct LiquidVitalTile: View {
                         // the classic tile did (the reading's own formatter + unit), so it's byte-identical.
                         CountUpText(value: value,
                                     format: { "\(reading.format($0)) \(reading.unit)" },
-                                    font: StrandFont.number(24),
+                                    font: WhoopReferenceFont.metric(22),
                                     color: reading.accent)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                     } else {
-                        Text("—").font(StrandFont.number(24)).foregroundStyle(reading.accent)
+                        Text("—").font(WhoopReferenceFont.metric(22)).foregroundStyle(reading.accent)
                     }
                     Spacer(minLength: 0)
                 }
@@ -1520,7 +1520,7 @@ private struct LiquidVitalTile: View {
                 }
                 #endif
                 Text(reading.stateCaption)
-                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
+                    .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textTertiary).lineLimit(1)
                     .padding(.top, 4)
             }
         }
