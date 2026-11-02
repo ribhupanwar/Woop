@@ -139,3 +139,5 @@ jobs:
           path: \${{ runner.temp }}/woop-archive.log
           if-no-files-found: ignore
           retention-days: 14
+
+# Build trigger: LongTermGoalReaderTests type-check fix 0e40ebc
