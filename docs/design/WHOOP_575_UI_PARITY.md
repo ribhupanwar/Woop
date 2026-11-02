@@ -78,3 +78,18 @@ A further read-only pass traced the score and supporting-series contracts before
 - Supporting HRV/RHR values must be date-aligned to the score's actual scored night. The repository has a separate recovery-independent overnight-vitals carry; that selector is intentionally not a source for Charge/Effort/Rest. A detail must preserve this separation and label any carried value/provenance rather than silently pairing today's score with an unrelated prior vital.
 
 **Safe implementation boundary:** the existing model contracts support a dedicated Recovery presentation, but the next implementation must first confirm the exact scored-day selection and date alignment for each supporting series. No source/data behavior was changed in this audit. Documentation only; no Xcode build or device test was run.
+
+
+## Recovery detail implementation contract — 2026-11-02
+
+The follow-up source trace located the generic detail implementation inside `Strand/Screens/MetricExplorerView.swift` (it is not a standalone `MetricDetailView.swift` file):
+
+- `MetricDetailView.load()` phase 1 loads the selected metric's values with `Repository.exploreSeries(key:source:)`. It separately loads `Repository.resolvedSeries(key:source:)` to attribute each daily point to the source that supplied it. The two paths are intentionally not interchangeable: the plotted history uses the established Explore series; provenance comes from the resolved points.
+- The generic detail then derives its visible range relative to the latest actual point, and builds its hero/statistics/readings/correlation sections from that metric series. Its 0–100 hero is a generic `LiquidVessel`, not the dedicated Recovery gauge.
+- The WHOOP Recovery overview entry currently resolves the catalog descriptor `recovery / my-whoop` and lands in that generic dossier. The source file containing the generic detail is `Strand/Screens/MetricExplorerView.swift`; navigation remains declared in `Strand/App/TabRoute.swift`.
+- The repository's `DailyMetric` history is oldest-to-newest and has explicit daily columns. `Repository.lastVitalsDay`, `lastHrvDay`, and `lastRestingHrDay` are carry selectors for current vital cards, not valid shortcuts for joining supporting values to an older Recovery score. The detail must select HRV/RHR by the score's own day first and show a missing value when that night has no corresponding reading.
+- The metric catalog's WHOOP-source descriptors are `recovery`, `hrv`, `rhr`, `resp_rate`, `spo2`, and `skin_temp`. Each series must be read through `exploreSeries`; no assumption should be made that every descriptor has a point on the selected score day.
+
+**Implementation sequence:** (1) add a dedicated Recovery route/view while keeping the existing generic dossier available for other metrics; (2) resolve the selected score with the same `ChargeDisplay` rules used by the dashboard; (3) join supporting vitals on the exact scored day, with explicit unavailable/carry provenance states; (4) use `exploreSeries` for chart history and `resolvedSeries` only for source attribution; (5) add tests for scored, carried, calibrating, no-data, and missing-vital combinations. Exact visual geometry still needs a WHOOP Recovery detail screenshot; do not claim pixel parity without that reference.
+
+This commit records the verified code paths and safe implementation contract only. It does not change app source, BLE, scoring, persistence, or sensor behavior, and no Xcode build/device test was run.
