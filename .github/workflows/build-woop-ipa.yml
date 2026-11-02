@@ -55,6 +55,7 @@ jobs:
       - name: Run package, macOS, and iOS simulator validation
         run: |
           set -euo pipefail
+          echo "Validating latest feature/whoop-575-ui-parity source before IPA packaging."
           Tools/local-tests.sh origin/main
 
       - name: Generate Xcode project and verify scheme
