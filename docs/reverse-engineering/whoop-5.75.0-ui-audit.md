@@ -265,3 +265,12 @@ Start with the Today root and shared visual primitives, then reuse those primiti
 - Added `StrandTests/TodayDashboardStyleTests.swift` with isolated-UserDefaults tests for: fresh install → Overview; legacy true → Liquid; legacy false → Classic; existing Trends selection preserved; and migration idempotence.
 - These tests are committed but have not been executed here. Required local test script and simulator/IPA build remain outstanding.
 - Analysis migration required: no.
+
+
+### Sleep dashboard hierarchy pass (2026-11-02)
+
+- Corrected the default analytical-card order on iOS and Android: 14-night Sleep balance first, then Stages, Body clock, Night detail, Stages vs typical, Asleep duration, and input-oriented Sleep marks last. Android-only Hours-vs-Needed and Consistency remain after the shared cards.
+- Existing customized order and hidden-section preferences are not rewritten; only an unset/default order changes. No metric calculation, storage schema, BLE, or analysis output changed.
+- Updated Swift and Kotlin regression expectations for missing-card insertion under the new default.
+- Analysis migration required: no.
+- Tests/build not run in this environment; `Tools/local-tests.sh`, Android tests, iOS simulator validation, screenshots, and IPA remain outstanding.
