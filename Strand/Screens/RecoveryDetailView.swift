@@ -66,9 +66,7 @@ struct RecoveryDetailView: View {
                     RecoveryRing(score: score, diameter: 236, lineWidth: 13,
                                  showsWordmark: false, showsHover: false,
                                  valueFormat: { "Recovery \(Int($0.rounded()))" })
-                    Text(display.stateLabel)
-                        .font(StrandFont.headline)
-                        .foregroundStyle(StrandPalette.recoveryColor(score))
+                    // RecoveryRing already renders the score's state word inside its gauge.
                     if let caption = display.carriedCaption {
                         Text(caption)
                             .font(StrandFont.footnote)
