@@ -3357,14 +3357,14 @@ struct TodayView: View {
             // LocalizedStringKey so the vitals labels read from the catalog; `.textCase` uppercases the
             // translated word in the current locale rather than baking an English "HRV"/"RESTING HR" in.
             Text(label)
-                .font(StrandFont.footnote.weight(.semibold))
+                .font(WhoopReferenceFont.label(11))
                 .textCase(.uppercase)
-                .tracking(0.6)
+                .tracking(1.1)
                 .foregroundStyle(StrandPalette.textSecondary)
             Spacer(minLength: 8)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
-                    .font(StrandFont.number(24))
+                    .font(WhoopReferenceFont.metric(24))
                     .foregroundStyle(StrandPalette.textPrimary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Text(unit)
