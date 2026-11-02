@@ -39,4 +39,6 @@ The archive and executable were inspected statically. The extracted report is a 
 
 - Static IPA extraction: complete.
 - Screen-by-screen visual audit: in progress; static extraction does not recover SwiftUI source or all runtime constraints.
-- Woop implementation: not yet ported by this audit commit.
+- Woop implementation: clean-room typography pass is underway on the WHOOP-reference dashboard branch. The dedicated typography roles are applied to Today, Overview, Sleep, Health, Training Load and HRV snapshot labels/selected metrics; Overview ring labels and Sleep hero/stage labels have also been aligned. This is a partial presentation pass, not a complete screen replica.
+- Remaining visual work: Recovery hero/card geometry, full Sleep chart/detail comparison, tab/navigation parity, and screenshot-based device review.
+- Validation still required: run `Tools/local-tests.sh` on the branch and compile/install on macOS/iOS; no IPA is certified by these source-only commits.
