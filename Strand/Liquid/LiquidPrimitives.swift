@@ -423,22 +423,21 @@ struct LiquidVessel: View {
         if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) { gauge } else { staticGauge }
     }
 
-    private var gauge: some View {
-        // 60fps: on the 120Hz ProMotion panel a 30fps cap updated the fluid only every 4th refresh,
-        // which read as juddery slosh. Only the 3 hero gauges + HR thread run live now (the small ones
-        // are static), so the higher rate is affordable and the liquid actually flows.
-        //
-        // ...but only while the liquid is actually MOVING. `LiquidSim.settled` knows when it has stopped,
-        // and nothing consulted it: the clock ran forever and Today idled with several Canvas fluid sims
-        // stepping and redrawing on the main thread. Standing the clock down on settle costs nothing
-        // visually (a settled vessel is a still picture and CoreAnimation holds the last frame), and every
-        // way the picture can start moving again re-arms it: a new value, a tap, a tilt (`LiquidWake`).
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: atRest)) { tl in
-            let now = liquidSeconds(tl.date)
+    @ViewBuilder private var gauge: some View {
+        // A settled vessel has no TimelineView at all. A new value, tap, or tilt
+        // clears atRest and re-enters the live clock branch.
+        if atRest {
             Canvas { context, size in
-                sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: value ?? 0)
-                LiquidRender.vessel(context, size, sim, now: now, tint: tint)
-                standDownIfSettled()
+                LiquidRender.vessel(context, size, LiquidSim.posed(value ?? 0), now: 0, tint: tint)
+            }
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { tl in
+                let now = liquidSeconds(tl.date)
+                Canvas { context, size in
+                    sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: value ?? 0)
+                    LiquidRender.vessel(context, size, sim, now: now, tint: tint)
+                    standDownIfSettled()
+                }
             }
         }
         .aspectRatio(1, contentMode: .fit)
@@ -504,17 +503,26 @@ struct LiquidTube: View {
         if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) { liveTube } else { staticTube }
     }
 
-    private var liveTube: some View {
-        // Stands its clock down on settle, as `LiquidVessel` does. A tube has no tap affordance, so the only
-        // things that can restart it are a new `frac` and a tilt.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: atRest)) { tl in
-            let now = liquidSeconds(tl.date)
+    @ViewBuilder private var liveTube: some View {
+        // A settled tube is rendered once without a timeline. A new fill or tilt
+        // re-enters the live branch through the existing onChange handlers.
+        if atRest {
             Canvas { context, size in
-                sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: frac)
-                LiquidRender.tube(context, size, sim, now: now, frac: max(0, min(1, frac)),
-                                  tint: tint, showsHighlight: showsHighlight,
-                                  usesCleanFill: usesCleanFill, outlined: outlined)
-                if sim.settled, !atRest { Task { @MainActor in atRest = true } }
+                LiquidRender.tube(context, size, LiquidSim.posed(frac), now: 0,
+                                  frac: max(0, min(1, frac)), tint: tint,
+                                  showsHighlight: showsHighlight, usesCleanFill: usesCleanFill,
+                                  outlined: outlined)
+            }
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
+                let now = liquidSeconds(tl.date)
+                Canvas { context, size in
+                    sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: frac)
+                    LiquidRender.tube(context, size, sim, now: now, frac: max(0, min(1, frac)),
+                                      tint: tint, showsHighlight: showsHighlight,
+                                      usesCleanFill: usesCleanFill, outlined: outlined)
+                    if sim.settled, !atRest { Task { @MainActor in atRest = true } }
+                }
             }
         }
         .frame(height: height)
