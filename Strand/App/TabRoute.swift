@@ -78,10 +78,11 @@ extension View {
             case .fullDayChart: FullDayChartView()
             case .battery: BatteryDetailView()
             case .metric(let key):
-                // Every caller passes a catalog key, so the fallback is theoretical; Health is the
-                // catch-all vitals surface. (Pre-#198 Trends fell back to the Explorer instead —
-                // unified here rather than carrying two never-taken branches.)
-                if let m = MetricCatalog.all.first(where: { $0.key == key }) {
+                // Recovery has a dedicated score-state-aware detail; other catalog metrics retain
+                // the shared explorer dossier.
+                if key == "recovery" {
+                    RecoveryDetailView()
+                } else if let m = MetricCatalog.all.first(where: { $0.key == key }) {
                     MetricDetailView(metric: m)
                 } else {
                     HealthView()
@@ -91,9 +92,11 @@ extension View {
                     MetricDetailView(metric: metric, effortReadout: readout)
                 }
             case .metricSourced(let key, let source):
-                // Exact (key, source) resolution, order-independent. Fall back to the bare-key entry,
-                // then Health, so a stale route can never dead-end.
-                if let m = MetricCatalog.metric(key: key, source: source)
+                // WHOOP Recovery uses its dedicated score-state-aware detail. Keep other sourced
+                // metrics on the generic explorer, preserving their exact source resolution.
+                if key == "recovery", source == Repository.whoopSource {
+                    RecoveryDetailView()
+                } else if let m = MetricCatalog.metric(key: key, source: source)
                     ?? MetricCatalog.all.first(where: { $0.key == key }) {
                     MetricDetailView(metric: m)
                 } else {
