@@ -666,11 +666,11 @@ struct SleepView: View {
             // Scheme-following text tokens turn black in Light mode, so use the fixed on-dark pair.
             VStack(alignment: .leading, spacing: 2) {
                 Text(nightRelativeLabel)
-                    .font(StrandFont.overline)
-                    .tracking(StrandFont.overlineTracking)
+                    .font(WhoopReferenceFont.label(11))
+                    .tracking(1.1)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
                 Text("Sleep performance")
-                    .font(StrandFont.title2)
+                    .font(WhoopReferenceFont.heading(22))
                     .foregroundStyle(StrandPalette.onDarkPrimary)
             }
             .padding(.horizontal, NoopMetrics.screenHPadding)
@@ -688,7 +688,7 @@ struct SleepView: View {
                                      color: StrandPalette.restColor, diameter: 172, lineWidth: 17.2)
                         }
                         Text(sleepScoreWord(score))
-                            .font(StrandFont.subhead.weight(.semibold))
+                            .font(WhoopReferenceFont.label(12))
                             .foregroundStyle(StrandPalette.restColor)
                     }
                     .padding(.top, NoopMetrics.space1)
@@ -705,7 +705,7 @@ struct SleepView: View {
                             color: StrandPalette.restBright
                         )
                         Text("asleep last night")
-                            .font(StrandFont.subhead)
+                            .font(WhoopReferenceFont.body(13))
                             .foregroundStyle(StrandPalette.textSecondary)
                     }
                     .padding(.vertical, NoopMetrics.space5)
