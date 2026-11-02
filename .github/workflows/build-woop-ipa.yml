@@ -143,3 +143,5 @@ jobs:
 # Build trigger: LongTermGoalReaderTests type-check fix 0e40ebc
 
 # Build trigger: SleepLayoutPrefs expected default order fix 0629183
+
+# Build trigger: Apple-only validation gate excludes upstream Android SDK build 7cff542
