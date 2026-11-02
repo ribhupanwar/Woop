@@ -164,3 +164,17 @@ The previously generated DSTA Actions artifact was recovered and inspected direc
 **Code change from this re-inspection:** `Strand/Screens/RecoveryDetailView.swift` now shows the four WHOOP-aligned contributors (HRV, Resting HR, Respiratory Rate, Sleep Performance) with all values aligned to the selected scored-night date. Recovery scoring, BLE, persistence and sensor decoding are unchanged.
 
 **Remaining validation:** run `Tools/local-tests.sh`, compile the iOS target on macOS, then install and capture a device screenshot for visual QA. The extracted metadata alone cannot certify pixel parity or an IPA.
+
+
+## Current source re-verification — 2026-11-02
+
+The earlier Recovery navigation audit above describes the route state at the time of that audit and is now superseded by the current branch source:
+
+- `Strand/App/TabRoute.swift` now sends both `.metric("recovery")` and the WHOOP-sourced `.metricSourced(key: "recovery", source: Repository.whoopSource)` route to `RecoveryDetailView()`.
+- Other sourced metrics continue to use `MetricDetailView`, preserving their exact catalog-source resolution.
+- `RecoveryDetailView.load()` resolves the score through `ChargeDisplay.resolve`, chooses the matching scored night for contributors, and keeps the recent recorded recovery history separate from the hero state.
+- The current route source therefore confirms that the dedicated Recovery view is wired into the route switch. It does not establish that every entry point is registered correctly in every navigation shell, nor does it establish pixel-level parity.
+- The repository has analytics and dashboard recovery tests, but no dedicated `RecoveryDetailView` UI test file was found in the current branch tree. Route/state UI coverage remains a follow-up.
+- This source audit was performed through GitHub's text/API view; the reference ZIP was not unpacked or visually inspected in this pass. No Xcode build, simulator run, install, or device QA was performed.
+
+The remaining evidence-based work is to add focused route/state coverage, run `Tools/local-tests.sh` in a supported macOS environment, then compare actual iPhone screenshots for Home, Recovery and Sleep against the extracted reference. Do not label the UI pixel-complete until those checks pass.
