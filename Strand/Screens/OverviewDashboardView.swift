@@ -944,6 +944,13 @@ struct OverviewDashboardView: View {
         .frame(height: 5)
     }
 
+    private var sleepInsightStatus: String {
+        guard let score = restScore else { return String(localized: "Sleep score not available yet.") }
+        return score >= 70
+            ? String(localized: "Recovery from sleep is on track.")
+            : String(localized: "More sleep may support recovery.")
+    }
+
     private var sleepInsightMiniCard: some View {
         NavigationLink(value: TabRoute.sleep) { miniCard(icon: "moon.stars.fill", tint: StrandPalette.restColor, title: "Sleep insight") {
             VStack(alignment: .leading, spacing: 5) {
@@ -951,8 +958,10 @@ struct OverviewDashboardView: View {
                     .font(WhoopReferenceFont.metric(16)).foregroundStyle(StrandPalette.textPrimary)
                 Text("Sleep quality").font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                 Text(restScore.map { $0 >= 70 ? String(localized: "Well rested") : String(localized: "Under-slept") } ?? "—")
-                    .font(StrandFont.footnote.weight(.semibold)).foregroundStyle(StrandPalette.restColor)
-                Text("On track for today.").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                    .font(WhoopReferenceFont.label(11)).foregroundStyle(StrandPalette.restColor)
+                Text(sleepInsightStatus)
+                    .font(WhoopReferenceFont.body(11))
+                    .foregroundStyle(StrandPalette.textTertiary)
             }
         } }.buttonStyle(.plain)
     }
