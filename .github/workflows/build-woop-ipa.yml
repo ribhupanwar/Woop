@@ -140,6 +140,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+# Build trigger: local-tests generated Info.plist cleanup 9c254fe
 # Build trigger: LongTermGoalReaderTests type-check fix 0e40ebc
 
 # Build trigger: SleepLayoutPrefs expected default order fix 0629183
