@@ -799,7 +799,7 @@ struct OverviewDashboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private static let ringDiameter: CGFloat = 74
+    private static let ringDiameter: CGFloat = 80
 
     /// The Recovery ring's detail line, keyed on what the ring DRAWS. A carried night spends the line on
     /// its provenance ("Last night · 2 Sep") instead of a training verdict: this ring has no room for both,
