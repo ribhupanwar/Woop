@@ -250,3 +250,11 @@ Start with the Today root and shared visual primitives, then reuse those primiti
 - No typography, BLE, protocol, storage, scoring, or metric provenance code changed.
 - Analysis migration required: no (presentation default only).
 - Validation status: source edit committed; repository-required `Tools/local-tests.sh`, simulator screenshots, and IPA build have **not** been run in this environment. Do not treat this commit as a verified build or completed UI conversion.
+
+
+### Fresh-install migration correction (2026-11-02)
+
+- Follow-up inspection found `TodayDashboardStyle.migrateLegacyBoolIfNeeded()` eagerly writes a value before `RootTabView` reads its `@AppStorage`. Its old missing-key fallback was Liquid, which would have silently overridden the new Overview default on a genuinely fresh install.
+- Corrected the migration: an explicit legacy boolean still maps to the user's prior Liquid/Classic choice; when no legacy key exists, the new style key is initialized to Overview. An already-saved four-way style remains untouched.
+- This is a presentation-preference migration only. Analysis migration required: no.
+- Validation remains pending: no macOS/Xcode runner was available here, so `Tools/local-tests.sh` and the iOS simulator build have not been executed.
