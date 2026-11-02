@@ -2174,7 +2174,7 @@ struct TodayView: View {
                     }
                     Spacer(minLength: NoopMetrics.space2)
                     Text("BETA")
-                        .strandOverline()
+                        .whoopReferenceOverline()
                     Image(systemName: "chevron.right")
                         .font(StrandFont.caption.weight(.semibold))
                         .foregroundStyle(StrandPalette.textTertiary)
@@ -2716,7 +2716,7 @@ struct TodayView: View {
                 // Section header: the "Your cards" label + a right-aligned BLUE "CUSTOMISE" action link (the
                 // WHOOP "My Dashboard" ✎ affordance). Opens a local sheet, no new nav destination.
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Your cards").strandOverline()
+                    Text("Your cards").whoopReferenceOverline()
                     Spacer(minLength: 8)
                     Button {
                         customizationDestination = .yourCards
@@ -2773,7 +2773,7 @@ struct TodayView: View {
             // a second drawing of the same day.
             NoopCard(tint: StressRamp.calm) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Stress through the day").strandOverline()
+                    Text("Stress through the day").whoopReferenceOverline()
                     if hostedStressHours.contains(where: { $0.level != nil }) {
                         DaytimeLoadLine(hours: hostedStressHours)
                     } else {
@@ -4409,7 +4409,7 @@ struct TodayView: View {
                             withAnimation(StrandMotion.interactive) { sourcesExpanded = false }
                         } label: {
                             HStack {
-                                Text("Synced from").strandOverline()
+                                Text("Synced from").whoopReferenceOverline()
                                 Spacer()
                                 Image(systemName: "chevron.up")
                                     .font(.system(size: 11, weight: .bold))
