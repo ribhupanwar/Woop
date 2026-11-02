@@ -110,7 +110,7 @@ struct RecoveryDetailView: View {
     @ViewBuilder
     private func vitalSection(_ night: DailyMetric) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Overnight metrics")
+            Text("Recovery contributors")
                 .font(WhoopReferenceFont.heading(17))
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(spacing: 10) {
