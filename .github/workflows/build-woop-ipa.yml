@@ -5,7 +5,15 @@ on:
     branches: [main, feature/whoop-575-ui-parity]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
-      - "Packages/StrandDesign/Sources/StrandDesign/WhoopReferenceTypography.swift"
+      - "Strand/**"
+      - "StrandTests/**"
+      - "StrandiOS/**"
+      - "StrandiOSShared/**"
+      - "StrandiOSWidgets/**"
+      - "StrandiOSTests/**"
+      - "Packages/StrandDesign/**"
+      - "project.yml"
+      - "Tools/local-tests.sh"
   workflow_dispatch:
 
 permissions:
@@ -43,6 +51,11 @@ jobs:
         run: |
           chmod +x Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh
+
+      - name: Run package, macOS, and iOS simulator validation
+        run: |
+          set -euo pipefail
+          Tools/local-tests.sh origin/main
 
       - name: Generate Xcode project and verify scheme
         run: |
