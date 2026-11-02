@@ -140,3 +140,9 @@ The first app-source implementation is now present on the parity branch:
 The dedicated Recovery screen now presents HRV, resting HR, respiratory rate and skin-temperature deviation from the exact scored-night row. Missing fields remain dashes; none are carried from another night. The new text uses the clean-room `WhoopReferenceFont` roles already used by the parity pass. No scorer, BLE decoder, or data persistence code changed.
 
 **Validation remains pending:** the branch's `Tools/local-tests.sh` requires macOS, XcodeGen and Xcode for the app leg. No Xcode build, simulator/device screenshot, or IPA was produced in this session.
+
+### Sleep typography follow-up — 2026-11-02
+- The Sleep-performance hero heading now uses the compact reference heading role; the night navigator title and duration chip use the reference heading/label roles as well.
+- This is a typography-only presentation adjustment. The sleep score, sleep-night selection, chart-style preference, hypnogram intervals, stage totals, motion trace, and sleep persistence are unchanged.
+- Navigation review confirms the current iPhone shell has five native tabs (Today, Trends, Training, Sleep, More), each with its own bound navigation stack. Without a matching WHOOP 5.75 screenshot, changing tab order or iconography would be speculative, so those remain unchanged pending visual QA.
+- Validation remains source review only: no Xcode build, simulator run, or device screenshot was available in this environment.
