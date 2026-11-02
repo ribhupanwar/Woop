@@ -212,3 +212,30 @@ This is a reverse-engineering evidence update only. No app source, BLE behavior,
 ### Additional localized evidence about step provenance
 
 The English 5.75.0 localized resources include HealthKit settings copy explicitly describing Apple Health connection as importing metrics “from Sleep to Steps”, plus `RockyWidget.title` = “Today’s Step Count”. This makes Apple Health ingestion a concrete original-app data-source candidate, alongside the strap/offload and server-derived possibilities. It still does not prove which source supplies the primary in-app daily step total or how duplicates are reconciled. The exact precedence must be established by controlled source toggles and paired observations; never merge HealthKit and strap totals blindly.
+
+
+## UI conversion execution plan (2026-11-02)
+
+The production Woop screens were re-opened for implementation planning. This section is deliberately a screen-role mapping, not a claim that the UI port is finished.
+
+| WHOOP 5.75.0 surface / role | Existing Woop implementation to adapt | Conversion boundary |
+|---|---|---|
+| Home / daily overview | `Strand/Screens/TodayView.swift`, `LiquidTodayView.swift`, `OverviewDashboardView.swift` | Match hierarchy, pillar entry points, daily summary and activity entry; retain current day selection, refresh and data states |
+| Recovery pillar | Today hero / charge breakdown and `HealthView.swift` | Present recovery score, state, contributors and history using existing `RecoveryScorer` outputs; no new scoring math |
+| Sleep pillar | `Strand/Screens/SleepView.swift` and sleep presentation/model components | Rework header, sleep performance, stages, need/debt and trend navigation; retain existing sleep model and provenance |
+| Strain pillar | `Strand/Screens/TrainingLoadView.swift`, activity strain components and live workout screens | Rework strain gauge, target and activity details; preserve effort scale and workout session state |
+| Health / vitals | `Strand/Screens/HealthView.swift`, `HRVSnapshotView.swift`, `SkinTempCardsView.swift` | Group HR, HRV, RHR, respiratory, SpO2 and temperature with honest empty/calibration states |
+| Trends / history | `Strand/Screens/TrendsDashboardView.swift`, `TrendsView.swift` | Align chart hierarchy, date ranges and metric drill-downs; preserve current series and source labels |
+| Activity / device / more | Existing workout, device and settings routes under `Strand/Screens/` and `RootTabView.swift` | Match navigation roles and interaction states; no BLE manager or command changes |
+
+### First implementation slice
+
+Start with the Today root and shared visual primitives, then reuse those primitives on Recovery, Sleep, Strain and Health. Keep all metric values bound to existing repository/view-model outputs. Avoid introducing parallel demo values, mock production state, or a second navigation stack. Preserve `StrandDesign/Typography.swift` and existing font tokens.
+
+### Verified starting point and current status
+
+- Production iOS shell already routes five independent tab stacks and supports four Today layouts (Classic, Liquid, Trends, Overview). The selected layout is persisted under `TodayDashboardStyle.storageKey`; do not replace the shell to imitate WHOOP's tab bar.
+- `OverviewDashboardView.swift` already describes itself as a reference-matched compact overview and renders Recovery/Strain/Sleep rings, focus cards and health list. It is a useful starting point, not proof of parity with WHOOP 5.75.0.
+- `TodayView.swift` contains existing score states, provenance, live-session state, daily steps, HR trace and data-source disclosures. Keep these behaviors when changing presentation.
+- No production UI source was changed in this kickoff pass. No screenshot-based visual comparison or iOS build has been performed in this pass.
+- Analysis migration required: no (planning/documentation only).
