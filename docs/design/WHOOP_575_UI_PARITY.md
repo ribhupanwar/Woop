@@ -247,3 +247,27 @@ A scoped presentation-only typography pass was applied to `Strand/Screens/Health
 - Static source verification confirms the edited call sites are present and the targeted legacy font calls are absent.
 
 This is a typography consistency pass, not a verified visual match. No Health calculations, live-HR sampling, BLE, persistence, or routing changed. Xcode compilation, simulator/device review and screenshot comparison remain unrun.
+
+## WHOOP 5.75.0 extracted UI reference — artifact review (2026-11-02)
+
+The previously generated GitHub Actions artifact is now retrieved and inspected directly:
+
+- Workflow run: [Inspect WHOOP 5.75.0 IPA UI reference](https://github.com/ribhupanwar/dsta/actions/runs/41341431589), run #2.
+- Artifact: `whoop-5.75.0-ipa-ui-reference` (artifact ID `13098150114`; 7.19 MB compressed; SHA-256 `696e1b2896fa4c1fe2dee38c21c74c5df0fa8a250fdbf630500275308f140937`).
+- The extraction README identifies the pinned `pulseforge.ipa` release asset as the WHOOP 5.75.0 iOS reference. The archive itself was not included in this small report artifact; the report contains static resource, string, symbol and metadata inventories.
+- The report exposes compiled view/model names including `HomeMyDashboardView`, `HomeView`, `OverviewGauge`, `RecoveryDetails`, `SleepPerformance`, `StrainCoachView`, `HealthMonitorView`, `HealthMonitorGridView` and `HealthMonitorMetricView`. These are metadata identifiers, not recovered SwiftUI source.
+
+### Additional reference details confirmed by the extraction
+
+- Home onboarding copy says the Home surface contains daily metrics, activities and weekly trends, and that swiping exposes the Sleep, Recovery and Strain pillars. The Home action button provides activity, journal and workout-library entry points.
+- The overview gauge vocabulary is Recovery, Sleep, Strain and HRV. Empty values are represented as `--` / `--%` and “Not Available”; a missing value must not be rendered as zero.
+- Dashboard customization uses “Customize Overview”, “Add to Focus Metrics”, a Stats section, Select and Save actions.
+- Health Monitor metadata includes a grid/metric-view component family. The extracted metric vocabulary is HRV, RHR, Respiratory Rate, Blood Oxygen (SpO2) and Skin Temperature. The reading-state vocabulary distinguishes no data, calibrating/recalibrating, within/near range, elevated/very elevated and low/very low. The screen also has explicit sleep-data-required and WHOOP 4.0-required states.
+- Sleep strings confirm “Sleep Performance”, “Hours of Sleep”, “Sleep Needed”, share action and a dedicated Sleep Needed explanation covering baseline, recent strain, sleep debt and naps.
+- Strain Coach strings confirm “Strain Target”, “Training State”, “Activity Strain”, “Current Day Strain”, “Estimated Day Strain”, “Optimal Training”, restorative/optimal/overreaching states and explicit recovery-required / set-goal empty states.
+- Main-tab localization contains Home, Health, Coaching, Community, More, Plan, Profile and Shop labels. This is a vocabulary inventory only; it does not establish which tabs are enabled in every account or exact tab order.
+
+### Clean-room implementation applied from this evidence
+
+- `HealthView` now places the existing five-metric strap-vitals grid immediately after the live-HR hero. Woop-only interpretation layers (Fitness Age, Vitality/Body Age, optional rhythm and Recovery contributor analysis) follow the core metric grid. This uses the extracted Health Monitor grid/metric hierarchy without copying proprietary code or assets and does not alter any data, scoring, BLE or persistence logic.
+- The report artifact contains no runtime screenshots and no original SwiftUI view source. It supports information architecture and state/copy vocabulary, but cannot prove exact pixel geometry, animation, or tab order. Device screenshot comparison and an iOS build remain outstanding.
