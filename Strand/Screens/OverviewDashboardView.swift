@@ -740,7 +740,10 @@ struct OverviewDashboardView: View {
                               dimmed: Bool = false,
                               emptyTitle: String? = nil, emptySubtitle: String? = nil) -> some View {
         VStack(spacing: 6) {
-            Text(label).font(WhoopReferenceFont.label(11)).foregroundStyle(color.legibleText)
+            Text(label)
+                .font(WhoopReferenceFont.label(11))
+                .textCase(.uppercase)
+                .foregroundStyle(color.legibleText)
             if let value {
                 ZStack {
                     GlowRing(fraction: value / 100, value: value, format: { _ in "" },
