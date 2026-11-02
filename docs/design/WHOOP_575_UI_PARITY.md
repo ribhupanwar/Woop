@@ -107,3 +107,15 @@ The underlying row model was verified in `Packages/WhoopStore/Sources/WhoopStore
 **Next UI implementation boundary:** add the dedicated Recovery route/view without changing `RecoveryScorer`, `ChargeDisplay`, BLE, or persistence. The view must keep the four truthful score states (scored, carried with date caption, calibrating, no data), align HRV/RHR to the selected score day, and show missing values as missing. Continue using the generic metric detail for all non-Recovery metrics. Until a WHOOP Recovery screenshot is available, match the established Woop design language and label the result as a structural implementation—not pixel-verified parity.
 
 This additional audit is documentation-only; no app source or runtime behavior changed, and no Xcode build/device test was run.
+
+## Recovery detail implementation — 2026-11-02
+
+The first app-source implementation is now present on the parity branch:
+
+- Added `Strand/Screens/RecoveryDetailView.swift` and routed both bare Recovery metric routes and the WHOOP-sourced Recovery route to it. The generic metric dossier remains the destination for other metrics.
+- The hero uses `ChargeDisplay.resolve`, preserving scored, carried, calibrating and no-data states. A carried score retains its existing provenance caption; no empty state is represented as zero.
+- HRV and resting HR are displayed only from the exact `DailyMetric` row selected as the scored night. The UI explicitly says the readings are not carried across nights.
+- Added a compact recent-history view from recorded `DailyMetric.recovery` values only. The WHOOP source data path and score engine are unchanged.
+- The new file is included by the iOS XcodeGen target's existing `Strand` source directory, so no project-file registration was needed.
+
+**Validation status:** source and route were reviewed against the existing resolver/model APIs, but this environment has not run `Tools/local-tests.sh`, Xcode compilation, simulator, or device screenshot QA. This is an implementation milestone, not a completed WHOOP visual replica or verified IPA. Exact Recovery screen geometry still needs a trusted reference screenshot for pixel-level comparison.
