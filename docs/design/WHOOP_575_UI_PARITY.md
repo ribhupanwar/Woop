@@ -271,5 +271,6 @@ The previously generated GitHub Actions artifact is now retrieved and inspected 
 ### Clean-room implementation applied from this evidence
 
 - `SleepView` now uses the extracted two-line uppercase `SLEEP\nPERFORMANCE` hero title.
+- The three Overview pillar-ring labels (Recovery, Strain, Sleep) now use the same uppercase reference-label treatment; the existing "Today at a glance" overline was already uppercase and was left unchanged.
 - `HealthView` now places the existing five-metric strap-vitals grid immediately after the live-HR hero. Woop-only interpretation layers (Fitness Age, Vitality/Body Age, optional rhythm and Recovery contributor analysis) follow the core metric grid. This uses the extracted Health Monitor grid/metric hierarchy without copying proprietary code or assets and does not alter any data, scoring, BLE or persistence logic.
 - The report artifact contains no runtime screenshots and no original SwiftUI view source. It supports information architecture and state/copy vocabulary, but cannot prove exact pixel geometry, animation, or tab order. Device screenshot comparison and an iOS build remain outstanding.
