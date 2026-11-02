@@ -426,17 +426,19 @@ struct LiquidVessel: View {
     @ViewBuilder private var gauge: some View {
         // A settled vessel has no TimelineView at all. A new value, tap, or tilt
         // clears atRest and re-enters the live clock branch.
-        if atRest {
-            Canvas { context, size in
-                LiquidRender.vessel(context, size, LiquidSim.posed(value ?? 0), now: 0, tint: tint)
-            }
-        } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { tl in
-                let now = liquidSeconds(tl.date)
+        Group {
+            if atRest {
                 Canvas { context, size in
-                    sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: value ?? 0)
-                    LiquidRender.vessel(context, size, sim, now: now, tint: tint)
-                    standDownIfSettled()
+                    LiquidRender.vessel(context, size, LiquidSim.posed(value ?? 0), now: 0, tint: tint)
+                }
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { tl in
+                    let now = liquidSeconds(tl.date)
+                    Canvas { context, size in
+                        sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: value ?? 0)
+                        LiquidRender.vessel(context, size, sim, now: now, tint: tint)
+                        standDownIfSettled()
+                    }
                 }
             }
         }
@@ -506,22 +508,24 @@ struct LiquidTube: View {
     @ViewBuilder private var liveTube: some View {
         // A settled tube is rendered once without a timeline. A new fill or tilt
         // re-enters the live branch through the existing onChange handlers.
-        if atRest {
-            Canvas { context, size in
-                LiquidRender.tube(context, size, LiquidSim.posed(frac), now: 0,
-                                  frac: max(0, min(1, frac)), tint: tint,
-                                  showsHighlight: showsHighlight, usesCleanFill: usesCleanFill,
-                                  outlined: outlined)
-            }
-        } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
-                let now = liquidSeconds(tl.date)
+        Group {
+            if atRest {
                 Canvas { context, size in
-                    sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: frac)
-                    LiquidRender.tube(context, size, sim, now: now, frac: max(0, min(1, frac)),
-                                      tint: tint, showsHighlight: showsHighlight,
-                                      usesCleanFill: usesCleanFill, outlined: outlined)
-                    if sim.settled, !atRest { Task { @MainActor in atRest = true } }
+                    LiquidRender.tube(context, size, LiquidSim.posed(frac), now: 0,
+                                      frac: max(0, min(1, frac)), tint: tint,
+                                      showsHighlight: showsHighlight, usesCleanFill: usesCleanFill,
+                                      outlined: outlined)
+                }
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
+                    let now = liquidSeconds(tl.date)
+                    Canvas { context, size in
+                        sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: frac)
+                        LiquidRender.tube(context, size, sim, now: now, frac: max(0, min(1, frac)),
+                                          tint: tint, showsHighlight: showsHighlight,
+                                          usesCleanFill: usesCleanFill, outlined: outlined)
+                        if sim.settled, !atRest { Task { @MainActor in atRest = true } }
+                    }
                 }
             }
         }
