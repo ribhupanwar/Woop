@@ -105,22 +105,25 @@ private struct HealthSectionsStack: View {
             // so the ~1Hz HR stream re-renders only this subtree — the static
             // vitals grid below does not re-render on each HR tick.
             HeartRateSection()
+            // WHOOP 5.75.0's extracted Health Monitor surface is organized around a
+            // HealthMonitorGridView / HealthMonitorMetricView. Keep the five core strap
+            // readings (HRV, RHR, respiratory rate, blood oxygen, skin temperature) directly
+            // after the live HR hero; the richer Woop-only analysis stays below this primary grid.
+            // VitalsSection is a read-only repository leaf and does not observe live HR.
+            VitalsSection()
+            // The following sections are Woop's additional interpretation layers, not part of
+            // the extracted WHOOP Health Monitor metric grid.
             // Fitness Age (weekly, computed by IntelligenceEngine and read back from the
-            // "fitness_age" metricSeries). Its own view depending only on `repo`/`profile`,
-            // so the live HR stream never re-renders it.
+            // "fitness_age" metricSeries). Its own view depending only on `repo`/`profile`.
             FitnessAgeSection()
             // Vitality / Body Age (weekly, computed by IntelligenceEngine from the mortality-
             // hazard model). Its own view depending only on repo/profile.
             if healthspanEnabled { HealthspanSection() } else { VitalitySection() }
             // Fork: daily rhythm (CosinorAge beta), Lab switch, off by default. Reads the stored daily readout.
             if rhythmAgeEnabled { RhythmAgeSection() }
-            // Screen-5 recovery detail: the CONTRIBUTORS to today's recovery as
-            // labelled progress bars (HRV / Resting HR / Sleep / Respiratory), each
-            // scored against the on-device baseline. Depends only on `repo`.
+            // Recovery contributors are an additional explanatory view, not a substitute for
+            // the primary Health Monitor metric grid.
             RecoveryContributorsSection()
-            // The static vitals grid is its own view depending only on `repo`,
-            // so it is unaffected by live HR ticks.
-            VitalsSection()
             // v5 skin-temperature suite: the illness "heads-up", body clock, and (opt-in) cycle
             // awareness, each driven by a pure StrandAnalytics engine result the analytics pass
             // computed and AppModel publishes. Its own view depending on `model` + `repo`.
