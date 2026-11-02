@@ -8,6 +8,11 @@ public enum WhoopReferenceFont {
     public static func score(_ size: CGFloat = 54) -> Font {
         .system(size: size, weight: .semibold, design: .default).monospacedDigit()
     }
+
+    /// Tight tracking for large WHOOP-reference score numerals.
+    public static func scoreTracking(_ size: CGFloat = 54) -> CGFloat {
+        -size * 0.02
+    }
     public static func heading(_ size: CGFloat = 20) -> Font {
         .system(size: size, weight: .semibold, design: .default)
     }
