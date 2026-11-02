@@ -25,4 +25,14 @@ final class DashboardRestScoreTests: XCTestCase {
         XCTAssertEqual(DashboardRestScore.value(day: day, days: [],
                                                 importedSleep: [day: imported]), 87)
     }
+
+
+    func testMissingSelectedDayDoesNotBorrowPriorSleepPerformance() {
+        var priorNight = ImportedSleepFigures()
+        priorNight.performancePct = 87
+
+        XCTAssertNil(DashboardRestScore.value(
+            day: "2026-09-08", days: [],
+            importedSleep: ["2026-09-07": priorNight]))
+    }
 }
