@@ -40,8 +40,13 @@ enum TodayDashboardStyle: String, CaseIterable, Identifiable {
     /// new key exists.
     static func migrateLegacyBoolIfNeeded(in defaults: UserDefaults = .standard) {
         guard defaults.string(forKey: storageKey) == nil else { return }
-        // Legacy default (before this type existed) was Liquid-on.
-        let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool ?? true
-        defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
+        // Preserve an explicit pre-migration choice, but let genuinely fresh installs use the
+        // current default. Treating a missing legacy key as Liquid would override the new default
+        // before RootTabView's @AppStorage gets a chance to apply it.
+        if let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool {
+            defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
+        } else {
+            defaults.set(TodayDashboardStyle.overview.rawValue, forKey: storageKey)
+        }
     }
 }
