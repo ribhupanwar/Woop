@@ -174,7 +174,7 @@ struct HRVSnapshotView: View {
 
                 VStack(spacing: 2) {
                     Text(dialValue)
-                        .font(StrandFont.number(48))
+                        .font(WhoopReferenceFont.score(48))
                         .foregroundStyle(StrandPalette.metricPurple)
                         .contentTransition(.numericText())
                         .animation(.snappy, value: dialValue)
@@ -327,7 +327,7 @@ struct HRVSnapshotView: View {
             Spacer(minLength: 6)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value)
-                    .font(StrandFont.number(24))
+                    .font(WhoopReferenceFont.metric(24))
                     .foregroundStyle(accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
