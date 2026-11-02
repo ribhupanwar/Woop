@@ -1630,7 +1630,7 @@ struct SleepView: View {
         HStack(alignment: .top, spacing: NoopMetrics.space6) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(durationText(s.asleep))
-                    .font(StrandFont.number(26))
+                    .font(WhoopReferenceFont.score(26))
                     .foregroundStyle(StrandPalette.textPrimary)
                 Text("HOURS OF SLEEP")
                     .font(StrandFont.overline)
@@ -1644,7 +1644,7 @@ struct SleepView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(durationText(restorative))
-                    .font(StrandFont.number(26))
+                    .font(WhoopReferenceFont.score(26))
                     .foregroundStyle(StrandPalette.sleepREM)
                 Text("RESTORATIVE SLEEP")
                     .font(StrandFont.overline)
