@@ -119,7 +119,7 @@ struct RecoveryDetailView: View {
                           value: night.skinTempDevC.map { String(format: "%+.1f", $0) } ?? "—",
                           unit: "°C vs baseline", symbol: "thermometer.medium")
             }
-            Text("Readings from \(dateLabel(night.day)); values are not carried across nights.")
+            Text("All values shown are from \(dateLabel(night.day)) and belong to the same scored night.")
                 .font(StrandFont.caption)
                 .foregroundStyle(StrandPalette.textTertiary)
         }
