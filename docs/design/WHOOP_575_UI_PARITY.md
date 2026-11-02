@@ -53,3 +53,15 @@ A source-only pass traced the Overview Recovery entry without changing app code:
 - `Packages/StrandDesign/Sources/StrandDesign/RecoveryRing.swift` supports a 240pt default hero gauge, but also layers Woop's own NOOP wordmark and glyph core behavior. `BevelGauge.swift` owns the shared 240-degree arc, track, center readout and tip.
 - The current source therefore proves that a reusable large Recovery gauge exists; it does **not** prove that the dedicated Recovery detail screen matches WHOOP 5.75.0. The exact detail layout, surrounding cards, and spacing still require a user-provided WHOOP Recovery screenshot or another verified visual reference.
 - No Swift source, sensor pipeline, score logic, or app behavior was changed in this audit. This is documentation only; it is not a build or device-validation result.
+
+
+## Recovery detail navigation audit — 2026-11-02
+
+Followed the Overview Recovery tap through the production route:
+
+- `OverviewDashboardView` wraps its 80pt Recovery row in `NavigationLink(value: TabRoute.metricSourced(key: "recovery", source: Repository.whoopSource))`.
+- `Strand/App/TabRoute.swift` resolves that exact catalog key/source to `MetricDetailView(metric: m)`.
+- `MetricDetailView` is a generic metric dossier: title + range selector, a 188pt `LiquidVessel` for 0–100 metrics, latest value/date, history `ChartCard`, statistics, readings and correlation content. The Recovery route does not instantiate `RecoveryRing`.
+- The detail hero is currently driven by the latest point in the selected metric's history, while the Overview ring uses `ChargeDisplay.resolve` (including calibration/carry provenance). These are separate presentation paths; do not assume the generic detail hero reproduces the Overview carry/calibration state.
+- This confirms a concrete implementation distinction, not a pixel-level WHOOP mismatch: no verified WHOOP Recovery detail screenshot is present in the repository to ground exact section order, spacing, or chart/card styling.
+- No app source, route, metric calculation, BLE, or stored data was changed. This audit adds documentation only; it does not constitute an Xcode build or device test.
