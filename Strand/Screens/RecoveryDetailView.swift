@@ -14,6 +14,14 @@ struct RecoveryDetailView: View {
 
     private var score: Double? { display.pct }
 
+    /// WHOOP's Recovery contributor set includes sleep performance. Resolve it on the exact
+    /// scored-night day with the same imported-first/on-device-composite rule used by Sleep and Today.
+    private var sleepPerformance: Double? {
+        guard let night = scoredNight else { return nil }
+        return DashboardRestScore.value(day: night.day, days: repo.days,
+                                        importedSleep: repo.importedSleep)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
@@ -34,10 +42,10 @@ struct RecoveryDetailView: View {
                 } else {
                     NoopCard {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Overnight metrics")
+                            Text("Recovery contributors")
                                 .font(WhoopReferenceFont.heading(16))
                                 .foregroundStyle(StrandPalette.textPrimary)
-                            Text("HRV, resting heart rate, respiratory rate and skin temperature appear when that scored night has matching readings.")
+                            Text("HRV, resting heart rate, respiratory rate and sleep performance appear when that scored night has matching readings.")
                                 .font(WhoopReferenceFont.body(12))
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
@@ -115,9 +123,9 @@ struct RecoveryDetailView: View {
                 vitalCard(title: "Respiratory rate",
                           value: night.respRateBpm.map { String(format: "%.1f", $0) } ?? "—",
                           unit: "breaths/min", symbol: "wind")
-                vitalCard(title: "Skin temp",
-                          value: night.skinTempDevC.map { String(format: "%+.1f", $0) } ?? "—",
-                          unit: "°C vs baseline", symbol: "thermometer.medium")
+                vitalCard(title: "Sleep performance",
+                          value: sleepPerformance.map { "\(Int($0.rounded()))" } ?? "—",
+                          unit: "%", symbol: "moon.zzz")
             }
             Text("All values shown are from \(dateLabel(night.day)) and belong to the same scored night.")
                 .font(WhoopReferenceFont.body(11))
