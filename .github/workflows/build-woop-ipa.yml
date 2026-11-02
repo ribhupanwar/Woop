@@ -52,6 +52,7 @@ jobs:
           chmod +x Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh
 
+      # Re-run validation after the LiquidViewBuilder modifier fix.
       - name: Run package, macOS, and iOS simulator validation
         run: |
           set -euo pipefail
