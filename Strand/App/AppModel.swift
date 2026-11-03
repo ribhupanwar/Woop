@@ -371,6 +371,8 @@ final class AppModel: ObservableObject {
     private var didInitialReadSpineAdopt = false
     /// Daily re-arm timer for the single-instant firmware smart alarm (see scheduleDailySmartAlarmRearm).
     private var smartAlarmRearmTimer: Timer?
+    /// Rate limit local activity rescans; live HR is banked in roughly 30-second batches.
+    private var lastAutoActivityScanTs = 0
 
     init() {
         let live = LiveState()
@@ -635,6 +637,9 @@ final class AppModel: ObservableObject {
         }
 
         AppModel.shared = self   // publish for App Intents (Shortcuts) , see the static above (#42)
+        // Keep the detector attached even when Today/Inbox is not on screen: live strap persistence is its trigger.
+        ActivitySuggestionCenter.shared.attach(repo)
+        ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
 
         // Seed the BLE client with the persisted "Continuous HRV capture" intent so `wantsRealtime`
         // reflects it from launch , the reconciler then arms the dense stream as soon as the strap bonds
@@ -1028,6 +1033,19 @@ final class AppModel: ObservableObject {
         _ = await intelligence.refreshCurrentDayActivity()
     }
 
+    /// Re-run the on-device activity detector after a successful live HR/RR persistence batch.
+    /// The detector reads minute buckets + strap motion/steps from the local store; it never waits for WHOOP's server.
+    private func scheduleLocalActivityDetectionScan() {
+        guard ActivitySuggestionCenter.isEnabled else { return }
+        let now = Int(Date().timeIntervalSince1970)
+        guard now - lastAutoActivityScanTs >= 90 else { return }
+        lastAutoActivityScanTs = now
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.repo.refreshActivitySuggestions(hrMax: self.profile.hrMax)
+        }
+    }
+
     private func refreshAfterCompletedBackfill() async {
         live.append(log: "Backfill: refreshing dashboard cache from completed sync")
         // Publish the two continuously-changing activity values first. This reads one calendar day and
@@ -1053,6 +1071,8 @@ final class AppModel: ObservableObject {
             await intelligence.analyzeRecent(skipIfUnchanged: true, allowDayReuse: true,
                                              reason: .rawMutation)
         }
+        // Recompute activity candidates from the newly banked local strap data after the daily RHR pass.
+        await repo.refreshActivitySuggestions(hrMax: profile.hrMax)
         await PlanReconciliationCoordinator.reconcile(repo: repo)
         await GoalTrackingStore.shared.refresh(repo: repo)
         await refreshV5Signals()
