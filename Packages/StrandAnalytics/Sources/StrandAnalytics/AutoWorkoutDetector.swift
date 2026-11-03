@@ -66,7 +66,7 @@ public enum AutoWorkoutDetector {
     public static let minSustainedMin: Double = 10.0
     /// Candidate duration policies evaluated only by local Test Centre shadow diagnostics.
     /// The published confirmation path uses `minSustainedMin` (10 minutes).
-    public static let shadowSustainedMinutes: [Double] = [10.0, 15.0]
+    public static let shadowSustainedMinutes: [Double] = [12.0, 15.0]
     /// A dip below the gate no longer than this does NOT break the span (a red light, a sip of water).
     public static let maxDipS = 90
     /// Two detected windows whose gap is strictly less than this are merged into one (5 min).
