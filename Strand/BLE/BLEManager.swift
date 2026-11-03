@@ -1601,6 +1601,10 @@ public final class BLEManager: NSObject, ObservableObject {
                               onBanked: { [weak self] c in
                                   // Live path: hr/rr are all the realtime decoder yields.
                                   self?.liveHr += c.hr; self?.liveRr += c.rr
+                                  // Wake the on-device activity detector only after HR rows are durable.
+                                  // The app throttles this to one local scan per 90s; no server decision
+                                  // or WHOOP API response is involved.
+                                  if c.hr > 0 { self?.onLiveSamplesPersisted?() }
                               })
         // The per-sample host-received readout belongs to the modes that exist for it; without one, the log
         // carries the summary instead (`LivePersistTrace.StandardHRHostReceivedTrace`).
