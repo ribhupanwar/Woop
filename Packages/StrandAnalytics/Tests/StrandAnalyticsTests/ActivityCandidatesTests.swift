@@ -41,7 +41,7 @@ final class ActivityCandidatesTests: XCTestCase {
             (60..<75).contains(i) ? (72, 102, nil, nil, nil) : self.still
         }
         let walks = A.walkCandidates(minutes, hrMax: 180)
-        XCTAssertEqual(walks.map(\\.durationMinutes), [15])
+        XCTAssertEqual(walks.map(\.durationMinutes), [15])
         XCTAssertEqual(walks.first?.cadence, 102)
         XCTAssertNil(walks.first?.locomotionShare)
         XCTAssertEqual(walks.first?.avgBpm, 72)
