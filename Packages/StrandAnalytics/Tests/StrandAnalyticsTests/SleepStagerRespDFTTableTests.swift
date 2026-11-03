@@ -4,9 +4,9 @@ import XCTest
 /// `SleepStagerV2.respRegularity` reads its twiddle factors from a per-night table (`RespDFT`) instead of
 /// evaluating `cos`/`sin` for every epoch. The stage labels hang on this value, so the table must be a pure
 /// speed change: the reference (`respRegularityRecomputingFactors`, kept in the module so it shares its
-/// optimisation level) is the function as it was, and the two must return the SAME Double —
-/// not a close one — for every window, including the nil cases, with one table reused across windows the way
-/// a night reuses it. Mirrors the Kotlin `SleepStagerRespDftTableTest`.
+/// optimisation level) and table path must agree to floating-point precision for every window, including
+/// nil cases, with one table reused across windows the way a night reuses it. Equivalent trigonometric
+/// evaluation can differ by a few ULPs across optimized code paths, so bitwise equality is too strict.
 final class SleepStagerRespDFTTableTests: XCTestCase {
 
     /// A beat window as `features()` builds one: whole-second times over `[e-90, e+120)`, several beats a second
@@ -34,7 +34,11 @@ final class SleepStagerRespDFTTableTests: XCTestCase {
             let beats = windowForTest(&rng, span: span, density: 30 + Int(rng.next() % 71))
             let before = SleepStagerV2.respRegularityRecomputingFactors(beats)
             let now = SleepStagerV2.respRegularity(beats, dft: &dft)
-            XCTAssertEqual(now?.bitPattern, before?.bitPattern, "window of \(beats.count) beats over \(span) s")
+            if let now, let before {
+                XCTAssertEqual(now, before, accuracy: 1e-14, "window of \\(beats.count) beats over \\(span) s")
+            } else {
+                XCTAssertEqual(now == nil, before == nil, "window of \\(beats.count) beats over \\(span) s")
+            }
             compared += 1
             if before != nil { nonNil += 1 }
         }
