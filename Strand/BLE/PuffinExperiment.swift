@@ -239,7 +239,10 @@ enum PuffinExperiment {
     /// Default OFF. Mirrors the Android `NoopPrefs.KEY_AUTO_DETECT_WORKOUTS`.
     static let autoDetectWorkoutsKey = "noopAutoDetectWorkouts"
 
-    static var autoDetectWorkoutsEnabled: Bool { UserDefaults.standard.bool(forKey: autoDetectWorkoutsKey) }
+    static var autoDetectWorkoutsEnabled: Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: autoDetectWorkoutsKey) as? Bool ?? true
+    }
 
     /// "Journal reminder" (#627). When ON, Today shows a persistent journal widget (a last-7-days
     /// completion strip that taps through to the journal) and nudges when today isn't logged yet.
