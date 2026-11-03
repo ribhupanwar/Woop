@@ -79,6 +79,30 @@ final class ActivitySuggestionCenterTests: XCTestCase {
         }
     }
 
+
+    func testUndoOfAutoLoggedWalkDoesNotRecreateIt() async throws {
+        try await withDetection {
+            let store = try await WhoopStore.inMemory()
+            let start = Int(Date().timeIntervalSince1970) - 6 * 3_600
+            let repo = try await setUp(store, start: start)
+            defer { withExtendedLifetime(repo) {} }
+            let center = ActivitySuggestionCenter.shared
+            await center.reload()
+
+            let saved = try await store.workouts(deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertEqual(saved.map(\\.sport), ["Walking"])
+            let suggestion = try XCTUnwrap(center.inbox.first { $0.track == .walk })
+            await center.undo(suggestion)
+            await center.reload()
+
+            let afterUndo = try await store.workouts(
+                deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertTrue(afterUndo.isEmpty, "Undo removes the auto-created workout")
+            XCTAssertFalse(center.inbox.contains { $0.track == .walk },
+                           "the dismissed span must not be auto-created again on the next reload")
+        }
+    }
+
     func testAHandLoggedSessionOverASuggestionAnswersIt() async throws {
         try await withDetection {
             let store = try await WhoopStore.inMemory()
