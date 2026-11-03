@@ -110,7 +110,9 @@ final class ActivitySuggestionCenterTests: XCTestCase {
             let repo = try await setUp(store, start: start)
             let center = ActivitySuggestionCenter.shared
             await center.reload()
-            let manual = WorkoutRow(startTs: start + 7_100, endTs: start + 9_100, sport: "Walking", source: "manual",
+            // The dedicated walk candidate is auto-logged during reload. Exercise the remaining
+            // open HR suggestion instead, using a hand-logged walk that overlaps its time window.
+            let manual = WorkoutRow(startTs: start + 100, endTs: start + 1_900, sport: "Walking", source: "manual",
                                     durationS: 2_000, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
                                     distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
             await center.noteLogged(manual)
