@@ -274,9 +274,9 @@ struct SettingsView: View {
     // hidden. Mirrors the Android pref so the toggle reads the same on both platforms.
     @AppStorage(HydrationStore.enabledKey) private var hydrationEnabled = false
 
-    /// Opt-in "Auto-detect workouts" (default OFF). When ON, Today scans the last day or two of HR for a
-    /// sustained-elevated window and offers — via a single dismissible card — to save it as a workout.
-    /// Nothing is ever created automatically. Mirrors the Android `NoopPrefs.KEY_AUTO_DETECT_WORKOUTS`.
+    /// Opt-in activity detection (default OFF). When ON, the daily pass combines strap locomotion/steps
+    /// with a personal heart-rate-reserve baseline. High-confidence walks/runs can auto-log after settling;
+    /// uncertain HR-only sessions remain confirmation prompts. Mirrors the Android preference key.
     @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) private var autoDetectWorkoutsEnabled = false
     /// Activity detection's own choices (decision 2026-10-31): walks, how often to ask, notifications.
     @AppStorage(ActivitySuggestions.walksKey) private var activityWalks = true
@@ -3440,7 +3440,7 @@ struct SettingsView: View {
                     ActivitySuggestionNotifier.requestAuthorization()
                     Task { await model.repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm) }
                 }
-                Text("After a sync, NOOP looks for walks and for stretches of raised heart rate and asks what they were. Nothing is saved until you answer. Times that already have a workout are skipped. Beta.")
+                Text("After a sync, NOOP uses strap motion and your personal heart-rate baseline to find activity. Clear walks and runs can be saved automatically after they settle; uncertain sessions are shown for confirmation. Existing workouts are skipped. Beta.")
                     .font(StrandFont.caption)
                     .foregroundStyle(StrandPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
