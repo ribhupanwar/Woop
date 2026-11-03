@@ -2,7 +2,7 @@ name: Woop iOS unsigned IPA
 
 on:
   push:
-    branches: [main, feature/whoop-575-ui-parity]
+    branches: [main, feature/whoop-575-ui-parity, feature/auto-workout-10min]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
       - "Strand/**"
@@ -11,9 +11,9 @@ on:
       - "StrandiOSShared/**"
       - "StrandiOSWidgets/**"
       - "StrandiOSTests/**"
-      - "Packages/StrandDesign/**"
+      - "Packages/**"
+      - "Tools/**"
       - "project.yml"
-      - "Tools/local-tests.sh"
   workflow_dispatch:
 
 permissions:
@@ -29,10 +29,10 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 90
     steps:
-      - name: Check out UI parity branch
+      - name: Check out the branch that triggered this build
         uses: actions/checkout@v4
         with:
-          ref: feature/whoop-575-ui-parity
+          ref: ${{ github.ref }}
           fetch-depth: 0
 
       - name: Select Xcode 26 SDK and install XcodeGen
@@ -56,7 +56,7 @@ jobs:
       - name: Run package, macOS, and iOS simulator validation
         run: |
           set -euo pipefail
-          echo "Validating latest feature/whoop-575-ui-parity source before IPA packaging."
+          echo "Validating source from ${GITHUB_REF_NAME} before IPA packaging."
           echo "Includes RecoveryDetailView iOS-only navigation modifier guard."
           Tools/local-tests.sh origin/main
 
