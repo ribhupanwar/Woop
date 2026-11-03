@@ -122,10 +122,13 @@ final class AutoWorkoutDetectorTraceTests: XCTestCase {
         let start = 2_000_000
         let hr = elapsedSpan(start, 10 * 60, 120)
 
-        XCTAssertTrue(AutoWorkoutDetector.detect(hr: hr, restingBpm: 60).isEmpty)
+        let defaultResults = AutoWorkoutDetector.detect(hr: hr, restingBpm: 60)
         let (traced, lines) = AutoWorkoutDetector.detectTrace(
             hr: hr, restingBpm: 60, minimumSustainedMinutes: 10.0, path: "shadow")
 
+        // The published default is 10 minutes; explicit shadow policy must produce the same result.
+        XCTAssertEqual(defaultResults.count, 1)
+        XCTAssertEqual(traced, defaultResults)
         XCTAssertEqual(traced.count, 1)
         XCTAssertTrue(lines.contains { $0.contains("path=shadow") })
         XCTAssertTrue(lines.contains { $0.contains("minSustainedMin=10.0") })
