@@ -23,12 +23,13 @@ final class ActivityCandidatesTests: XCTestCase {
             switch i {
             case 60..<95: return i == 70 || i == 71 ? self.still : self.walking()   // 35 min, a two-minute stop
             case 200..<220: return self.walking()                                   // 20 min
-            case 300..<310: return self.walking()                                   // 10 min, too short
+            case 300..<310: return self.walking()                                   // 10 min, exact minimum
+            case 400..<409: return self.walking()                                   // 9 min, too short
             default: return self.still
             }
         }
         let walks = A.walkCandidates(minutes, hrMax: 180)
-        XCTAssertEqual(walks.map(\.durationMinutes), [35, 20])
+        XCTAssertEqual(walks.map(\.durationMinutes), [35, 20, 10])
         XCTAssertEqual(walks.first?.kinds, [.walk])
         XCTAssertEqual(walks.first?.cadence, 105)
     }
