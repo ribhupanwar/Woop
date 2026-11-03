@@ -90,6 +90,27 @@ final class ActivitySuggestionCenter: ObservableObject {
             reloadAgain = false
             guard let repo else { return }
             all = await repo.activitySuggestions(settings: Self.settings)
+            // WHOOP-style auto logging is deliberately conservative: the dedicated motion/step track is
+            // high-confidence; HR-only spans qualify only when the strap's own locomotion classifier
+            // independently calls them Running or Walking. Strength/cycling/ambiguous HR rises stay prompts.
+            let ready = all.filter { s in
+                guard s.state == .open, s.end + ActivitySuggestions.settleSeconds <= now else { return false }
+                if s.track == .walk { return true }
+                return (s.likelyKind == .run || s.likelyKind == .walk)
+                    && s.load >= Self.settings.level.minimumLoad
+            }
+            for suggestion in ready {
+                let kind = suggestion.track == .walk ? suggestion.likelyKind : suggestion.likelyKind
+                let row = Self.prefill(suggestion, kind: kind)
+                let answerKind: ActivitySuggestionAnswer.Answer = kind == .walk ? .walk : .sport
+                let answer = ActivitySuggestions.answer(
+                    suggestion, answerKind, sport: answerKind == .sport ? row.sport : nil,
+                    origin: .automatic, shownAt: nil, now: now, workout: nil)
+                await repo.autoLogActivitySuggestion(suggestion, row: row, answer: answer)
+            }
+            if !ready.isEmpty {
+                all = await repo.activitySuggestions(settings: Self.settings)
+            }
         } while reloadAgain
         ActivitySuggestionNotifier.update(with: toAsk, now: now)
     }
