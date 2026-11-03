@@ -22,7 +22,7 @@ public enum ActivityCandidates {
     /// Bumped whenever a threshold or rule below changes, so stored suggestions and answers can be told apart.
     public static let ruleVersion = "activity-v1"
 
-    public static let minimumMinutes = 15
+    public static let minimumMinutes = 10
     public static let boutShare = 0.8
     /// Longest run of non-qualifying minutes inside a span.
     public static let maxGapMinutes = 2
