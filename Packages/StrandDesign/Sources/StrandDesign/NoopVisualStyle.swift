@@ -34,20 +34,19 @@ public enum NoopVisualStyle {
             let light: String
             let dark: String
         }
-        static let canvas = Pair(light: "#E7EBF3", dark: "#121518")
-        static let surface = Pair(light: "#FFFFFF", dark: "#25292C")
-        static let surfaceTop = Pair(light: "#FFFFFF", dark: "#31363A")
-        static let surfaceBottom = Pair(light: "#F9FAFD", dark: "#25292C")
-        static let inset = Pair(light: "#E8ECF5", dark: "#1F252A")
-        static let border = Pair(light: "#98A3B6", dark: "#1C1F22")
-        static let borderHighlight = Pair(light: "#FFFFFF", dark: "#31363A")
-        static let divider = Pair(light: "#98A3B6", dark: "#1C1F22")
-        static let primaryText = Pair(light: "#0B0F18", dark: "#FFFFFF")
-        // Translucent, NOT opaque: cards and the Liquid hero are partly transparent, so secondary and
-        // tertiary copy composites over whatever is actually behind it. Only the opacity rose — enough
-        // to clear 4.5:1 over canvas, surface and inset alike.
-        static let secondaryText = Pair(light: "#28313FCC", dark: "#9AA4AC")
-        static let tertiaryText = Pair(light: "#28313FB8", dark: "#6B7177")
+        static let canvas = Pair(light: "#E7EBF3", dark: "#03050A")
+        static let surface = Pair(light: "#FFFFFF", dark: "#151B2A")
+        static let surfaceTop = Pair(light: "#FFFFFF", dark: "#181F30")
+        static let surfaceBottom = Pair(light: "#F9FAFD", dark: "#121724")
+        static let inset = Pair(light: "#E8ECF5", dark: "#212B3D")
+        static let border = Pair(light: "#98A3B6", dark: "#4C5F83")
+        static let borderHighlight = Pair(light: "#FFFFFF", dark: "#60799D")
+        static let divider = Pair(light: "#98A3B6", dark: "#4C5F83")
+        static let primaryText = Pair(light: "#0B0F18", dark: "#F4F7FC")
+        // Dark copy stays cool-white and carries enough opacity to clear WCAG AA on every dark fill.
+        // Light values remain unchanged to preserve the existing paper appearance.
+        static let secondaryText = Pair(light: "#28313FCC", dark: "#E6EDFAC4")
+        static let tertiaryText = Pair(light: "#28313FB8", dark: "#E6EDFAC0")
     }
 
     private static func token(_ pair: ChromeHex.Pair) -> Color {
