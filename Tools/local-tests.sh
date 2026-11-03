@@ -93,15 +93,19 @@ if [ "$APP" = 1 ]; then
 fi
 
 if [ "$ANDROID" = 1 ]; then
-  echo "local-tests: Android full and demo debug builds + unit tests"
-  export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
-  export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-  # Two invocations, as in android.yml: in one, the unit-test task can be configured before the Room schema
-  # snapshot it reads exists on a fresh build directory.
-  (cd android && ./gradlew --quiet assembleFullDebug assembleDemoDebug assembleFullDebugAndroidTest &&
-    python3 swift-core/check-apk-resources.py app/build/outputs/apk/full/debug/*.apk app/build/outputs/apk/demo/debug/*.apk &&
-    ./gradlew --quiet testFullDebugUnitTest)
-  RAN+=("android")
+  if [ "${NOOP_SKIP_ANDROID:-0}" = "1" ]; then
+    echo "local-tests: Android validation skipped by caller; run android.yml separately."
+  else
+    echo "local-tests: Android full and demo debug builds + unit tests"
+    export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home -v 17)}"
+    export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+    # Two invocations, as in android.yml: in one, the unit-test task can be configured before the Room schema
+    # snapshot it reads exists on a fresh build directory.
+    (cd android && ./gradlew --quiet assembleFullDebug assembleDemoDebug assembleFullDebugAndroidTest &&
+      python3 swift-core/check-apk-resources.py app/build/outputs/apk/full/debug/*.apk app/build/outputs/apk/demo/debug/*.apk &&
+      ./gradlew --quiet testFullDebugUnitTest)
+    RAN+=("android")
+  fi
 fi
 
 # Builds rewrite the String Catalogs; a stamp over a tree the build itself changed would be a lie.
