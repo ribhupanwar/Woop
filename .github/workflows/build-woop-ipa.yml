@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           echo "Validating source from ${GITHUB_REF_NAME} before IPA packaging."
           echo "Includes RecoveryDetailView iOS-only navigation modifier guard."
-          Tools/local-tests.sh origin/main
+          NOOP_SKIP_ANDROID=1 Tools/local-tests.sh origin/main
 
       - name: Generate Xcode project and verify scheme
         run: |
