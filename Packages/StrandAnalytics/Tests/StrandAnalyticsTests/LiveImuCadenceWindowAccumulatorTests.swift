@@ -1,11 +1,12 @@
 import XCTest
+import Foundation
 import WhoopProtocol
 @testable import StrandAnalytics
 
 final class LiveImuCadenceWindowAccumulatorTests: XCTestCase {
     private func frame(_ second: Int, cadenceHz: Double = 1.8) -> Whoop5ImuFrame {
         let samples = (0..<100).map { index -> RawImuSample in
-            let phase = 2.0 * Double.pi * cadenceHz * Double(index) / 100.0
+            let phase = 2.0 * Double.pi * cadenceHz * (Double(second) + Double(index) / 100.0)
             return RawImuSample(ax: 1.0 + 0.12 * sin(phase), ay: 0, az: 0,
                                 gx: 0, gy: 0, gz: 0)
         }
