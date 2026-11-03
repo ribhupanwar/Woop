@@ -76,10 +76,10 @@ public enum MotionCadenceBoutDetector {
                     row.sampleCount >= minimumSamplesPerMinute && row.rhythmStrength >= minimumRhythmStrength
                         && (row.cadenceHz.map { $0 >= minimumCadenceHz && $0 <= maximumCadenceHz } ?? false)
                 }
-                let cadences = bout.compactMap(\\.cadenceHz).sorted()
+                let cadences = bout.compactMap(\.cadenceHz).sorted()
                 let median = cadences[cadences.count / 2]
-                let strengths = bout.map(\\.rhythmStrength)
-                let hr = bout.compactMap(\\.averageBpm)
+                let strengths = bout.map(\.rhythmStrength)
+                let hr = bout.compactMap(\.averageBpm)
                 let avgHR = hr.isEmpty ? nil : Int((Double(hr.reduce(0, +)) / Double(hr.count)).rounded())
                 results.append(Candidate(
                     startTs: rows[start].startTs, endTs: rows[lastGood].startTs + 60,
