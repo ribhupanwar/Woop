@@ -20,7 +20,7 @@ import Foundation
 public enum ActivityCandidates {
 
     /// Bumped whenever a threshold or rule below changes, so stored suggestions and answers can be told apart.
-    public static let ruleVersion = "activity-v1"
+    public static let ruleVersion = "activity-v2-cadence-primary"
 
     public static let minimumMinutes = 10
     public static let boutShare = 0.8
@@ -117,9 +117,13 @@ public enum ActivityCandidates {
 
     // MARK: - Walk track
 
+    /// Step counter delta is the primary movement signal. Do not require activityClass here:
+    /// WHOOP may deliver valid steps before/without the optional per-second locomotion labels.
+    /// Heart rate is carried into the resulting candidate as corroboration, not used to reject an
+    /// otherwise sustained cadence bout (easy walks can remain near resting HR).
     static func isWalkMinute(_ m: Minute) -> Bool {
-        guard !m.asleep, let steps = m.steps, let classed = m.classSeconds, classed >= 30 else { return false }
-        return (m.walkSeconds ?? 0) + (m.runSeconds ?? 0) >= 30 && steps >= walkCadence
+        guard !m.asleep, let steps = m.steps else { return false }
+        return steps >= walkCadence
     }
 
     public static func walkCandidates(_ minutes: [Minute], hrMax: Int) -> [Candidate] {
@@ -127,7 +131,12 @@ public enum ActivityCandidates {
             let span = Array(minutes[range])
             let walk = span.reduce(0) { $0 + ($1.walkSeconds ?? 0) }
             let run = span.reduce(0) { $0 + ($1.runSeconds ?? 0) }
-            return candidate(.walk, span, hrMax: hrMax, kinds: [run > walk ? .run : .walk])
+            let cadence = span.compactMap(\.steps).sorted()
+            // When class labels exist they can distinguish running from walking. Without them,
+            // use sustained high cadence as a conservative run hint; the HR profile remains metadata.
+            let likelyRun = run > walk || (walk + run == 0 && cadence.count >= minimumMinutes
+                && cadence[cadence.count / 2] >= 150)
+            return candidate(.walk, span, hrMax: hrMax, kinds: [likelyRun ? .run : .walk])
         }
     }
 
