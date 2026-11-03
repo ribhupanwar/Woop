@@ -1047,6 +1047,8 @@ public final class BLEManager: NSObject, ObservableObject {
     /// from `encryptedBond` at the moment it observed `connectedPeripheralUUID`, which a late subscriber
     /// read as true for an ordinary launch connect and re-pointed the active device onto the wrong strap.
     public let readoptionConfirmed = PassthroughSubject<String, Never>()
+    /// Called after live strap samples have been durably banked, so app-level local detectors can react.
+    public var onLiveSamplesPersisted: (() -> Void)?
     /// Multi-WHOOP Add-a-WHOOP wizard surface: straps seen while `isPresentingScan` is true, WITHOUT
     /// auto-connecting. Cleared at the start of each `scanForWhoops()`. Empty/unused on the default path.
     @Published public private(set) var discoveredWhoops: [(uuid: String, name: String, rssi: Int)] = []
