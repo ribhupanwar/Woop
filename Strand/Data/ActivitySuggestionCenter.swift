@@ -94,7 +94,8 @@ final class ActivitySuggestionCenter: ObservableObject {
             // high-confidence; HR-only spans qualify only when the strap's own locomotion classifier
             // independently calls them Running or Walking. Strength/cycling/ambiguous HR rises stay prompts.
             let ready = all.filter { s in
-                guard s.state == .open, s.end + ActivitySuggestions.settleSeconds <= now else { return false }
+                guard s.state == .open, s.avgBpm != nil,
+                      s.end + ActivitySuggestions.settleSeconds <= now else { return false }
                 if s.track == .walk { return true }
                 return (s.likelyKind == .run || s.likelyKind == .walk)
                     && s.load >= Self.settings.level.minimumLoad
