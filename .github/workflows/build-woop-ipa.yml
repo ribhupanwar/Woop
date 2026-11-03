@@ -115,7 +115,7 @@ jobs:
           shasum -a 256 Woop-unsigned.ipa | tee Woop-unsigned.ipa.sha256
           {
             echo "## Woop unsigned IPA"
-            echo "- Branch: feature/whoop-575-ui-parity"
+            echo "- Branch: ${GITHUB_REF_NAME}"
             echo "- IPA: Woop-unsigned.ipa"
             echo "- SHA-256: $(cut -d ' ' -f 1 Woop-unsigned.ipa.sha256)"
             echo "- Signing: unsigned; install using SideStore/AltStore signing."
