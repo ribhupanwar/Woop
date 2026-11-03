@@ -4368,7 +4368,12 @@ struct TodayView: View {
     /// WHOOP-style Today activity timeline: sleep and recorded workouts are mixed by start time,
     /// rather than hiding sleep in the Sleep tab and workouts in a separate grid.
     private var todayActivityItems: [TodayActivityFeedItem] {
-        let sleepItems = repo.sleeps.map { session in
+        let sleepCutoff = Calendar.current.date(byAdding: .day, value: -13,
+                                                       to: Calendar.current.startOfDay(for: Date()))
+            .map { Int($0.timeIntervalSince1970) } ?? 0
+        let sleepItems = repo.sleeps
+            .filter { $0.endTs >= sleepCutoff }
+            .map { session in
             let start = session.effectiveStartTs
             let end = session.endTs
             let minutes = max(0, (end - start) / 60)
@@ -4402,11 +4407,22 @@ struct TodayView: View {
     @ViewBuilder
     private var workoutsSection: some View {
         let items = todayActivityItems
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                SectionHeader("Today's Activities", overline: "Today",
-                              trailing: String(localized: "\(items.count)"))
-                NoopCard {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Today's Activities", overline: "Today",
+                          trailing: String(localized: "14 days"))
+            NoopCard {
+                if items.isEmpty {
+                    HStack(spacing: 12) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                        Text("Your sleep and workouts will appear here.")
+                            .font(StrandFont.body)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 14)
+                } else {
                     VStack(spacing: 0) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                             let row = HStack(spacing: 12) {
@@ -4451,22 +4467,22 @@ struct TodayView: View {
                         }
                     }
                 }
-                HStack(spacing: 10) {
-                    Button {
-                        router.openTodayDetail(.workouts)
-                    } label: {
-                        Label("Add Activity", systemImage: "plus")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    Button { showLiveSession = true } label: {
-                        Label("Start Activity", systemImage: "stopwatch")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .font(.system(size: 12, weight: .bold))
             }
+            HStack(spacing: 10) {
+                Button {
+                    router.openTodayDetail(.workouts)
+                } label: {
+                    Label("Add Activity", systemImage: "plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                Button { showLiveSession = true } label: {
+                    Label("Start Activity", systemImage: "stopwatch")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .font(.system(size: 12, weight: .bold))
         }
     }
 
