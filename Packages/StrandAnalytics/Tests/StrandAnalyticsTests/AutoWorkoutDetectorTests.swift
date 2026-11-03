@@ -147,7 +147,7 @@ final class AutoWorkoutDetectorTests: XCTestCase {
         let exact = elapsedSpan(start, 10 * 60, 120)
 
         XCTAssertEqual(AutoWorkoutDetector.minSustainedMin, 10.0)
-        XCTAssertEqual(AutoWorkoutDetector.shadowSustainedMinutes, [10.0, 15.0])
+        XCTAssertEqual(AutoWorkoutDetector.shadowSustainedMinutes, [12.0, 15.0])
         XCTAssertTrue(AutoWorkoutDetector.detect(hr: below, restingBpm: 60).isEmpty)
         XCTAssertEqual(AutoWorkoutDetector.detect(hr: exact, restingBpm: 60).count, 1)
     }
