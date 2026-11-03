@@ -231,8 +231,11 @@ final class LongTermGoalReaderTests: XCTestCase {
         let reading = LongTermGoalReader.consistency(goal: goal, spec: goal.measure!, weeklyGoalId: weeklyId,
                                                      history: history, thisWeek: 0, weeklyTarget: 3,
                                                      workouts: [], now: now, calendar: calendar)
-        XCTAssertTrue(reading.fixedEndReached, "the fixed end date has passed")
-        XCTAssertLessThan(reading.reading.share ?? 1, 0.8, "8 of 12 qualifying weeks is below 80 %")
+        guard case .consistency(let data) = reading else {
+            return XCTFail("expected a consistency reading")
+        }
+        XCTAssertTrue(data.fixedEndReached, "the fixed end date has passed")
+        XCTAssertLessThan(data.reading.share ?? 1, 0.8, "8 of 12 qualifying weeks is below 80 %")
     }
 
     // MARK: - Average
