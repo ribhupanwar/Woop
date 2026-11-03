@@ -277,7 +277,7 @@ struct SettingsView: View {
     /// Opt-in activity detection (default OFF). When ON, the daily pass combines strap locomotion/steps
     /// with a personal heart-rate-reserve baseline. High-confidence walks/runs can auto-log after settling;
     /// uncertain HR-only sessions remain confirmation prompts. Mirrors the Android preference key.
-    @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) private var autoDetectWorkoutsEnabled = false
+    @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) private var autoDetectWorkoutsEnabled = true
     /// Activity detection's own choices (decision 2026-10-31): walks, how often to ask, notifications.
     @AppStorage(ActivitySuggestions.walksKey) private var activityWalks = true
     @AppStorage(ActivitySuggestions.levelKey) private var activityLevelRaw = ActivityCandidates.Level.balanced.rawValue
