@@ -90,7 +90,7 @@ final class ActivitySuggestionCenterTests: XCTestCase {
             await center.reload()
 
             let saved = try await store.workouts(deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
-            XCTAssertEqual(saved.map(\\.sport), ["Walking"])
+            XCTAssertEqual(saved.map(\.sport), ["Walking"])
             let suggestion = try XCTUnwrap(center.inbox.first { $0.track == .walk })
             await center.undo(suggestion)
             await center.reload()
