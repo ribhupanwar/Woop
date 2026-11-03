@@ -34,6 +34,27 @@ final class ActivityCandidatesTests: XCTestCase {
         XCTAssertEqual(walks.first?.cadence, 105)
     }
 
+    func testStepCadenceDetectsSustainedWalkWithoutActivityClassLabels() {
+        // Step counter is present, but activityClass is absent for every minute.
+        // HR stays near resting level: it corroborates the candidate but cannot veto an easy walk.
+        let minutes = day { i in
+            (60..<75).contains(i) ? (72, 102, nil, nil, nil) : self.still
+        }
+        let walks = A.walkCandidates(minutes, hrMax: 180)
+        XCTAssertEqual(walks.map(\\.durationMinutes), [15])
+        XCTAssertEqual(walks.first?.cadence, 102)
+        XCTAssertNil(walks.first?.locomotionShare)
+        XCTAssertEqual(walks.first?.avgBpm, 72)
+        XCTAssertEqual(walks.first?.kinds, [.walk])
+    }
+
+    func testCadenceBelowWalkThresholdDoesNotTriggerWithoutActivityClass() {
+        let minutes = day { i in
+            (60..<90).contains(i) ? (85, 70, nil, nil, nil) : self.still
+        }
+        XCTAssertTrue(A.walkCandidates(minutes, hrMax: 180).isEmpty)
+    }
+
     func testARunIsNamedARun() {
         let minutes = day { i in (60..<90).contains(i) ? (150, 165, 5, 55, 60) : self.still }
         XCTAssertEqual(A.walkCandidates(minutes, hrMax: 185).first?.kinds, [.run])
