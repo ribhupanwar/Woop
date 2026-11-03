@@ -82,12 +82,21 @@ extension Repository {
                                    source: WorkoutSource.confirmedSuggestionSource, durationS: row.durationS,
                                    energyKcal: row.energyKcal, avgHr: row.avgHr, maxHr: row.maxHr,
                                    strain: row.strain, distanceM: row.distanceM, zonesJSON: row.zonesJSON,
-                                   notes: "Automatically detected from WHOOP motion + heart-rate data",
+                                   notes: "Automatically detected from strap motion + heart-rate data",
                                    steps: row.steps)
-        await saveManualWorkout(confirmed)
+
+        // Do not route this through saveManualWorkout: that path schedules noteLogged() asynchronously.
+        // During an auto-detection refresh it could re-enter the resolver before the automatic answer exists,
+        // observe the still-open candidate, and attempt to auto-save it a second time. Persist the workout,
+        // then its answer, and only then publish a repository refresh.
+        do { _ = try await store.upsertWorkouts([confirmed], deviceId: deviceId) }
+        catch { return }
+
         var linked = answer
         linked.workout = .init(deviceId: deviceId, startTs: confirmed.startTs, sport: confirmed.sport)
-        await recordActivityAnswer(linked)
+        _ = try? await store.recordActivitySuggestionAnswer(linked)
+        scheduleEnergyRefresh(coveringStart: confirmed.startTs)
+        await refresh()
     }
 
     /// Undo: deletes the answer and its workout. Auto-logged spans are tombstoned so reload cannot recreate them.
