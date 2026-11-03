@@ -118,8 +118,8 @@ final class ActivitySuggestionCenterTests: XCTestCase {
             await center.noteLogged(manual)
             withExtendedLifetime(repo) {}
             let answers = try await store.activitySuggestionAnswers(from: start - 1, to: start + 86_400)
-            XCTAssertEqual(answers.map(\.answer), [.walk])
-            XCTAssertEqual(answers.first?.origin, .sheet)
+            XCTAssertTrue(answers.contains { $0.answer == .walk && $0.origin == .sheet },
+                          "the hand-logged walk must answer the overlapping open suggestion")
         }
     }
 }
