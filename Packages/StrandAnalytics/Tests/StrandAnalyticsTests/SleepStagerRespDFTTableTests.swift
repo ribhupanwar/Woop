@@ -57,7 +57,11 @@ final class SleepStagerRespDFTTableTests: XCTestCase {
             var cold: [Int: SleepStagerV2.RespDFT] = [:]
             let fromWarm = SleepStagerV2.respRegularity(beats, dft: &warm)
             let fromCold = SleepStagerV2.respRegularity(beats, dft: &cold)
-            XCTAssertEqual(fromWarm, fromCold, accuracy: 1e-14)
+            if let fromWarm, let fromCold {
+                XCTAssertEqual(fromWarm, fromCold, accuracy: 1e-14)
+            } else {
+                XCTAssertEqual(fromWarm == nil, fromCold == nil)
+            }
         }
     }
 }
