@@ -46,6 +46,7 @@ extension Repository {
 
     /// Recomputes the recent suggestions now, as the daily pass would, when detection is switched on.
     func refreshActivitySuggestions(hrMax: Int) async {
+        guard ActivitySuggestionCenter.isEnabled else { return }
         guard let store = await storeHandle() else { return }
         _ = try? await ActivitySuggestions.refresh(store: store, deviceId: deviceId, computedId: deviceId + "-noop",
                                                    hrMax: hrMax, now: Int(Date().timeIntervalSince1970))
