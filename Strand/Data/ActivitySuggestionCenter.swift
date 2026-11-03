@@ -46,7 +46,10 @@ final class ActivitySuggestionCenter: ObservableObject {
         }
     }
 
-    nonisolated static var isEnabled: Bool { UserDefaults.standard.bool(forKey: ActivitySuggestions.enabledKey) }
+    nonisolated static var isEnabled: Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: ActivitySuggestions.enabledKey) as? Bool ?? true
+    }
 
     nonisolated static var settings: ActivitySuggestions.Settings {
         let d = UserDefaults.standard
