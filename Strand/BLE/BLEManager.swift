@@ -1047,6 +1047,8 @@ public final class BLEManager: NSObject, ObservableObject {
     /// from `encryptedBond` at the moment it observed `connectedPeripheralUUID`, which a late subscriber
     /// read as true for an ordinary launch connect and re-pointed the active device onto the wrong strap.
     public let readoptionConfirmed = PassthroughSubject<String, Never>()
+    /// Called after live strap samples have been durably banked, so app-level local detectors can react.
+    public var onLiveSamplesPersisted: (() -> Void)?
     /// Multi-WHOOP Add-a-WHOOP wizard surface: straps seen while `isPresentingScan` is true, WITHOUT
     /// auto-connecting. Cleared at the start of each `scanForWhoops()`. Empty/unused on the default path.
     @Published public private(set) var discoveredWhoops: [(uuid: String, name: String, rssi: Int)] = []
@@ -1599,6 +1601,10 @@ public final class BLEManager: NSObject, ObservableObject {
                               onBanked: { [weak self] c in
                                   // Live path: hr/rr are all the realtime decoder yields.
                                   self?.liveHr += c.hr; self?.liveRr += c.rr
+                                  // Wake the on-device activity detector only after HR rows are durable.
+                                  // The app throttles this to one local scan per 90s; no server decision
+                                  // or WHOOP API response is involved.
+                                  if c.hr > 0 { self?.onLiveSamplesPersisted?() }
                               })
         // The per-sample host-received readout belongs to the modes that exist for it; without one, the log
         // carries the summary instead (`LivePersistTrace.StandardHRHostReceivedTrace`).

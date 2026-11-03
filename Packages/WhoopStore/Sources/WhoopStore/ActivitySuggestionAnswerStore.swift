@@ -18,7 +18,7 @@ public struct ActivitySuggestionAnswer: Equatable, Sendable {
 
     /// Where the answer was given; with `shownAtTs` it tells how long a prompt waited.
     public enum Origin: String, Sendable, CaseIterable {
-        case today, inbox, sheet, notification
+        case today, inbox, sheet, notification, automatic
     }
 
     /// The workout row a confirmation saved, by the workout table's own key.

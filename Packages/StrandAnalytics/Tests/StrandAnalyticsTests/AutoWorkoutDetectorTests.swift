@@ -128,7 +128,7 @@ final class AutoWorkoutDetectorTests: XCTestCase {
         XCTAssertEqual(AutoWorkoutDetector.detect(hr: hr, restingBpm: nil).count, 1)
     }
 
-    func testTenMinuteShadowPolicyBoundary() {
+    func testTenMinutePublishedPolicyBoundary() {
         let start = 10_000_000
         let below = elapsedSpan(start, 10 * 60 - 1, 120)
         let exact = elapsedSpan(start, 10 * 60, 120)
@@ -137,17 +137,17 @@ final class AutoWorkoutDetectorTests: XCTestCase {
             hr: below, restingBpm: 60, minimumSustainedMinutes: 10.0).isEmpty)
         XCTAssertEqual(AutoWorkoutDetector.detect(
             hr: exact, restingBpm: 60, minimumSustainedMinutes: 10.0).count, 1)
-        // The same exact ten-minute span must not change the published 12-minute result.
-        XCTAssertTrue(AutoWorkoutDetector.detect(hr: exact, restingBpm: 60).isEmpty)
+        // Ten minutes is the published default as well as the explicit policy.
+        XCTAssertEqual(AutoWorkoutDetector.detect(hr: exact, restingBpm: 60).count, 1)
     }
 
-    func testPublishedDefaultRemainsTwelveMinutes() {
+    func testPublishedDefaultIsTenMinutes() {
         let start = 10_500_000
-        let below = elapsedSpan(start, 12 * 60 - 1, 120)
-        let exact = elapsedSpan(start, 12 * 60, 120)
+        let below = elapsedSpan(start, 10 * 60 - 1, 120)
+        let exact = elapsedSpan(start, 10 * 60, 120)
 
-        XCTAssertEqual(AutoWorkoutDetector.minSustainedMin, 12.0)
-        XCTAssertEqual(AutoWorkoutDetector.shadowSustainedMinutes, [10.0, 15.0])
+        XCTAssertEqual(AutoWorkoutDetector.minSustainedMin, 10.0)
+        XCTAssertEqual(AutoWorkoutDetector.shadowSustainedMinutes, [12.0, 15.0])
         XCTAssertTrue(AutoWorkoutDetector.detect(hr: below, restingBpm: 60).isEmpty)
         XCTAssertEqual(AutoWorkoutDetector.detect(hr: exact, restingBpm: 60).count, 1)
     }

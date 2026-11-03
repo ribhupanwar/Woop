@@ -45,7 +45,14 @@ final class ActivitySuggestionCenterTests: XCTestCase {
             defer { withExtendedLifetime(repo) {} }
             let center = ActivitySuggestionCenter.shared
             await center.reload()
-            XCTAssertEqual(center.toAsk.map(\.track), [.walk, .heartRate])
+            XCTAssertEqual(center.toAsk.map(\.track), [.heartRate],
+                           "the confident motion-classified walk is auto-logged instead of prompting")
+            let autoWalkRows = try await store.workouts(
+                deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertEqual(autoWalkRows.map(\.sport), ["Walking"])
+            XCTAssertEqual(autoWalkRows.first?.source, WorkoutSource.confirmedSuggestionSource)
+            var autoAnswers = try await store.activitySuggestionAnswers(from: start - 1, to: start + 86_400)
+            XCTAssertEqual(autoAnswers.first(where: { $0.track == .walk })?.origin, .automatic)
 
             let lift = try XCTUnwrap(center.toAsk.first { $0.track == .heartRate })
             await center.confirm(lift, row: ActivitySuggestionCenter.prefill(lift), origin: .today)
@@ -56,19 +63,43 @@ final class ActivitySuggestionCenterTests: XCTestCase {
             XCTAssertEqual(answers.first?.answer, .sport)
             XCTAssertEqual(answers.first?.workout?.startTs, start)
 
-            let walk = try XCTUnwrap(center.toAsk.first)
-            await center.answer(walk, .everyday, origin: .notification)
             XCTAssertTrue(center.toAsk.isEmpty)
-            let walkRows = try await store.workouts(deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
-            XCTAssertTrue(walkRows.isEmpty, "Not training never writes a workout")
 
             let confirmed = try XCTUnwrap(center.inbox.first { $0.track == .heartRate })
             await center.undo(confirmed)
             answers = try await store.activitySuggestionAnswers(from: start - 1, to: start + 86_400)
-            XCTAssertEqual(answers.map(\.answer), [.everyday])
+            XCTAssertEqual(answers.map(\.answer), [.walk],
+                           "undoing the manual confirmation must leave the separately auto-logged walk")
             let afterUndo = try await store.workouts(deviceId: deviceId, from: start - 1, to: start + 1, limit: 10)
-            XCTAssertTrue(afterUndo.isEmpty, "Undo removes the session the confirmation saved")
+            XCTAssertTrue(afterUndo.isEmpty, "Undo removes the session the wearer confirmed")
+            let retainedAutoWalk = try await store.workouts(
+                deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertEqual(retainedAutoWalk.map(\.sport), ["Walking"])
             XCTAssertEqual(center.toAsk.map(\.track), [.heartRate])
+        }
+    }
+
+
+    func testUndoOfAutoLoggedWalkDoesNotRecreateIt() async throws {
+        try await withDetection {
+            let store = try await WhoopStore.inMemory()
+            let start = Int(Date().timeIntervalSince1970) - 6 * 3_600
+            let repo = try await setUp(store, start: start)
+            defer { withExtendedLifetime(repo) {} }
+            let center = ActivitySuggestionCenter.shared
+            await center.reload()
+
+            let saved = try await store.workouts(deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertEqual(saved.map(\.sport), ["Walking"])
+            let suggestion = try XCTUnwrap(center.inbox.first { $0.track == .walk })
+            await center.undo(suggestion)
+            await center.reload()
+
+            let afterUndo = try await store.workouts(
+                deviceId: deviceId, from: start + 7_000, to: start + 9_000, limit: 10)
+            XCTAssertTrue(afterUndo.isEmpty, "Undo removes the auto-created workout")
+            XCTAssertFalse(center.inbox.contains { $0.track == .walk },
+                           "the dismissed span must not be auto-created again on the next reload")
         }
     }
 

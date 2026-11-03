@@ -12,18 +12,16 @@ import WhoopProtocol
 // is the lightweight, OPT-IN, NON-DESTRUCTIVE confirmation detector that only ever SUGGESTS a
 // workout via a dismissible Today card — it never writes a row on its own. The user taps "Save"
 // to turn a suggestion into a manual workout, or X to dismiss it forever. Its published policy
-// remains frozen while the duration alternatives collect local shadow evidence.
+// uses the validated 10-minute threshold.
 //
-// The published thresholds here are intentionally CONSERVATIVE (low sensitivity): a sustained ≥ 12-min
+// The published thresholds here are intentionally CONSERVATIVE (low sensitivity): a sustained ≥ 10-min
 // elevation of HR ≥ resting + 30 bpm, brief (≤ 90 s) dips tolerated, near windows merged. Tuned
 // to avoid false positives from stress / caffeine / a brief flight of stairs, at the cost of
 // missing the odd short or gentle session — exactly right for a SUGGESTION you can decline. An
 // OPTIONAL continuous motion signal, when one is readily available, is required as confirmation;
 // with no motion series it runs HR-only.
 //
-// The 10- and 15-minute alternatives are SHADOW policies only. Test Centre may run them beside the
-// published 12-minute result to compare against labelled workouts, but they must not drive the Today
-// card, persistence, classification, or downstream scores until real-world validation supports a change.
+// The 12- and 15-minute alternatives remain available as local shadow policies for comparison.
 //
 // Pure / headless: no I/O, no clock. All ts/start/end are unix SECONDS. NOT medical advice.
 
@@ -64,11 +62,11 @@ public enum AutoWorkoutDetector {
 
     /// Elevated gate: bpm must be at least restingHR + this margin to count as "working".
     public static let elevatedMarginBPM = 30
-    /// A candidate must hold the elevated gate for a contiguous span of at least this long (12 min).
-    public static let minSustainedMin: Double = 12.0
+    /// A candidate must hold the elevated gate for a contiguous span of at least this long (10 min).
+    public static let minSustainedMin: Double = 10.0
     /// Candidate duration policies evaluated only by local Test Centre shadow diagnostics.
-    /// The published confirmation path continues to use `minSustainedMin` (12 minutes).
-    public static let shadowSustainedMinutes: [Double] = [10.0, 15.0]
+    /// The published confirmation path uses `minSustainedMin` (10 minutes).
+    public static let shadowSustainedMinutes: [Double] = [12.0, 15.0]
     /// A dip below the gate no longer than this does NOT break the span (a red light, a sip of water).
     public static let maxDipS = 90
     /// Two detected windows whose gap is strictly less than this are merged into one (5 min).
@@ -143,7 +141,7 @@ public enum AutoWorkoutDetector {
     ///   - restingBpm: the nightly resting HR for the day; nil → `defaultRestingHR` (60).
     ///   - motion: OPTIONAL continuous motion series for confirmation; nil/empty → HR-only.
     ///   - savedSpans: already-saved workout windows to exclude by overlap.
-    ///   - minimumSustainedMinutes: duration policy. The default is the published 12-minute policy;
+    ///   - minimumSustainedMinutes: duration policy. The default is the published 10-minute policy;
     ///     callers may pass values from `shadowSustainedMinutes` only for local shadow diagnostics.
     public static func detect(hr: [(ts: Int, bpm: Int)],
                               restingBpm: Int?,

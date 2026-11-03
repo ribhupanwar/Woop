@@ -46,6 +46,7 @@ extension Repository {
 
     /// Recomputes the recent suggestions now, as the daily pass would, when detection is switched on.
     func refreshActivitySuggestions(hrMax: Int) async {
+        guard ActivitySuggestionCenter.isEnabled else { return }
         guard let store = await storeHandle() else { return }
         _ = try? await ActivitySuggestions.refresh(store: store, deviceId: deviceId, computedId: deviceId + "-noop",
                                                    hrMax: hrMax, now: Int(Date().timeIntervalSince1970))
@@ -71,12 +72,48 @@ extension Repository {
         await refresh()
     }
 
-    /// Undo: deletes the answer and the confirmed session it saved, if it saved one.
+    /// Saves a high-confidence strap-classified activity without opening the confirmation sheet.
+    /// The answer and workout share the same stable candidate key, making repeated analysis passes idempotent.
+    func autoLogActivitySuggestion(_ s: ActivitySuggestions.Suggestion, row: WorkoutRow,
+                                   answer: ActivitySuggestionAnswer) async {
+        guard let store = await storeHandle() else { return }
+        let existing = (try? await store.activitySuggestionAnswers(from: s.start, to: s.end)) ?? []
+        guard !existing.contains(where: { $0.track == answer.track && $0.candidateStartTs == s.start }) else { return }
+        let confirmed = WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: row.sport,
+                                   source: WorkoutSource.confirmedSuggestionSource, durationS: row.durationS,
+                                   energyKcal: row.energyKcal, avgHr: row.avgHr, maxHr: row.maxHr,
+                                   strain: row.strain, distanceM: row.distanceM, zonesJSON: row.zonesJSON,
+                                   notes: "Automatically detected from strap motion + heart-rate data",
+                                   steps: row.steps)
+
+        // Do not route this through saveManualWorkout: that path schedules noteLogged() asynchronously.
+        // During an auto-detection refresh it could re-enter the resolver before the automatic answer exists,
+        // observe the still-open candidate, and attempt to auto-save it a second time. Persist the workout,
+        // then its answer, and only then publish a repository refresh.
+        do { _ = try await store.upsertWorkouts([confirmed], deviceId: deviceId) }
+        catch { return }
+
+        var linked = answer
+        linked.workout = .init(deviceId: deviceId, startTs: confirmed.startTs, sport: confirmed.sport)
+        _ = try? await store.recordActivitySuggestionAnswer(linked)
+        scheduleEnergyRefresh(coveringStart: confirmed.startTs)
+        await refresh()
+    }
+
+    /// Undo: deletes the answer and its workout. Auto-logged spans are tombstoned so reload cannot recreate them.
     func undoActivitySuggestion(_ s: ActivitySuggestions.Suggestion) async {
         guard let store = await storeHandle() else { return }
         let track: ActivitySuggestionAnswer.Track = s.track == .walk ? .walk : .heartRate
         let answers = (try? await store.activitySuggestionAnswers(from: s.start, to: s.end)) ?? []
-        if let key = answers.first(where: { $0.track == track && $0.candidateStartTs == s.start })?.workout,
+        let answer = answers.first(where: { $0.track == track && $0.candidateStartTs == s.start })
+        if answer?.origin == .automatic {
+            let defaults = UserDefaults.standard
+            var dismissed = defaults.stringArray(forKey: "workouts.autoDetectDismissed") ?? []
+            let token = "\(s.start):\(s.end)"
+            if !dismissed.contains(token) { dismissed.append(token) }
+            defaults.set(dismissed, forKey: "workouts.autoDetectDismissed")
+        }
+        if let key = answer?.workout,
            let row = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
                $0.startTs == key.startTs && $0.sport == key.sport
                    && WorkoutSource.classify($0.source) == .confirmed
