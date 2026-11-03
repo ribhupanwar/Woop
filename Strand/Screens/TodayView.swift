@@ -4453,7 +4453,7 @@ struct TodayView: View {
                 }
                 HStack(spacing: 10) {
                     Button {
-                        router.navigate(to: .workouts)
+                        router.openTodayDetail(.workouts)
                     } label: {
                         Label("Add Activity", systemImage: "plus")
                             .frame(maxWidth: .infinity)
