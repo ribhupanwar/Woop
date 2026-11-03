@@ -218,14 +218,21 @@ final class LongTermGoalReaderTests: XCTestCase {
                              templateId: GoalTemplateID.trainingWeekly.rawValue,
                              measure: .init(metric: .weeklyAdherence, adherenceTarget: 0.8,
                                             fixedEnd: daysAgo(1), weeklyGoalId: weeklyId))
-        let history = (0..<12).map {
-            PeriodGoalSnapshot.HistoryEntry(periodStart: PeriodGoalTracker.dayKey(daysAgo(Double((12 - $0) * 7)), calendar: calendar),
-                                            target: 3, value: $0 < 4 ? 1 : 3, outcome: $0 < 4 ? .missed : .achieved)
+        var history: [PeriodGoalSnapshot.HistoryEntry] = []
+        history.reserveCapacity(12)
+        for week in 0..<12 {
+            let daysBack = Double((12 - week) * 7)
+            let periodStart = PeriodGoalTracker.dayKey(daysAgo(daysBack), calendar: calendar)
+            let value = week < 4 ? 1.0 : 3.0
+            let outcome: PeriodOutcome = week < 4 ? .missed : .achieved
+            history.append(PeriodGoalSnapshot.HistoryEntry(periodStart: periodStart, target: 3,
+                                                            value: value, outcome: outcome))
         }
         let reading = LongTermGoalReader.consistency(goal: goal, spec: goal.measure!, weeklyGoalId: weeklyId,
                                                      history: history, thisWeek: 0, weeklyTarget: 3,
                                                      workouts: [], now: now, calendar: calendar)
-        XCTAssertEqual(reading.state, .outOfReach, "8 of 12 weeks is below 80 %")
+        XCTAssertTrue(reading.fixedEndReached, "the fixed end date has passed")
+        XCTAssertLessThan(reading.reading.share ?? 1, 0.8, "8 of 12 qualifying weeks is below 80 %")
     }
 
     // MARK: - Average
