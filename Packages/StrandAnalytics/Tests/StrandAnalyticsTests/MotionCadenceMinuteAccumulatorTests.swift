@@ -24,6 +24,23 @@ final class MotionCadenceMinuteAccumulatorTests: XCTestCase {
         XCTAssertEqual(minute?.averageBpm, 58)
     }
 
+    func testDirectionalWalkingSignalSurvivesConstantAccelerationMagnitude() {
+        var accumulator = MotionCadenceMinuteAccumulator()
+        for second in 0..<60 {
+            let samples = (0..<100).map { index -> RawImuSample in
+                let phase = 2.0 * .pi * 2.0 * (Double(second * 100 + index) / 100.0)
+                // Wrist rotates rhythmically: acceleration magnitude remains exactly 1 g.
+                return RawImuSample(ax: sin(phase), ay: cos(phase), az: 0,
+                                    gx: 0, gy: 0, gz: 2.0 * sin(phase))
+            }
+            _ = accumulator.append(Whoop5ImuFrame(baseTs: 1_800_000 + second,
+                                                  sampleRateHz: 100, samples: samples))
+        }
+        let minute = accumulator.finish()
+        XCTAssertEqual(minute?.cadenceHz ?? 0, 2.0, accuracy: 0.08)
+        XCTAssertGreaterThan(minute?.rhythmStrength ?? 0, 0.8)
+    }
+
     func testPartialMinuteDoesNotInventCadence() {
         var accumulator = MotionCadenceMinuteAccumulator()
         for second in 0..<12 {
