@@ -50,7 +50,7 @@ public struct MotionCadenceSessionEngine {
 
     private mutating func newlyDetected(restingBpm: Int?) -> [MotionCadenceBoutDetector.Candidate] {
         MotionCadenceBoutDetector.detect(minutes, restingBpm: restingBpm).filter { candidate in
-            let key = "\(candidate.startTs):\(candidate.endTs):\(candidate.kind.rawValue)"
+            let key = "\(candidate.startTs):\(candidate.kind.rawValue)"
             return emittedKeys.insert(key).inserted
         }
     }
