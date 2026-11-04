@@ -1049,6 +1049,8 @@ public final class BLEManager: NSObject, ObservableObject {
     public let readoptionConfirmed = PassthroughSubject<String, Never>()
     /// Called after live strap samples have been durably banked, so app-level local detectors can react.
     public var onLiveSamplesPersisted: (() -> Void)?
+    /// Receives integrity-verified live WHOOP 5 type-43 IMU frames only; historical/offload packets never cross this seam.
+    public var onLiveWhoop5ImuFrame: ((Whoop5ImuFrame) -> Void)?
     /// Multi-WHOOP Add-a-WHOOP wizard surface: straps seen while `isPresentingScan` is true, WITHOUT
     /// auto-connecting. Cleared at the start of each `scanForWhoops()`. Empty/unused on the default path.
     @Published public private(set) var discoveredWhoops: [(uuid: String, name: String, rssi: Int)] = []
@@ -8026,6 +8028,14 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                         // …and the strap's own console narration, which it emits precisely DURING a sync.
                         router.mirrorStrapConsoleIfPresent(frame: frame)
                         continue
+                    }
+                    // Automatic walk/run analysis consumes only verified live type-43 buffers.
+                    // Keep this before the general router, but after the offload branch above so history
+                    // replay can never be mistaken for a live workout.
+                    if frame.count > 8, frame[8] == 43,
+                       verifyFrame(frame, family: .whoop5).ok,
+                       let imu = Whoop5RawImu.decode(frame) {
+                        onLiveWhoop5ImuFrame?(imu)
                     }
                     router.handle(frame: frame)
                     // The same split as the WHOOP 4.0 loop above, and for the same reasons: the probe
