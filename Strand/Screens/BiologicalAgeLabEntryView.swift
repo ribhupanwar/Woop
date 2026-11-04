@@ -130,7 +130,7 @@ struct BiologicalAgeLabEntryView: View {
                             .font(StrandFont.footnote)
                             .foregroundStyle(StrandPalette.textSecondary)
                         Text(result.biologicalAge.formatted(.number.precision(.fractionLength(1))) + " years")
-                            .font(StrandFont.largeTitle.weight(.bold).monospacedDigit())
+                            .font(StrandFont.heroNumber)
                             .foregroundStyle(StrandPalette.textPrimary)
                         Text("Age acceleration: \(result.ageAcceleration >= 0 ? "+" : "")\(result.ageAcceleration.formatted(.number.precision(.fractionLength(1)))) years")
                             .font(StrandFont.subhead)
