@@ -279,7 +279,7 @@ struct OverviewDashboardView: View {
         case .energyDetail: energyDetailSection
         case .journal: if selectedDayOffset == 0 { journalSection }
         case .menstrualCycle: if selectedDayOffset == 0 { menstrualCycleSection }
-        case .hero, .trendsChart, .metricStrip, .activity: EmptyView()
+        case .hero, .trendsChart, .metricStrip: EmptyView()
         default:
             DashboardSupplementSections(dashboard: "overview", compact: true, day: displayDay,
                                         appleDay: appleDays.last(where: { $0.day == selectedDayKey }),
