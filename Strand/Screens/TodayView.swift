@@ -4356,37 +4356,45 @@ struct TodayView: View {
     @ViewBuilder
     private var workoutsSection: some View {
         // #1702: window HERE, not on `workouts`. That array is shared — it also feeds the Data Sources
-        // Apple-workout count and the HR chart's sport glyphs, both all-time by design — so windowing it
-        // at the source would silently shrink two unrelated numbers on this same screen.
+        // Apple-workout count and the HR chart's sport glyphs, both all-time by design.
         let recent = Self.recentWorkoutsFeed(workouts)
-        if !recent.isEmpty {
+        // The selected day's main sleep span and recent workouts share ONE time-sorted feed. Sleep is
+        // derived by SleepView.mainNightSpan above, so fragmented blocks are represented as one night.
+        let sleepEntry: (startTs: Int, workout: WorkoutRow?)? = sleepToday.map {
+            (startTs: $0.startTs, workout: Optional<WorkoutRow>.none)
+        }
+        let entries: [(startTs: Int, workout: WorkoutRow?)] =
+            recent.map { (startTs: $0.startTs, workout: Optional($0)) }
+            + (sleepEntry.map { [$0] } ?? [])
+        let ordered = entries.sorted { $0.startTs > $1.startTs }
+        if !ordered.isEmpty {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                // "14 days" describes the window, like Android's today_workouts_14_days. The old
-                // "\(count) total" counted every workout ever recorded while showing at most six.
-                SectionHeader("Latest Workouts", overline: "Activity",
+                SectionHeader("Today's Activities", overline: "Sleep & workouts",
                               trailing: String(localized: "14 days"))
                 LazyVGrid(columns: grid, alignment: .leading, spacing: NoopMetrics.gap) {
-                    ForEach(Array(recent.prefix(6).enumerated()), id: \.offset) { _, w in
-                        // Opens THIS workout's detail directly as a sheet — not a push through the
-                        // Workouts overview screen (see `workoutDetailTarget`'s doc comment).
-                        Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
+                    ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { _, entry in
+                        if let w = entry.workout {
+                            // Opens THIS workout's detail directly as a sheet.
+                            Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
+                                StatTile(
+                                    label: WorkoutSource.localizedDisplaySport(w.sport),
+                                    value: workoutDuration(w),
+                                    caption: Self.workoutCaption(w),
+                                    accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
+                                        ?? StrandPalette.textTertiary
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else if let sleep = sleepToday {
+                            let minutes = max(0, (sleep.endTs - sleep.startTs) / 60)
                             StatTile(
-                                label: "\(WorkoutSource.localizedDisplaySport(w.sport))",
-                                value: workoutDuration(w),
-                                caption: Self.workoutCaption(w),
-                                // A workout without a stored Effort gets a neutral accent: the lowest-effort
-                                // tint would claim a zero load that was never measured.
-                                accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
-                                    ?? StrandPalette.textTertiary
-                                // No kcal chip here. In a three-column tile the chip and the duration
-                                // cannot both fit: letting the chip compress rendered "327 kcal" as
-                                // "3…", and giving it its natural width instead pushed the DURATION —
-                                // the tile's headline — down to "…". Neither is worth having, so the
-                                // tile keeps sport + duration + when, and calories stay one tap away
-                                // in the workout detail (and on the Workouts screen, which has the room).
+                                label: "Sleep",
+                                value: String(format: "%dh %02dm", minutes / 60, minutes % 60),
+                                caption: Date(timeIntervalSince1970: Double(sleep.endTs))
+                                    .formatted(date: .abbreviated, time: .omitted),
+                                accent: StrandPalette.textTertiary
                             )
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
