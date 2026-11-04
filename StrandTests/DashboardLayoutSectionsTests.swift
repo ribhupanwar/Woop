@@ -117,8 +117,9 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         }
         // Trends shows "Recent activity" by default, so its workout read must still happen there.
         XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "trends").contains(.activity))
-        // Overview has no `.activity` block at all, which is why it can skip workouts entirely.
-        XCTAssertFalse(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
+        // Overview now shows the Recent activity block by default, so it must load workout rows too.
+        XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "overview").contains(.activity))
+        XCTAssertTrue(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
     }
 
     // MARK: - "More workouts"

@@ -275,7 +275,7 @@ struct OverviewDashboardView: View {
         case .focus: importantRow
         case .health: healthList
         case .goals: if selectedDayOffset == 0 { goalsSection }
-        case .workoutsList: workoutsListSection
+        case .activity, .workoutsList: workoutsListSection
         case .energyDetail: energyDetailSection
         case .journal: if selectedDayOffset == 0 { journalSection }
         case .menstrualCycle: if selectedDayOffset == 0 { menstrualCycleSection }
@@ -400,7 +400,7 @@ struct OverviewDashboardView: View {
         // for a 45-day window in a field log), and every user who never enables the section paid it on
         // every refresh and every day swipe. The toggle still works instantly: the visible-section set is
         // part of this view's `.task` id, so showing a section re-runs the load that fills it.
-        if sections.contains(.workoutsList) {
+        if sections.contains(.activity) || sections.contains(.workoutsList) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
             next.recentWorkouts = (selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
@@ -1034,15 +1034,32 @@ struct OverviewDashboardView: View {
 
     @ViewBuilder
     private var workoutsListSection: some View {
-        if !recentWorkouts.isEmpty {
-            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                HStack {
-                    Text("Recent activity").strandOverline()
-                    Spacer()
-                    NavigationLink(value: TabRoute.workouts) {
-                        Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            HStack {
+                Text("Today's Activities").strandOverline()
+                Spacer()
+                NavigationLink(value: TabRoute.workouts) {
+                    Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
+                }
+            }
+            if recentWorkouts.isEmpty {
+                NoopCard(padding: 14) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(StrandPalette.textSecondary)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("No activities yet today")
+                                .font(StrandFont.subhead.weight(.semibold))
+                                .foregroundStyle(StrandPalette.textPrimary)
+                            Text("Detected walks and workouts will appear here.")
+                                .font(StrandFont.footnote)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                        }
+                        Spacer(minLength: 0)
                     }
                 }
+            } else {
                 VStack(spacing: 6) {
                     ForEach(Array(recentWorkouts.enumerated()), id: \.offset) { _, w in
                         NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
