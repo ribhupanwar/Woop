@@ -20,11 +20,21 @@ public struct MotionCadenceMinuteAccumulator {
         guard frame.sampleRateHz == 100, !frame.samples.isEmpty else { return nil }
         guard lastFrameTimestamp.map({ frame.baseTs > $0 }) ?? true else { return nil }
         lastFrameTimestamp = frame.baseTs
-        let bucket = (frame.baseTs / 60) * 60
+        // Anchor each 60-second window to the first live frame, not the wall-clock
+        // minute. Epoch-aligned buckets discard the first/last partial minute whenever a
+        // user starts walking between :00 boundaries, making a real 10-minute bout require
+        // 11+ minutes before it can qualify.
+        var bucket = frame.baseTs
         var completed: MotionCadenceMinute?
-        if let current = minuteStart, bucket != current {
-            completed = summarize()
-            resetMinute()
+        if let current = minuteStart {
+            let elapsed = frame.baseTs - current
+            if elapsed >= 60 {
+                completed = summarize()
+                resetMinute()
+                bucket = frame.baseTs
+            } else {
+                bucket = current
+            }
         }
         if minuteStart == nil { minuteStart = bucket }
         for sample in frame.samples {
