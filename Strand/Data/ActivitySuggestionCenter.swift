@@ -151,7 +151,7 @@ final class ActivitySuggestionCenter: ObservableObject {
     /// A session logged by hand (the sheet from the menu, a live session) over an open suggestion answers
     /// it, so learning sees the answer and the inbox shows it as logged. A confirmation records its own.
     func noteLogged(_ row: WorkoutRow) async {
-        guard let repo, Self.isEnabled, WorkoutSource.classify(row.source) != .confirmed else { return }
+        guard let repo, Self.isEnabled, row.source != WorkoutSource.confirmedSuggestionSource else { return }
         let span = ActivityDetectionScore.Span(start: row.startTs, end: row.endTs)
         guard let s = all.first(where: {
             $0.state == .open
