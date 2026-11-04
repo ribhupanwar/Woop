@@ -113,7 +113,7 @@ extension Repository {
         let finalEnd = max(endTs, existing?.endTs ?? endTs)
         let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
                              source: existing?.source ?? WorkoutSource.confirmedSuggestionSource,
-                             durationS: finalEnd - startTs,
+                             durationS: Double(finalEnd - startTs),
                              energyKcal: existing?.energyKcal, avgHr: averageBpm ?? existing?.avgHr,
                              maxHr: existing?.maxHr, strain: existing?.strain,
                              distanceM: existing?.distanceM, zonesJSON: existing?.zonesJSON,
