@@ -104,11 +104,15 @@ extension Repository {
     /// extend the existing confirmed workout's end time while preserving its stable identity.
     func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?) async {
         guard endTs > startTs, let store = await storeHandle() else { return }
+        // A bout keeps one identity even if its rolling median cadence crosses the walk/run
+        // boundary while the user speeds up or slows down. Match our own motion-generated row
+        // by start time, not by the currently inferred label, or one real session becomes two.
         let existing = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
-            $0.startTs == startTs && $0.sport == sport
+            $0.startTs == startTs
                 && WorkoutSource.classify($0.source) == .confirmed
+                && $0.notes == "Automatically detected from WHOOP 5 live motion cadence"
         })
-        if let existing, endTs <= existing.endTs { return }
+        if let existing, endTs <= existing.endTs, existing.sport == sport { return }
 
         let finalEnd = max(endTs, existing?.endTs ?? endTs)
         let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
@@ -119,12 +123,18 @@ extension Repository {
                              distanceM: existing?.distanceM, zonesJSON: existing?.zonesJSON,
                              notes: "Automatically detected from WHOOP 5 live motion cadence",
                              steps: existing?.steps)
+        // Write the replacement first. If it fails, the old confirmed activity remains intact.
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
         catch { return }
+        if let existing, existing.sport != sport {
+            // Workout rows use (device, start, sport) as their natural key. Retire the old
+            // label only after the replacement is durable, preventing a duplicate bout.
+            _ = try? await store.deleteWorkouts(deviceId: deviceId, sport: existing.sport,
+                                                from: existing.startTs, to: existing.startTs)
+        }
         scheduleEnergyRefresh(coveringStart: startTs)
         await refresh()
     }
-
     /// Undo: deletes the answer and its workout. Auto-logged spans are tombstoned so reload cannot recreate them.
     func undoActivitySuggestion(_ s: ActivitySuggestions.Suggestion) async {
         guard let store = await storeHandle() else { return }
