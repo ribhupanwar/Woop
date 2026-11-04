@@ -7,15 +7,16 @@ import WhoopProtocol
 public struct MotionCadenceSessionEngine {
     private var accumulator = MotionCadenceMinuteAccumulator()
     private var minutes: [MotionCadenceMinute] = []
-    private var emittedKeys: Set<String> = []
+    private var emittedEndByKey: [String: Int] = [:]
     private let retentionMinutes: Int
 
-    public init(retentionMinutes: Int = 30) {
+    public init(retentionMinutes: Int = 1_440) {
         self.retentionMinutes = max(MotionCadenceBoutDetector.minimumDurationMinutes, retentionMinutes)
     }
 
     /// Feed one already-integrity-verified, live WHOOP 5/MG IMU frame.
-    /// Returns only newly qualified bouts; repeat frames/boundary scans cannot re-emit a bout.
+    /// Returns a newly qualified bout and later end-time extensions for that same bout,
+    /// without re-emitting an unchanged candidate.
     public mutating func append(_ frame: Whoop5ImuFrame,
                                 averageBpm: Int? = nil,
                                 restingBpm: Int? = nil) -> [MotionCadenceBoutDetector.Candidate] {
@@ -32,14 +33,14 @@ public struct MotionCadenceSessionEngine {
         trim()
         let result = newlyDetected(restingBpm: restingBpm)
         minutes.removeAll(keepingCapacity: true)
-        emittedKeys.removeAll(keepingCapacity: true)
+        emittedEndByKey.removeAll(keepingCapacity: true)
         return result
     }
 
     public mutating func reset() {
         accumulator = MotionCadenceMinuteAccumulator()
         minutes.removeAll(keepingCapacity: true)
-        emittedKeys.removeAll(keepingCapacity: true)
+        emittedEndByKey.removeAll(keepingCapacity: true)
     }
 
     private mutating func trim() {
@@ -51,7 +52,9 @@ public struct MotionCadenceSessionEngine {
     private mutating func newlyDetected(restingBpm: Int?) -> [MotionCadenceBoutDetector.Candidate] {
         MotionCadenceBoutDetector.detect(minutes, restingBpm: restingBpm).filter { candidate in
             let key = "\(candidate.startTs):\(candidate.kind.rawValue)"
-            return emittedKeys.insert(key).inserted
+            guard candidate.endTs > (emittedEndByKey[key] ?? Int.min) else { return false }
+            emittedEndByKey[key] = candidate.endTs
+            return true
         }
     }
 }
