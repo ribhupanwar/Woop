@@ -373,6 +373,8 @@ final class AppModel: ObservableObject {
     private var smartAlarmRearmTimer: Timer?
     /// Rate limit local activity rescans; live HR is banked in roughly 30-second batches.
     private var lastAutoActivityScanTs = 0
+    /// Consumes only BLEManager's integrity-verified live WHOOP 5 type-43 frames.
+    private var motionCadenceEngine = MotionCadenceSessionEngine()
 
     init() {
         let live = LiveState()
@@ -640,6 +642,19 @@ final class AppModel: ObservableObject {
         // Keep the detector attached even when Today/Inbox is not on screen: live strap persistence is its trigger.
         ActivitySuggestionCenter.shared.attach(repo)
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
+        ble.onLiveWhoop5ImuFrame = { [weak self] frame in
+            guard let self else { return }
+            let resting = self.repo.today?.restingHr
+            let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.bpm, restingBpm: resting)
+            for bout in bouts {
+                let sport = bout.kind == .run ? "Running" : "Walking"
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    await self.repo.autoLogMotionDetectedWorkout(
+                        startTs: bout.startTs, endTs: bout.endTs, sport: sport, averageBpm: bout.averageBpm)
+                }
+            }
+        }
 
         // Seed the BLE client with the persisted "Continuous HRV capture" intent so `wantsRealtime`
         // reflects it from launch , the reconciler then arms the dense stream as soon as the strap bonds
