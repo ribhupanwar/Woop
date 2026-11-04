@@ -959,6 +959,8 @@ public final class BLEManager: NSObject, ObservableObject {
     /// Re-entrancy guard for captureRawAccel: true while a bounded on-demand window is running.
     /// A second tap is a no-op until the active capture's asyncAfter block fires and clears this.
     private var rawCaptureInFlight = false
+    /// Continuous WHOOP 5 motion stream owned by automatic walk/run detection.
+    private var autoMotionCaptureInFlight = false
     private var rawCaptureStoppedAt = Date.distantPast
     private var unexpectedImuStopAt = Date.distantPast
     /// Keep each main-actor drain slice small enough that SwiftUI can process input/paint between slices.
@@ -2330,6 +2332,18 @@ public final class BLEManager: NSObject, ObservableObject {
         await collector?.storageStats()
     }
 
+    /// Arm continuous WHOOP 5 type-43 motion for local walk/run detection after history offload.
+    private func startAutomaticMotionCaptureIfReady() {
+        guard state.connected, selectedModel.deviceFamily == .whoop5, !backfilling,
+              !autoMotionCaptureInFlight, !rawCaptureInFlight,
+              !UserDefaults.standard.bool(forKey: "enableRawCapture") else { return }
+        autoMotionCaptureInFlight = true
+        // Hardware-verified order: START_RAW_DATA (81), then realtime IMU selector (106, [1,1]).
+        send(.startRawData, payload: [0x01], writeType: .withResponse)
+        send(.toggleIMUMode, payload: [0x01, 0x01], writeType: .withResponse)
+        log("Auto activity motion capture: WHOOP 5 live IMU stream armed after backfill")
+    }
+
     /// Capture raw accelerometer (type-43 IMU) frames on demand for a bounded window, then stop.
     /// Persists raw even when the global research toggle is off (that's the point: on-demand, not
     /// 24/7). The Collector's window auto-expires at its deadline so a dropped stop can't leak raw.
@@ -2419,7 +2433,8 @@ public final class BLEManager: NSObject, ObservableObject {
     private func stopUnexpectedRealtimeImu(_ frame: [UInt8], isOffload: Bool, now: Date = Date()) {
         guard selectedModel.deviceFamily == .whoop5, !isOffload, frame.count > 8,
               frame[8] == 43 || frame[8] == 51,
-              !rawCaptureInFlight, !UserDefaults.standard.bool(forKey: "enableRawCapture"),
+              !rawCaptureInFlight, !autoMotionCaptureInFlight,
+              !UserDefaults.standard.bool(forKey: "enableRawCapture"),
               now.timeIntervalSince(rawCaptureStoppedAt) >= 3,
               now.timeIntervalSince(unexpectedImuStopAt) >= 30,
               Whoop5Ecg.r17FromFrame(frame) == nil else { return }
@@ -2519,8 +2534,8 @@ public final class BLEManager: NSObject, ObservableObject {
                 || command == .setClock || command == .getClock
                 // Bounded Raw Data Collector only. These writes remain impossible unless the explicit
                 // user-started capture window is in flight; normal sync never enables this gate.
-                || (rawCaptureInFlight && (command == .startRawData
-                    || command == .stopRawData || command == .toggleIMUMode))
+                || ((rawCaptureInFlight || autoMotionCaptureInFlight)
+                    && (command == .startRawData || command == .stopRawData || command == .toggleIMUMode))
                 // SET_CONFIG / SET_FF_VALUE (120), ENABLE direction — the R22 deep-stream unlock. Allowed
                 // only while the deep-data experiment is opted in, and only for a KEY and a VALUE the gate
                 // recognises: one of the sixteen R22 flags carrying that key's own enable value. The clause
@@ -2867,6 +2882,8 @@ public final class BLEManager: NSObject, ObservableObject {
         guard backfilling else { return }
         backfilling = false
         state.backfilling = false
+        // Automatic walk/run detection consumes live motion only. Arm after the history gate closes.
+        startAutomaticMotionCaptureIfReady()
         // #174: a backfill just ended. Start (or extend) the deep-packet cooldown from this instant so
         // any type-0x2F records the strap flushes in the seconds after the session aren't miscounted as
         // the live R22 stream — they're the offload's tail.
@@ -6745,6 +6762,8 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
     /// probes and the per-link displays. Runs after the drop detectors have read their timestamps. Shared by
     /// `didDisconnectPeripheral` and `endLinkForRadioState`.
     private func resetLinkState() {
+        // Link is already down: close the local command gate; reconnect re-arms after backfill.
+        autoMotionCaptureInFlight = false
         Task { @MainActor in await collector?.flush() }
         bondedAt = nil   // cleared after the bond-loop detector above read it (#617)
         state.connected = false
