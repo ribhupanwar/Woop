@@ -2369,7 +2369,7 @@ public final class BLEManager: NSObject, ObservableObject {
             // Only stop the raw stream if the 24/7 research toggle is OFF.  When it's ON, the
             // continuous stream must keep running — we just flush/upload the bounded window we
             // captured without halting the wider session.
-            if !UserDefaults.standard.bool(forKey: "enableRawCapture") {
+            if !UserDefaults.standard.bool(forKey: "enableRawCapture"), !self.autoMotionCaptureInFlight {
                 self.send(.stopRawData, payload: [0x01], writeType: .withResponse)
                 if self.selectedModel.deviceFamily == .whoop5 {
                     self.send(.toggleIMUMode, payload: [0x01, 0x00], writeType: .withResponse)
@@ -2379,6 +2379,9 @@ public final class BLEManager: NSObject, ObservableObject {
             Task { @MainActor in
                 await self.collector?.endRawCapture()
             }
+            // If the bounded capture occupied the link when history ended, hand ownership to the
+            // continuous activity detector now that the bounded window has closed.
+            self.startAutomaticMotionCaptureIfReady()
             self.log("Raw-accel capture: stopped + flushed")
         }
     }
