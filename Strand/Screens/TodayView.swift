@@ -4377,7 +4377,7 @@ struct TodayView: View {
                             // Opens THIS workout's detail directly as a sheet.
                             Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
                                 StatTile(
-                                    label: WorkoutSource.localizedDisplaySport(w.sport),
+                                    label: LocalizedStringKey(WorkoutSource.localizedDisplaySport(w.sport)),
                                     value: workoutDuration(w),
                                     caption: Self.workoutCaption(w),
                                     accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
