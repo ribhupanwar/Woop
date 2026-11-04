@@ -30,6 +30,23 @@ final class MotionCadenceSessionEngineTests: XCTestCase {
                       "An unchanged candidate must not be emitted again.")
     }
 
+    func testTenMinuteBoutQualifiesWhenWalkStartsBetweenClockMinuteBoundaries() {
+        var engine = MotionCadenceSessionEngine()
+        var candidates: [MotionCadenceBoutDetector.Candidate] = []
+
+        // Start at :35, then provide exactly ten minutes of 100 Hz walking frames.
+        // Include the first frame of the next window to finalize the tenth complete minute.
+        for second in 35...635 {
+            candidates += engine.append(frame(second, frequency: 2.0), averageBpm: 52)
+        }
+
+        XCTAssertFalse(candidates.isEmpty, "A ten-minute walk must qualify regardless of wall-clock alignment.")
+        XCTAssertEqual(candidates.first?.startTs, 35)
+        XCTAssertEqual(candidates.first?.endTs, 635)
+        XCTAssertEqual(candidates.first?.durationMinutes, 10)
+        XCTAssertTrue(candidates.allSatisfy { $0.kind == .walk })
+    }
+
     func testThirtyMinuteBoutKeepsStableStartAndExtendsPastThreshold() {
         var engine = MotionCadenceSessionEngine()
         var candidates: [MotionCadenceBoutDetector.Candidate] = []
