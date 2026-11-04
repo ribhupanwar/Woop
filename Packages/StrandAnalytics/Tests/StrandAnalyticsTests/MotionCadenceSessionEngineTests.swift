@@ -19,6 +19,8 @@ final class MotionCadenceSessionEngineTests: XCTestCase {
             candidates += engine.append(frame(second, frequency: 2.0), averageBpm: 52)
         }
 
+        candidates += engine.append(frame(11 * 60, frequency: 2.0), averageBpm: 52)
+
         XCTAssertGreaterThanOrEqual(candidates.count, 2, "The qualified bout should be emitted initially and when its end time extends.")
         XCTAssertTrue(candidates.allSatisfy { $0.kind == .walk && $0.startTs == 0 })
         XCTAssertEqual(candidates.first?.endTs, 10 * 60)
