@@ -100,21 +100,25 @@ extension Repository {
         await refresh()
     }
 
-    /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. The detector's start timestamp is
-    /// stable across process restarts, and the workout table's (device,start,sport) key makes retries idempotent.
+    /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. Repeated detector updates
+    /// extend the existing confirmed workout's end time while preserving its stable identity.
     func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?) async {
         guard endTs > startTs, let store = await storeHandle() else { return }
-        let existing = await workoutRows(days: ActivitySuggestions.listDays + 2)
-        guard !existing.contains(where: {
+        let existing = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
             $0.startTs == startTs && $0.sport == sport
                 && WorkoutSource.classify($0.source) == .confirmed
-        }) else { return }
-        let row = WorkoutRow(startTs: startTs, endTs: endTs, sport: sport,
-                             source: WorkoutSource.confirmedSuggestionSource,
-                             durationS: endTs - startTs, energyKcal: nil, avgHr: averageBpm,
-                             maxHr: nil, strain: nil, distanceM: nil, zonesJSON: nil,
+        })
+        if let existing, endTs <= existing.endTs { return }
+
+        let finalEnd = max(endTs, existing?.endTs ?? endTs)
+        let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
+                             source: existing?.source ?? WorkoutSource.confirmedSuggestionSource,
+                             durationS: finalEnd - startTs,
+                             energyKcal: existing?.energyKcal, avgHr: averageBpm ?? existing?.avgHr,
+                             maxHr: existing?.maxHr, strain: existing?.strain,
+                             distanceM: existing?.distanceM, zonesJSON: existing?.zonesJSON,
                              notes: "Automatically detected from WHOOP 5 live motion cadence",
-                             steps: nil)
+                             steps: existing?.steps)
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
         catch { return }
         scheduleEnergyRefresh(coveringStart: startTs)
