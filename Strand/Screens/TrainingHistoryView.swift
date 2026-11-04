@@ -516,34 +516,37 @@ struct TrainingHistoryVO2Chart: View {
 
     private func points(_ values: [TrainingHistoryValue]) -> [Point] {
         values.compactMap { entry in
-            guard let value = entry.value, let mid = TrainingHistoryDates.mid(entry.period) else { return nil }
+            guard let value = entry.value, value.isFinite, value > 0,
+                  let mid = TrainingHistoryDates.mid(entry.period) else { return nil }
             return Point(id: entry.period.start, date: mid, value: value)
         }
     }
 
     var body: some View {
-        let noop = points(estimates)
-        let watch = points(apple)
-        if noop.isEmpty && watch.isEmpty {
-            Text("No VO₂max in this span.")
-                .font(StrandFont.caption)
-                .foregroundStyle(StrandPalette.textTertiary)
+        let measured = points(apple)
+        if measured.isEmpty {
+            VStack(alignment: .leading, spacing: NoopMetrics.space1) {
+                Text("No Apple Health VO₂max readings in this span.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text("VO₂max is shown from measured HealthKit data. Model-based workout estimates are not substituted for a measured reading.")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textTertiary)
+            }
         } else {
             VStack(alignment: .leading, spacing: NoopMetrics.space1) {
-                Text("VO₂max (ml/kg/min) — line: NOOP estimate · dots: Apple Watch")
+                Text("VO₂max (ml/kg/min) · Apple Health")
                     .font(StrandFont.caption)
                     .foregroundStyle(StrandPalette.textSecondary)
                 Chart {
-                    ForEach(noop) { point in
+                    ForEach(measured) { point in
                         LineMark(x: .value("Period", point.date), y: .value("VO₂max", point.value),
-                                 series: .value("Source", "NOOP"))
+                                 series: .value("Source", "Apple Health"))
                             .foregroundStyle(StrandPalette.cardioColor)
                             .interpolationMethod(.monotone)
-                    }
-                    ForEach(watch) { point in
                         PointMark(x: .value("Period", point.date), y: .value("VO₂max", point.value))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                            .symbolSize(16)
+                            .foregroundStyle(StrandPalette.cardioColor)
+                            .symbolSize(20)
                     }
                 }
                 .chartXScale(domain: TrainingHistoryDates.domain(range))
