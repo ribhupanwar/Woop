@@ -100,6 +100,27 @@ extension Repository {
         await refresh()
     }
 
+    /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. The detector's start timestamp is
+    /// stable across process restarts, and the workout table's (device,start,sport) key makes retries idempotent.
+    func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?) async {
+        guard endTs > startTs, let store = await storeHandle() else { return }
+        let existing = await workoutRows(days: ActivitySuggestions.listDays + 2)
+        guard !existing.contains(where: {
+            $0.startTs == startTs && $0.sport == sport
+                && WorkoutSource.classify($0.source) == .confirmed
+        }) else { return }
+        let row = WorkoutRow(startTs: startTs, endTs: endTs, sport: sport,
+                             source: WorkoutSource.confirmedSuggestionSource,
+                             durationS: endTs - startTs, energyKcal: nil, avgHr: averageBpm,
+                             maxHr: nil, strain: nil, distanceM: nil, zonesJSON: nil,
+                             notes: "Automatically detected from WHOOP 5 live motion cadence",
+                             steps: nil)
+        do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
+        catch { return }
+        scheduleEnergyRefresh(coveringStart: startTs)
+        await refresh()
+    }
+
     /// Undo: deletes the answer and its workout. Auto-logged spans are tombstoned so reload cannot recreate them.
     func undoActivitySuggestion(_ s: ActivitySuggestions.Suggestion) async {
         guard let store = await storeHandle() else { return }
