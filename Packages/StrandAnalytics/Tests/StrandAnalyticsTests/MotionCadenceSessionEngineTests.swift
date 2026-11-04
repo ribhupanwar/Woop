@@ -12,18 +12,32 @@ final class MotionCadenceSessionEngineTests: XCTestCase {
         return Whoop5ImuFrame(baseTs: second, sampleRateHz: 100, samples: samples)
     }
 
-    func testTenMinuteCadenceBoutEmitsOnceAndDoesNotRejectLowHeartRate() {
+    func testTenMinuteCadenceBoutEmitsAndExtendsWithoutRejectingLowHeartRate() {
         var engine = MotionCadenceSessionEngine()
         var candidates: [MotionCadenceBoutDetector.Candidate] = []
         for second in 0..<(11 * 60) {
             candidates += engine.append(frame(second, frequency: 2.0), averageBpm: 52)
         }
-        XCTAssertEqual(candidates.count, 1)
-        XCTAssertEqual(candidates[0].kind, .walk)
-        XCTAssertEqual(candidates[0].startTs, 0)
-        XCTAssertEqual(candidates[0].endTs, 10 * 60)
-        XCTAssertEqual(candidates[0].averageBpm, 52)
-        XCTAssertTrue(engine.append(frame(11 * 60, frequency: 2.0), averageBpm: 52).isEmpty)
+
+        XCTAssertGreaterThanOrEqual(candidates.count, 2, "The qualified bout should be emitted initially and when its end time extends.")
+        XCTAssertTrue(candidates.allSatisfy { $0.kind == .walk && $0.startTs == 0 })
+        XCTAssertEqual(candidates.first?.endTs, 10 * 60)
+        XCTAssertEqual(candidates.last?.endTs, 11 * 60)
+        XCTAssertTrue(candidates.allSatisfy { $0.averageBpm == 52 })
+        XCTAssertTrue(engine.append(frame(11 * 60, frequency: 2.0), averageBpm: 52).isEmpty,
+                      "An unchanged candidate must not be emitted again.")
+    }
+
+    func testThirtyMinuteBoutKeepsStableStartAndExtendsPastThreshold() {
+        var engine = MotionCadenceSessionEngine()
+        var candidates: [MotionCadenceBoutDetector.Candidate] = []
+        for second in 0..<(31 * 60) {
+            candidates += engine.append(frame(second, frequency: 2.0), averageBpm: 55)
+        }
+
+        XCTAssertFalse(candidates.isEmpty)
+        XCTAssertTrue(candidates.allSatisfy { $0.startTs == 0 && $0.kind == .walk })
+        XCTAssertGreaterThanOrEqual(candidates.last?.endTs ?? 0, 30 * 60)
     }
 
     func testStationaryMotionNeverCreatesBout() {
