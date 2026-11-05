@@ -3510,6 +3510,7 @@ public final class BLEManager: NSObject, ObservableObject {
     }
 
     /// Keep WHOOP 5 live IMU notifications available for background walk/run detection.
+    /// AppModel seeds this from the automatic-activity preference at launch and on reconnect.
     /// WHOOP 4 is deliberately excluded: it has no verified live type-43 IMU stream.
     public func setKeepMotionDetection(_ keep: Bool) {
         keepMotionDetection = keep
