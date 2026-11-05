@@ -1197,6 +1197,11 @@ final class AppModel: ObservableObject {
     func startWorkout(sport: String = WorkoutCatalog.defaultSportName, targetZone: Int? = nil,
                       gpsEnabled: Bool? = nil) {
         guard activeWorkout == nil, workoutCompletion == nil, !workoutSaveFailed else { return }
+        // A manually-started session takes ownership of the shared location recorder.
+        if autoGpsCandidateStartTs != nil {
+            gpsRecorder.stop()
+            autoGpsCandidateStartTs = nil
+        }
         lastWorkout = nil
         let name = sport.trimmingCharacters(in: .whitespaces)
         let resolved = name.isEmpty ? WorkoutCatalog.defaultSportName : name

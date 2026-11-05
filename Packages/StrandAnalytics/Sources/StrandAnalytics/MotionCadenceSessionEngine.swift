@@ -91,6 +91,10 @@ public struct MotionCadenceSessionEngine {
         let result = newlyDetected(restingBpm: restingBpm)
         minutes.removeAll(keepingCapacity: true)
         emittedEndByKey.removeAll(keepingCapacity: true)
+        preArmStartTs = nil
+        preArmLastFrameTs = nil
+        preArmLastCadenceHz = nil
+        preArmConsecutiveFrames = 0
         return result
     }
 
