@@ -657,6 +657,35 @@ final class AppModel: ObservableObject {
             await self.refreshAutomaticallyDetectedWorkoutMetrics()
         }
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
+        ble.onLiveLinkDropped = { [weak self] in
+            guard let self else { return }
+            // A reconnect is a new live capture epoch. Never combine cadence minutes from before
+            // the disconnect with post-reconnect frames to manufacture a continuous 10-minute bout.
+            self.motionCadenceEngine.reset()
+
+            // Close an already-confirmed GPS route cleanly; an unconfirmed pre-arm is discarded.
+            if let start = self.autoGpsConfirmedStartTs,
+               let end = self.autoGpsConfirmedEndTs,
+               let sport = self.autoGpsConfirmedSport {
+                let route = self.gpsRecorder.capturedRoute()
+                self.gpsRecorder.stop()
+                if let route { RouteStore.store(route, startTs: start, sport: sport) }
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    _ = await self.repo.autoLogMotionDetectedWorkout(
+                        startTs: start, endTs: end, sport: sport, averageBpm: nil,
+                        medianCadenceHz: nil, distanceM: route?.distanceM,
+                        stepTicksPerStep: self.profile.stepTicksPerStep,
+                        strideLengthM: self.profile.strideLengthM(for: sport))
+                }
+            } else {
+                self.gpsRecorder.stop()
+            }
+            self.autoGpsCandidateStartTs = nil
+            self.autoGpsConfirmedStartTs = nil
+            self.autoGpsConfirmedEndTs = nil
+            self.autoGpsConfirmedSport = nil
+        }
         ble.onLiveWhoop5ImuFrame = { [weak self] frame in
             guard let self else { return }
             // Pre-arm from the first stable gait frames, so the GPS route includes the beginning
