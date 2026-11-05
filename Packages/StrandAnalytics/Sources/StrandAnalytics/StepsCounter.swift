@@ -60,4 +60,38 @@ public enum StepsCounter {
         }
         return total > 0 ? total : nil
     }
-}
+
+    
+    /// Counter ticks attributable to the exact workout interval. The surrounding samples are required:
+    /// one before the start and one after the end let us prorate the boundary intervals instead of
+    /// assigning every tick since the previous minute to the workout. Daily totals keep using the
+    /// unbounded overload above.
+    public static func stepsInWindow(_ samples: [StepSample], from startTs: Int, to endTs: Int) -> Int? {
+        guard endTs > startTs else { return nil }
+        let sorted = samples.sorted { $0.ts < $1.ts }
+        guard sorted.count >= 2 else { return nil }
+        let classed = hasActivityClasses(sorted)
+        var totalTicks = 0.0
+        for index in 1..<sorted.count {
+            let previous = sorted[index - 1]
+            let current = sorted[index]
+            let elapsed = current.ts - previous.ts
+            guard elapsed > 0 else { continue }
+            let overlap = min(endTs, current.ts) - max(startTs, previous.ts)
+            guard overlap > 0 else { continue }
+            // If the interval crosses the workout end, use the last in-window sample's class;
+            // the first sample after finishing may already be labelled still.
+            let activityClass = current.ts > endTs ? previous.activityClass : current.activityClass
+            guard shouldCountDelta(activityClass: activityClass, hasActivityClasses: classed) else { continue }
+            let delta = (current.counter - previous.counter) & 0xFFFF
+            guard isPlausibleDelta(previousTs: previous.ts, currentTs: current.ts, delta: delta) else {
+                continue
+            }
+            // A single counter interval spanning the entire workout has no in-window class evidence.
+            if previous.ts < startTs && current.ts > endTs { continue }
+            totalTicks += Double(delta) * Double(overlap) / Double(elapsed)
+        }
+        let rounded = Int(totalTicks.rounded())
+        return rounded > 0 ? rounded : nil
+    }
+}\n}

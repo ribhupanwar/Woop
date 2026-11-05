@@ -1119,7 +1119,7 @@ struct WorkoutsView: View {
     private func summarySection(rows: [WorkoutRow], effectiveRange: Range, groups: [SportGroup]) -> some View {
         let totalCount = rows.count
         let totalTimeH = rows.compactMap(\.durationS).reduce(0, +) / 3600.0
-        let totalKcal = rows.compactMap(\.energyKcal).reduce(0, +)
+        let totalKcal = rows.compactMap { resolvedEnergy($0)?.kcal }.reduce(0, +)
         // Only POSITIVE distances count as "has distance" (a strap-detected sport with no GPS/manual
         // distance is nil, and an explicit 0 is not a real distance) — matches `distanceLabel`'s `m > 0`
         // guard on the per-workout rows. When nothing in the window has distance, the tile shows "–"

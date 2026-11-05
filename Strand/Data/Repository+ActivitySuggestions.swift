@@ -122,10 +122,15 @@ extension Repository {
         let priorStep = try? await store.stepSampleBefore(deviceId: deviceId, before: startTs)
         let stepRows = (try? await store.stepSamples(deviceId: deviceId, from: startTs,
                                                        to: finalEnd, limit: Int.max)) ?? []
+        // The next counter sample closes the final partial interval. The 10-minute look-ahead
+        // covers the strap's normal minute cadence without pulling an unbounded history window.
+        let nextStep = (try? await store.stepSamples(deviceId: deviceId, from: finalEnd + 1,
+                                                      to: finalEnd + 600, limit: 1))?.first
         var stepWindow: [StepSample] = []
         if let priorStep { stepWindow.append(priorStep) }
         stepWindow.append(contentsOf: stepRows)
-        let rawTicks = StepsCounter.stepsInWindow(stepWindow)
+        if let nextStep { stepWindow.append(nextStep) }
+        let rawTicks = StepsCounter.stepsInWindow(stepWindow, from: startTs, to: finalEnd)
         let correction = stepTicksPerStep.isFinite ? min(max(stepTicksPerStep, 0.5), 30.0) : 1.0
         let counterSteps = rawTicks.map { max(0, Int((Double($0) / correction).rounded())) }
         let cadenceSteps = medianCadenceHz.flatMap { cadence -> Int? in
@@ -165,21 +170,10 @@ extension Repository {
         let resolvedAverageHR = hrSummary?.averageHR ?? averageBpm ?? existing?.avgHr
         let resolvedMaxHR = hrSummary?.maxHR ?? existing?.maxHr
         let resolvedStrain = hrSummary?.strain ?? existing?.strain
-        let localDay = Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(startTs)))
-        let peakMET = latestEnergyPeakMET.flatMap { $0.day == localDay ? $0.peakMET : nil }
-        let estimatedKcal: Double?
-        if hasHRCoverage {
-            let kcal = WorkoutEnergyEstimate.boutKcal(
-                hrSamples, sport: sport, profile: analyticsProfile, hrMax: hrMax,
-                restingHR: restingHR, peakMET: peakMET, distanceM: gpsDistance)
-            estimatedKcal = kcal > 0 ? kcal : nil
-        } else {
-            estimatedKcal = WorkoutEnergyEstimate.resolve(
-                recordedKcal: nil, sport: sport, durationSeconds: Double(finalEnd - startTs),
-                averageHR: resolvedAverageHR, profile: analyticsProfile, hrMax: hrMax,
-                restingHR: restingHR, peakMET: peakMET, distanceM: gpsDistance)?.kcal
-        }
-
+        // Do not freeze an HR/pace fallback into the row here. The Workouts list and detail
+        // resolve this window against the strap's own five-minute energy buckets after the
+        // confirmed-workout refresh, then use the same HR/pace estimate only if strap coverage
+        // is insufficient. A stored fallback would prevent that higher-quality strap price.
         var noteParts = ["Automatically detected from WHOOP 5 live motion cadence"]
         if gpsDistance != nil { noteParts.append("GPS distance") }
         else if estimatedDistance != nil { noteParts.append("Estimated stride distance") }
@@ -188,7 +182,7 @@ extension Repository {
         let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
                              source: existing?.source ?? WorkoutSource.confirmedSuggestionSource,
                              durationS: Double(finalEnd - startTs),
-                             energyKcal: estimatedKcal ?? existing?.energyKcal,
+                             energyKcal: nil,
                              avgHr: resolvedAverageHR, maxHr: resolvedMaxHR, strain: resolvedStrain,
                              distanceM: resolvedDistance, zonesJSON: existing?.zonesJSON,
                              notes: note, steps: resolvedSteps)

@@ -74,4 +74,27 @@ final class StepsCounterTests: XCTestCase {
             step(0, 100), step(10, 140), step(20, 170),
         ]), 70)
     }
-}
+
+    
+    func testWorkoutWindowProratesBothBoundaryIntervals() {
+        // 60 ticks per minute; [30, 150] owns half of the first interval, all of the second,
+        // and half of the third: 30 + 60 + 30 = 120, not all 180 ticks.
+        let samples = [
+            step(0, 100, 1), step(60, 160, 1),
+            step(120, 220, 1), step(180, 280, 1),
+        ]
+        XCTAssertEqual(StepsCounter.stepsInWindow(samples, from: 30, to: 150), 120)
+    }
+
+    func testWorkoutWindowUsesLastInWindowClassAtTrailingBoundary() {
+        // The sample after the workout is already labelled still. Its interval's in-workout
+        // portion still belongs to the preceding walk sample.
+        let samples = [step(0, 100, 1), step(60, 160, 1), step(120, 220, 0)]
+        XCTAssertEqual(StepsCounter.stepsInWindow(samples, from: 60, to: 90), 30)
+    }
+
+    func testWorkoutWindowRejectsCounterIntervalsOutsideWindow() {
+        let samples = [step(0, 100, 1), step(60, 700, 1), step(120, 760, 1)]
+        XCTAssertNil(StepsCounter.stepsInWindow(samples, from: 20, to: 40))
+    }
+}\n}
