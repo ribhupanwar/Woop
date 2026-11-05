@@ -72,6 +72,27 @@ final class ActivityCandidatesTests: XCTestCase {
         XCTAssertEqual(A.walkCandidates(minutes, hrMax: 185).first?.kinds, [.run])
     }
 
+
+    func testSustainedRunningCadenceOverridesWalkingClassLabels() {
+        // Reproduces the 5 Nov run: 160–167 spm, elevated HR, but WHOOP labels every minute walking.
+        let minutes = day { i in
+            (60..<100).contains(i) ? (150.0, 164, 60, 0, 60) : self.still
+        }
+        let candidates = A.walkCandidates(minutes, hrMax: 185)
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates.first?.durationMinutes, 40)
+        XCTAssertEqual(candidates.first?.cadence, 164)
+        XCTAssertEqual(candidates.first?.avgBpm, 150)
+        XCTAssertEqual(candidates.first?.kinds, [.run])
+    }
+
+    func testShortHighCadenceBurstDoesNotBecomeRunning() {
+        let minutes = day { i in
+            (60..<68).contains(i) ? (150.0, 164, 60, 0, 60) : self.still
+        }
+        XCTAssertTrue(A.walkCandidates(minutes, hrMax: 185).isEmpty)
+    }
+
     func testAWhoop4WithoutAStepStreamFindsNoWalkButStillAHeartRateSpan() {
         let minutes = day { i in (100..<140).contains(i) ? (140, nil, nil, nil, nil) : (65, nil, nil, nil, nil) }
         XCTAssertTrue(A.walkCandidates(minutes, hrMax: 180).isEmpty)
