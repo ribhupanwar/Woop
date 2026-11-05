@@ -142,7 +142,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     }
 
     func testSignalLossFreezesDistanceAndAnUnexplainedRecoveryOnlySetsANewAnchor() throws {
-        let start = Date.now
+        let start = Date.now.addingTimeInterval(1)
         let recorder = makeRecorder()
         defer { recorder.stop() }
         recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
@@ -169,7 +169,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     /// OpenTracks bridges an outage the movement can explain. A tunnel walked at running pace must not
     /// erase its length or split the route.
     func testAnOutageTheMovementExplainsIsBridged() throws {
-        let start = Date.now
+        let start = Date.now.addingTimeInterval(1)
         let recorder = makeRecorder()
         defer { recorder.stop() }
         recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
@@ -188,7 +188,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     }
 
     func testAnUnavailableDeliveryWithCoordinatesCannotBridgeRecovery() {
-        let start = Date.now
+        let start = Date.now.addingTimeInterval(1)
         let recorder = GpsWorkoutRecorder()
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         recorder.journal = ActiveRouteJournal(url: folder.appendingPathComponent("route.txt"))
@@ -207,7 +207,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     }
 
     func testOneUntrustedFixIsSkippedButARunOfThemIsAnOutage() {
-        let start = Date.now
+        let start = Date.now.addingTimeInterval(1)
         let recorder = makeRecorder()
         defer { recorder.stop() }
         recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
