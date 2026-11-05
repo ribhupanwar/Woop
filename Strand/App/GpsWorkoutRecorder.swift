@@ -565,6 +565,19 @@ final class GpsWorkoutRecorder: NSObject, ObservableObject {
         locationUpdatesTask?.cancel()
     }
 
+    /// Begin an automatic route only when location permission has already been granted.
+    /// This avoids prompting while the strap is merely connected.
+    @discardableResult
+    func startIfAuthorized(startMs: Int64, maxSpeedMps: Double = 12) -> Bool {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            start(startMs: startMs, maxSpeedMps: maxSpeedMps)
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Begin recording a fresh route for a workout started at `startMs` (unix milliseconds). Requests
     /// When-In-Use if not yet decided; fails safe (records nothing) if denied / restricted / unavailable.
     /// A re-arm resets the track. Returns immediately — fixes arrive on the native async stream (or the

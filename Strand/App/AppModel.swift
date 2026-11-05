@@ -375,6 +375,8 @@ final class AppModel: ObservableObject {
     private var lastAutoActivityScanTs = 0
     /// Consumes only BLEManager's integrity-verified live WHOOP 5 type-43 frames.
     private var motionCadenceEngine = MotionCadenceSessionEngine()
+    /// Start of a provisional GPS buffer; this never creates an activity row by itself.
+    private var autoGpsCandidateStartTs: Int?
 
     init() {
         let live = LiveState()
@@ -645,15 +647,39 @@ final class AppModel: ObservableObject {
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
         ble.onLiveWhoop5ImuFrame = { [weak self] frame in
             guard let self else { return }
+            // Start GPS after three stable gait frames, while the ten-minute confirmation window
+            // is still accumulating. The route is keyed back to the first candidate frame.
+            if let candidateStart = self.motionCadenceEngine.preliminaryMovementStart(for: frame),
+               self.autoGpsCandidateStartTs == nil, self.activeWorkout == nil,
+               self.gpsRecorder.startIfAuthorized(startMs: Int64(candidateStart) * 1000, maxSpeedMps: 12) {
+                self.autoGpsCandidateStartTs = candidateStart
+            }
             let resting = self.repo.today?.restingHr
             let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.bpm, restingBpm: resting)
             for bout in bouts {
                 let sport = bout.kind == .run ? "Running" : "Walking"
+                let route: WorkoutRoute?
+                if self.autoGpsCandidateStartTs == bout.startTs {
+                    route = self.gpsRecorder.capturedRoute()
+                    self.gpsRecorder.stop()
+                    self.autoGpsCandidateStartTs = nil
+                } else {
+                    route = nil
+                }
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     await self.repo.autoLogMotionDetectedWorkout(
-                        startTs: bout.startTs, endTs: bout.endTs, sport: sport, averageBpm: bout.averageBpm)
+                        startTs: bout.startTs, endTs: bout.endTs, sport: sport,
+                        averageBpm: bout.averageBpm, medianCadenceHz: bout.medianCadenceHz,
+                        distanceM: route?.distanceM)
+                    if let route { RouteStore.store(route, startTs: bout.startTs, sport: sport) }
                 }
+            }
+            // Discard an unconfirmed buffer after the detector's qualification window plus a grace period.
+            if let started = self.autoGpsCandidateStartTs,
+               frame.baseTs - started > (MotionCadenceBoutDetector.minimumDurationMinutes + 3) * 60 {
+                self.gpsRecorder.stop()
+                self.autoGpsCandidateStartTs = nil
             }
         }
 

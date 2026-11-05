@@ -2828,9 +2828,12 @@ struct LiquidTodayView: View {
             .contentShape(Rectangle())
         case .workout(let row):
             let tint = AppleInspiredColors.role(forSport: row.sport).color
-            let distance = row.distanceM.map { $0 >= 1000
-                ? String(format: "%.1f km", $0 / 1000)
-                : String(format: "%.0f m", $0) }
+            let isEstimatedDistance = row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+            let distance = row.distanceM.map { value in
+                let label = value >= 1000 ? String(format: "%.1f km", value / 1000)
+                    : String(format: "%.0f m", value)
+                return isEstimatedDistance ? "~" + label : label
+            }
             let primary = row.strain.map { String(format: "%.1f", $0) }
                 ?? timelineDuration(Int(row.durationS))
             HStack(spacing: NoopMetrics.space3) {

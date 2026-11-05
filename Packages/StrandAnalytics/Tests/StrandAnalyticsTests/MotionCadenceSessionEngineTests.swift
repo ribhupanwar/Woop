@@ -59,6 +59,21 @@ final class MotionCadenceSessionEngineTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(candidates.last?.endTs ?? 0, 30 * 60)
     }
 
+    func testPreliminaryMovementSignalRequiresThreeStableGaitFrames() {
+        var engine = MotionCadenceSessionEngine()
+        XCTAssertNil(engine.preliminaryMovementStart(for: frame(35, frequency: 2.0)))
+        XCTAssertNil(engine.preliminaryMovementStart(for: frame(36, frequency: 2.0)))
+        XCTAssertEqual(engine.preliminaryMovementStart(for: frame(37, frequency: 2.0)), 35)
+        XCTAssertEqual(engine.preliminaryMovementStart(for: frame(38, frequency: 2.0)), 35)
+    }
+
+    func testPreliminaryMovementSignalRejectsStationaryFrames() {
+        var engine = MotionCadenceSessionEngine()
+        for second in 0..<5 {
+            XCTAssertNil(engine.preliminaryMovementStart(for: frame(second, frequency: nil)))
+        }
+    }
+
     func testStationaryMotionNeverCreatesBout() {
         var engine = MotionCadenceSessionEngine()
         var candidates: [MotionCadenceBoutDetector.Candidate] = []

@@ -102,7 +102,8 @@ extension Repository {
 
     /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. Repeated detector updates
     /// extend the existing confirmed workout's end time while preserving its stable identity.
-    func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?) async {
+    func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?,
+                                      medianCadenceHz: Double? = nil, distanceM: Double? = nil) async {
         guard endTs > startTs, let store = await storeHandle() else { return }
         // A bout keeps one identity even if its rolling median cadence crosses the walk/run
         // boundary while the user speeds up or slows down. Match our own motion-generated row
@@ -110,19 +111,28 @@ extension Repository {
         let existing = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
             $0.startTs == startTs
                 && WorkoutSource.classify($0.source) == .confirmed
-                && $0.notes == "Automatically detected from WHOOP 5 live motion cadence"
+                && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
         })
         if let existing, endTs <= existing.endTs, existing.sport == sport { return }
 
         let finalEnd = max(endTs, existing?.endTs ?? endTs)
+        let strideLengthM = sport.localizedCaseInsensitiveContains("run") ? 0.98 : 0.72
+        let estimatedDistanceM: Double? = (distanceM == nil && existing?.distanceM == nil)
+            ? medianCadenceHz.map { Double(finalEnd - startTs) * $0 * strideLengthM }
+            : nil
+        let resolvedDistanceM = distanceM ?? existing?.distanceM ?? estimatedDistanceM
+        let note = distanceM != nil
+            ? "Automatically detected from WHOOP 5 live motion cadence · GPS distance"
+            : (existing?.notes ?? (estimatedDistanceM != nil
+                ? "Automatically detected from WHOOP 5 live motion cadence · Estimated stride distance"
+                : "Automatically detected from WHOOP 5 live motion cadence"))
         let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
                              source: existing?.source ?? WorkoutSource.confirmedSuggestionSource,
                              durationS: Double(finalEnd - startTs),
                              energyKcal: existing?.energyKcal, avgHr: averageBpm ?? existing?.avgHr,
                              maxHr: existing?.maxHr, strain: existing?.strain,
-                             distanceM: existing?.distanceM, zonesJSON: existing?.zonesJSON,
-                             notes: "Automatically detected from WHOOP 5 live motion cadence",
-                             steps: existing?.steps)
+                             distanceM: resolvedDistanceM, zonesJSON: existing?.zonesJSON,
+                             notes: note, steps: existing?.steps)
         // Write the replacement first. If it fails, the old confirmed activity remains intact.
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
         catch { return }
