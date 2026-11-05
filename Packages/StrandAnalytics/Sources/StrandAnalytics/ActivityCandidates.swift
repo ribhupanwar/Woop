@@ -26,7 +26,7 @@ public enum ActivityCandidates {
     public static let boutShare = 0.8
     /// Longest run of non-qualifying minutes inside a span.
     public static let maxGapMinutes = 2
-    public static let walkCadence = 60
+    public static let walkCadence = 80
     public static let everydayMarginHRR = 0.12
     public static let everydayQuantile = 0.75
     /// Without enough history, the heart-rate track uses this fixed reserve instead of the everyday level.
