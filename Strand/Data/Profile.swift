@@ -179,6 +179,7 @@ final class ProfileStore: ObservableObject {
         static let runStrideLength = "profile.runStrideLengthM"
         static let walkStrideSamples = "profile.walkStrideCalibrationSamples"
         static let runStrideSamples = "profile.runStrideCalibrationSamples"
+        static let strideCalibratedSessions = "profile.strideCalibratedSessions"
         static let waist = "profile.waistCm"
         static let stepsCoeff = "profile.stepsCalibrationCoefficient"
         static let stepsSampleDays = "profile.stepsCalibrationSampleDays"
@@ -239,7 +240,7 @@ final class ProfileStore: ObservableObject {
         walkStrideLengthM = d.object(forKey: K.walkStrideLength) as? Double
             ?? min(max(heightCm / 100.0 * 0.415, 0.35), 0.85)
         runStrideLengthM = d.object(forKey: K.runStrideLength) as? Double
-            ?? min(max(heightCm / 100.0 * 0.45, 0.55), 1.40)
+            ?? min(max(heightCm / 100.0 * 0.53, 0.55), 1.40)
         walkStrideCalibrationSamples = max(0, d.integer(forKey: K.walkStrideSamples))
         runStrideCalibrationSamples = max(0, d.integer(forKey: K.runStrideSamples))
         stepsCalibrationCoefficient = d.object(forKey: K.stepsCoeff) as? Double ?? 0
@@ -463,12 +464,18 @@ final class ProfileStore: ObservableObject {
 
     /// Learn a personal stride only from a GPS-measured route and a counter-backed (not cadence-estimated)
     /// step total. Bounds reject route glitches and non-locomotion counts before they can poison calibration.
-    func recordStrideCalibration(gpsDistanceM: Double, steps: Int, sport: String) {
-        guard gpsDistanceM.isFinite, gpsDistanceM >= 300, steps >= 100 else { return }
+    func recordStrideCalibration(gpsDistanceM: Double, steps: Int, sport: String, sessionKey: String) {
+        guard gpsDistanceM.isFinite, gpsDistanceM >= 300, steps >= 100, !sessionKey.isEmpty else { return }
         let isRun = sport.localizedCaseInsensitiveContains("run")
         let observed = gpsDistanceM / Double(steps)
         let plausible = isRun ? (0.55...1.80).contains(observed) : (0.35...1.00).contains(observed)
         guard plausible else { return }
+        let token = "\(isRun ? "run" : "walk")|\(sessionKey)"
+        var calibratedSessions = d.stringArray(forKey: K.strideCalibratedSessions) ?? []
+        guard !calibratedSessions.contains(token) else { return }
+        calibratedSessions.append(token)
+        if calibratedSessions.count > 200 { calibratedSessions.removeFirst(calibratedSessions.count - 200) }
+        d.set(calibratedSessions, forKey: K.strideCalibratedSessions)
         if isRun {
             let alpha = 1.0 / Double(min(runStrideCalibrationSamples + 1, 8))
             runStrideLengthM += (observed - runStrideLengthM) * alpha

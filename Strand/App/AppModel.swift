@@ -706,7 +706,8 @@ final class AppModel: ObservableObject {
                         RouteStore.store(finalRoute, startTs: start, sport: sport)
                         if let counterSteps {
                             self.profile.recordStrideCalibration(gpsDistanceM: finalRoute.distanceM,
-                                                                 steps: counterSteps, sport: sport)
+                                                                 steps: counterSteps, sport: sport,
+                                                                 sessionKey: String(start))
                         }
                     }
                 }
@@ -1131,11 +1132,15 @@ final class AppModel: ObservableObject {
         let rows = await repo.workoutRows(days: ActivitySuggestions.listDays + 2)
         for row in rows where row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true {
             let route = RouteStore.load(startTs: row.startTs, sport: row.sport)
-            _ = await repo.autoLogMotionDetectedWorkout(
+            let counterSteps = await repo.autoLogMotionDetectedWorkout(
                 startTs: row.startTs, endTs: row.endTs, sport: row.sport,
                 averageBpm: row.avgHr, medianCadenceHz: nil, distanceM: route?.distanceM,
                 stepTicksPerStep: profile.stepTicksPerStep,
                 strideLengthM: profile.strideLengthM(for: row.sport))
+            if let route, let counterSteps {
+                profile.recordStrideCalibration(gpsDistanceM: route.distanceM, steps: counterSteps,
+                                                 sport: row.sport, sessionKey: String(row.startTs))
+            }
         }
     }
 
