@@ -2,6 +2,7 @@ import Foundation
 import StrandAnalytics
 import StrandCore
 import WhoopStore
+import WhoopProtocol
 
 // Activity-detection reads and writes (fork decision 2026-10-31). The suggestions are what the daily pass
 // stored; the answers are wearer input; a confirmed session is a workout row under its own source.
@@ -102,48 +103,113 @@ extension Repository {
 
     /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. Repeated detector updates
     /// extend the existing confirmed workout's end time while preserving its stable identity.
+    @discardableResult
     func autoLogMotionDetectedWorkout(startTs: Int, endTs: Int, sport: String, averageBpm: Int?,
-                                      medianCadenceHz: Double? = nil, distanceM: Double? = nil) async {
-        guard endTs > startTs, let store = await storeHandle() else { return }
-        // A bout keeps one identity even if its rolling median cadence crosses the walk/run
-        // boundary while the user speeds up or slows down. Match our own motion-generated row
-        // by start time, not by the currently inferred label, or one real session becomes two.
+                                      medianCadenceHz: Double? = nil, distanceM: Double? = nil,
+                                      stepTicksPerStep: Double = 1.0,
+                                      strideLengthM: Double? = nil) async -> Int? {
+        guard endTs > startTs, let store = await storeHandle() else { return nil }
+        // One motion bout keeps its identity as the rolling cadence label changes.
         let existing = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
             $0.startTs == startTs
                 && WorkoutSource.classify($0.source) == .confirmed
                 && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
         })
-        if let existing, endTs <= existing.endTs, existing.sport == sport { return }
-
         let finalEnd = max(endTs, existing?.endTs ?? endTs)
-        let strideLengthM = sport.localizedCaseInsensitiveContains("run") ? 0.98 : 0.72
-        let estimatedDistanceM: Double? = (distanceM == nil && existing?.distanceM == nil)
-            ? medianCadenceHz.map { Double(finalEnd - startTs) * $0 * strideLengthM }
+
+        // @57 is a cumulative u16 counter. Include the last sample before the workout so the first
+        // in-window increment is not lost, then apply the wearer's existing counter-tick correction.
+        let priorStep = try? await store.stepSampleBefore(deviceId: deviceId, before: startTs)
+        let stepRows = (try? await store.stepSamples(deviceId: deviceId, from: startTs,
+                                                       to: finalEnd, limit: Int.max)) ?? []
+        var stepWindow: [StepSample] = []
+        if let priorStep { stepWindow.append(priorStep) }
+        stepWindow.append(contentsOf: stepRows)
+        let rawTicks = StepsCounter.stepsInWindow(stepWindow)
+        let correction = stepTicksPerStep.isFinite ? min(max(stepTicksPerStep, 0.5), 30.0) : 1.0
+        let counterSteps = rawTicks.map { max(0, Int((Double($0) / correction).rounded())) }
+        let cadenceSteps = medianCadenceHz.flatMap { cadence -> Int? in
+            guard cadence.isFinite,
+                  (MotionCadenceBoutDetector.minimumCadenceHz...MotionCadenceBoutDetector.maximumCadenceHz)
+                    .contains(cadence) else { return nil }
+            return max(0, Int((Double(finalEnd - startTs) * cadence).rounded()))
+        }
+        let existingCadenceEstimate = existing?.notes?.contains("Estimated cadence steps") == true
+        let resolvedSteps = counterSteps
+            ?? (existingCadenceEstimate ? cadenceSteps ?? existing?.steps : existing?.steps ?? cadenceSteps)
+        let stepsAreEstimated = counterSteps == nil
+            && (existingCadenceEstimate || (existing?.steps == nil && cadenceSteps != nil))
+
+        // GPS is the only measured distance. Otherwise use counter/cadence steps multiplied by the
+        // wearer's height-derived stride, progressively calibrated from GPS runs/walks.
+        let existingHasGPS = existing?.notes?.contains("GPS distance") == true
+        let gpsDistance = distanceM ?? (existingHasGPS ? existing?.distanceM : nil)
+        let stride = strideLengthM.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        let estimatedDistance = gpsDistance == nil
+            ? resolvedSteps.flatMap { steps in stride.map { Double(steps) * $0 } }
             : nil
-        let resolvedDistanceM = distanceM ?? existing?.distanceM ?? estimatedDistanceM
-        let note = distanceM != nil
-            ? "Automatically detected from WHOOP 5 live motion cadence · GPS distance"
-            : (existing?.notes ?? (estimatedDistanceM != nil
-                ? "Automatically detected from WHOOP 5 live motion cadence · Estimated stride distance"
-                : "Automatically detected from WHOOP 5 live motion cadence"))
+        let resolvedDistance = gpsDistance ?? estimatedDistance
+
+        // Use the stored HR trace when it covers the workout, not the smoothed dashboard BPM.
+        // The motion-minute BPM is retained only as a fallback when raw coverage is insufficient.
+        let hrSamples = (try? await store.hrSamples(deviceId: deviceId, from: startTs,
+                                                     to: finalEnd, limit: 10_000)) ?? []
+        let restingHR = today?.restingHr.map(Double.init)
+        let analyticsProfile = ProfileStore.persistedAnalyticsProfile
+        let hrMax = strainProfile?.hrMax ?? analyticsProfile.maxHR
+        let hasHRCoverage = WorkoutHeartRateFill.hasUsableCoverage(hrSamples, start: startTs, end: finalEnd)
+        let hrSummary = hasHRCoverage
+            ? WorkoutHeartRateFill.resolve(band: hrSamples, watchMinutes: [], start: startTs, end: finalEnd,
+                                           maxHR: hrMax, restingHR: restingHR)
+            : nil
+        let resolvedAverageHR = hrSummary?.averageHR ?? averageBpm ?? existing?.avgHr
+        let resolvedMaxHR = hrSummary?.maxHR ?? existing?.maxHr
+        let resolvedStrain = hrSummary?.strain ?? existing?.strain
+        let localDay = Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(startTs)))
+        let peakMET = latestEnergyPeakMET.flatMap { $0.day == localDay ? $0.peakMET : nil }
+        let estimatedKcal: Double?
+        if hasHRCoverage {
+            let kcal = WorkoutEnergyEstimate.boutKcal(
+                hrSamples, sport: sport, profile: analyticsProfile, hrMax: hrMax,
+                restingHR: restingHR, peakMET: peakMET, distanceM: gpsDistance)
+            estimatedKcal = kcal > 0 ? kcal : nil
+        } else {
+            estimatedKcal = WorkoutEnergyEstimate.resolve(
+                recordedKcal: nil, sport: sport, durationSeconds: Double(finalEnd - startTs),
+                averageHR: resolvedAverageHR, profile: analyticsProfile, hrMax: hrMax,
+                restingHR: restingHR, peakMET: peakMET, distanceM: gpsDistance)?.kcal
+        }
+
+        var noteParts = ["Automatically detected from WHOOP 5 live motion cadence"]
+        if gpsDistance != nil { noteParts.append("GPS distance") }
+        else if estimatedDistance != nil { noteParts.append("Estimated stride distance") }
+        if stepsAreEstimated { noteParts.append("Estimated cadence steps") }
+        let note = noteParts.joined(separator: " · ")
         let row = WorkoutRow(startTs: startTs, endTs: finalEnd, sport: sport,
                              source: existing?.source ?? WorkoutSource.confirmedSuggestionSource,
                              durationS: Double(finalEnd - startTs),
-                             energyKcal: existing?.energyKcal, avgHr: averageBpm ?? existing?.avgHr,
-                             maxHr: existing?.maxHr, strain: existing?.strain,
-                             distanceM: resolvedDistanceM, zonesJSON: existing?.zonesJSON,
-                             notes: note, steps: existing?.steps)
-        // Write the replacement first. If it fails, the old confirmed activity remains intact.
+                             energyKcal: estimatedKcal ?? existing?.energyKcal,
+                             avgHr: resolvedAverageHR, maxHr: resolvedMaxHR, strain: resolvedStrain,
+                             distanceM: resolvedDistance, zonesJSON: existing?.zonesJSON,
+                             notes: note, steps: resolvedSteps)
+
+        if let existing, existing.endTs == row.endTs, existing.sport == row.sport,
+           existing.energyKcal == row.energyKcal, existing.avgHr == row.avgHr,
+           existing.maxHr == row.maxHr, existing.strain == row.strain,
+           existing.distanceM == row.distanceM, existing.steps == row.steps,
+           existing.notes == row.notes {
+            return counterSteps
+        }
+
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
-        catch { return }
+        catch { return counterSteps }
         if let existing, existing.sport != sport {
-            // Workout rows use (device, start, sport) as their natural key. Retire the old
-            // label only after the replacement is durable, preventing a duplicate bout.
             _ = try? await store.deleteWorkouts(deviceId: deviceId, sport: existing.sport,
                                                 from: existing.startTs, to: existing.startTs)
         }
         scheduleEnergyRefresh(coveringStart: startTs)
         await refresh()
+        return counterSteps
     }
     /// Undo: deletes the answer and its workout. Auto-logged spans are tombstoned so reload cannot recreate them.
     func undoActivitySuggestion(_ s: ActivitySuggestions.Suggestion) async {

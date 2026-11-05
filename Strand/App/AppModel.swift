@@ -377,6 +377,11 @@ final class AppModel: ObservableObject {
     private var motionCadenceEngine = MotionCadenceSessionEngine()
     /// Start of a provisional GPS buffer; this never creates an activity row by itself.
     private var autoGpsCandidateStartTs: Int?
+    /// Last confirmed end and stable start for the GPS-backed automatic bout. GPS stays active until
+    /// the detector has stopped extending this end for the grace window.
+    private var autoGpsConfirmedStartTs: Int?
+    private var autoGpsConfirmedEndTs: Int?
+    private var autoGpsConfirmedSport: String?
 
     init() {
         let live = LiveState()
@@ -647,8 +652,8 @@ final class AppModel: ObservableObject {
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
         ble.onLiveWhoop5ImuFrame = { [weak self] frame in
             guard let self else { return }
-            // Start GPS after three stable gait frames, while the ten-minute confirmation window
-            // is still accumulating. The route is keyed back to the first candidate frame.
+            // Pre-arm from the first stable gait frames, so the GPS route includes the beginning
+            // while the 10-minute motion detector is still qualifying the bout.
             if let candidateStart = self.motionCadenceEngine.preliminaryMovementStart(for: frame),
                self.autoGpsCandidateStartTs == nil, self.activeWorkout == nil,
                self.gpsRecorder.startIfAuthorized(startMs: Int64(candidateStart) * 1000, maxSpeedMps: 12) {
@@ -658,25 +663,59 @@ final class AppModel: ObservableObject {
             let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.bpm, restingBpm: resting)
             for bout in bouts {
                 let sport = bout.kind == .run ? "Running" : "Walking"
-                let route: WorkoutRoute?
-                if self.autoGpsCandidateStartTs == bout.startTs {
-                    route = self.gpsRecorder.capturedRoute()
-                    self.gpsRecorder.stop()
-                    self.autoGpsCandidateStartTs = nil
-                } else {
-                    route = nil
+                let candidateStart = self.autoGpsCandidateStartTs
+                let routeMatchesBout = candidateStart.map { abs($0 - bout.startTs) <= 90 } ?? false
+                let route = routeMatchesBout ? self.gpsRecorder.capturedRoute() : nil
+                if routeMatchesBout {
+                    self.autoGpsConfirmedStartTs = bout.startTs
+                    self.autoGpsConfirmedEndTs = max(self.autoGpsConfirmedEndTs ?? bout.endTs, bout.endTs)
+                    self.autoGpsConfirmedSport = sport
                 }
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    await self.repo.autoLogMotionDetectedWorkout(
+                    _ = await self.repo.autoLogMotionDetectedWorkout(
                         startTs: bout.startTs, endTs: bout.endTs, sport: sport,
                         averageBpm: bout.averageBpm, medianCadenceHz: bout.medianCadenceHz,
-                        distanceM: route?.distanceM)
+                        distanceM: route?.distanceM,
+                        stepTicksPerStep: self.profile.stepTicksPerStep,
+                        strideLengthM: self.profile.strideLengthM(for: sport))
                     if let route { RouteStore.store(route, startTs: bout.startTs, sport: sport) }
                 }
             }
-            // Discard an unconfirmed buffer after the detector's qualification window plus a grace period.
-            if let started = self.autoGpsCandidateStartTs,
+
+            // Keep GPS recording while the confirmed bout continues to extend. Stop only after
+            // 90 seconds without a newer confirmed end, then write the final route/stride calibration.
+            if let lastEnd = self.autoGpsConfirmedEndTs,
+               frame.baseTs - lastEnd > 90,
+               let start = self.autoGpsConfirmedStartTs,
+               let sport = self.autoGpsConfirmedSport {
+                let finalRoute = self.gpsRecorder.capturedRoute()
+                self.gpsRecorder.stop()
+                self.autoGpsCandidateStartTs = nil
+                self.autoGpsConfirmedStartTs = nil
+                self.autoGpsConfirmedEndTs = nil
+                self.autoGpsConfirmedSport = nil
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    let counterSteps = await self.repo.autoLogMotionDetectedWorkout(
+                        startTs: start, endTs: lastEnd, sport: sport, averageBpm: nil,
+                        medianCadenceHz: nil, distanceM: finalRoute?.distanceM,
+                        stepTicksPerStep: self.profile.stepTicksPerStep,
+                        strideLengthM: self.profile.strideLengthM(for: sport))
+                    if let finalRoute {
+                        RouteStore.store(finalRoute, startTs: start, sport: sport)
+                        if let counterSteps {
+                            self.profile.recordStrideCalibration(gpsDistanceM: finalRoute.distanceM,
+                                                                 steps: counterSteps, sport: sport)
+                        }
+                    }
+                }
+            }
+
+            // Discard only an unconfirmed GPS candidate. A confirmed bout owns the recorder until
+            // its end grace window above has elapsed.
+            if self.autoGpsConfirmedEndTs == nil,
+               let started = self.autoGpsCandidateStartTs,
                frame.baseTs - started > (MotionCadenceBoutDetector.minimumDurationMinutes + 3) * 60 {
                 self.gpsRecorder.stop()
                 self.autoGpsCandidateStartTs = nil
@@ -1088,6 +1127,18 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func refreshAutomaticallyDetectedWorkoutMetrics() async {
+        let rows = await repo.workoutRows(days: ActivitySuggestions.listDays + 2)
+        for row in rows where row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true {
+            let route = RouteStore.load(startTs: row.startTs, sport: row.sport)
+            _ = await repo.autoLogMotionDetectedWorkout(
+                startTs: row.startTs, endTs: row.endTs, sport: row.sport,
+                averageBpm: row.avgHr, medianCadenceHz: nil, distanceM: route?.distanceM,
+                stepTicksPerStep: profile.stepTicksPerStep,
+                strideLengthM: profile.strideLengthM(for: row.sport))
+        }
+    }
+
     private func refreshAfterCompletedBackfill() async {
         live.append(log: "Backfill: refreshing dashboard cache from completed sync")
         // Publish the two continuously-changing activity values first. This reads one calendar day and
@@ -1115,6 +1166,7 @@ final class AppModel: ObservableObject {
         }
         // Recompute activity candidates from the newly banked local strap data after the daily RHR pass.
         await repo.refreshActivitySuggestions(hrMax: profile.hrMax)
+        await refreshAutomaticallyDetectedWorkoutMetrics()
         await PlanReconciliationCoordinator.reconcile(repo: repo)
         await GoalTrackingStore.shared.refresh(repo: repo)
         await refreshV5Signals()

@@ -60,6 +60,21 @@ final class ProfileStore: ObservableObject {
         didSet { d.set(min(max(stepTicksPerStep, 0.5), 30.0), forKey: K.stepScale) }
     }
 
+    /// Personal step lengths used only when a GPS route is unavailable. Initial values are
+    /// height-derived; GPS workouts with a counter-backed step total progressively calibrate them.
+    @Published private(set) var walkStrideLengthM: Double {
+        didSet { d.set(walkStrideLengthM, forKey: K.walkStrideLength) }
+    }
+    @Published private(set) var runStrideLengthM: Double {
+        didSet { d.set(runStrideLengthM, forKey: K.runStrideLength) }
+    }
+    @Published private(set) var walkStrideCalibrationSamples: Int {
+        didSet { d.set(walkStrideCalibrationSamples, forKey: K.walkStrideSamples) }
+    }
+    @Published private(set) var runStrideCalibrationSamples: Int {
+        didSet { d.set(runStrideCalibrationSamples, forKey: K.runStrideSamples) }
+    }
+
     // ── Steps ESTIMATE calibration (WHOOP 4.0; StepsEstimateEngine) ─────────────────────────────
     // Written by IntelligenceEngine each analytics pass from the auto-fit against phone steps, and
     // read by the Settings/Steps screen to display + adjust the calibration. `stepsManualCoefficient`
@@ -160,6 +175,10 @@ final class ProfileStore: ObservableObject {
         /// Upstream ryanbr/noop's single custom-zone key. READ ONLY here — see the import in `init`.
         static let hrZoneThresholds = "profile.hrZoneThresholds"
         static let stepScale = "profile.stepTicksPerStep"
+        static let walkStrideLength = "profile.walkStrideLengthM"
+        static let runStrideLength = "profile.runStrideLengthM"
+        static let walkStrideSamples = "profile.walkStrideCalibrationSamples"
+        static let runStrideSamples = "profile.runStrideCalibrationSamples"
         static let waist = "profile.waistCm"
         static let stepsCoeff = "profile.stepsCalibrationCoefficient"
         static let stepsSampleDays = "profile.stepsCalibrationSampleDays"
@@ -217,6 +236,12 @@ final class ProfileStore: ObservableObject {
         zonePercentEdgesRaw = percentRaw
         zoneBpmEdgesRaw = bpmRaw
         stepTicksPerStep = min(max(d.object(forKey: K.stepScale) as? Double ?? 1.0, 0.5), 30.0)
+        walkStrideLengthM = d.object(forKey: K.walkStrideLength) as? Double
+            ?? min(max(heightCm / 100.0 * 0.415, 0.35), 0.85)
+        runStrideLengthM = d.object(forKey: K.runStrideLength) as? Double
+            ?? min(max(heightCm / 100.0 * 0.45, 0.55), 1.40)
+        walkStrideCalibrationSamples = max(0, d.integer(forKey: K.walkStrideSamples))
+        runStrideCalibrationSamples = max(0, d.integer(forKey: K.runStrideSamples))
         stepsCalibrationCoefficient = d.object(forKey: K.stepsCoeff) as? Double ?? 0
         stepsCalibrationSampleDays = d.object(forKey: K.stepsSampleDays) as? Int ?? 0
         stepsCalibrationConfidence = d.object(forKey: K.stepsConfidence) as? Double ?? 0
@@ -428,6 +453,30 @@ final class ProfileStore: ObservableObject {
         case ..<2.0: return 0.1
         case ..<5.0: return 0.5
         default: return 1.0
+        }
+    }
+
+    /// The current stride used for a no-GPS distance estimate.
+    func strideLengthM(for sport: String) -> Double {
+        sport.localizedCaseInsensitiveContains("run") ? runStrideLengthM : walkStrideLengthM
+    }
+
+    /// Learn a personal stride only from a GPS-measured route and a counter-backed (not cadence-estimated)
+    /// step total. Bounds reject route glitches and non-locomotion counts before they can poison calibration.
+    func recordStrideCalibration(gpsDistanceM: Double, steps: Int, sport: String) {
+        guard gpsDistanceM.isFinite, gpsDistanceM >= 300, steps >= 100 else { return }
+        let isRun = sport.localizedCaseInsensitiveContains("run")
+        let observed = gpsDistanceM / Double(steps)
+        let plausible = isRun ? (0.55...1.80).contains(observed) : (0.35...1.00).contains(observed)
+        guard plausible else { return }
+        if isRun {
+            let alpha = 1.0 / Double(min(runStrideCalibrationSamples + 1, 8))
+            runStrideLengthM += (observed - runStrideLengthM) * alpha
+            runStrideCalibrationSamples += 1
+        } else {
+            let alpha = 1.0 / Double(min(walkStrideCalibrationSamples + 1, 8))
+            walkStrideLengthM += (observed - walkStrideLengthM) * alpha
+            walkStrideCalibrationSamples += 1
         }
     }
 
