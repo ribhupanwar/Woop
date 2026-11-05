@@ -123,7 +123,7 @@ final class ActivitySuggestionCenterTests: XCTestCase {
 
             let rows = try await store.workouts(deviceId: deviceId, from: start - 1,
                                                 to: start + 1_300, limit: 10)
-            XCTAssertEqual(rows.map(\\.sport), ["Walking"],
+            XCTAssertEqual(rows.map(\.sport), ["Walking"],
                            "A ten-minute step-confirmed walk must auto-log even when HR average is unavailable.")
             let answers = try await store.activitySuggestionAnswers(from: start - 1, to: start + 1_300)
             XCTAssertEqual(answers.first?.origin, .automatic)
