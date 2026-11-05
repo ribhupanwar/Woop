@@ -215,7 +215,8 @@ final class ProfileStore: ObservableObject {
         sex = d.string(forKey: K.sex) ?? "male"
         bodyFormulaSex = d.string(forKey: K.bodyFormulaSex) ?? ""
         weightKg = d.object(forKey: K.weight) as? Double ?? 75
-        heightCm = d.object(forKey: K.height) as? Double ?? 178
+        let resolvedHeightCm = d.object(forKey: K.height) as? Double ?? 178
+        heightCm = resolvedHeightCm
         waistCm = d.object(forKey: K.waist) as? Double ?? 0
         hrMaxOverride = d.object(forKey: K.hrMax) as? Int ?? 0
         var mode = d.string(forKey: K.zoneMode) ?? HRZoneConfig.Mode.auto.rawValue
@@ -238,9 +239,9 @@ final class ProfileStore: ObservableObject {
         zoneBpmEdgesRaw = bpmRaw
         stepTicksPerStep = min(max(d.object(forKey: K.stepScale) as? Double ?? 1.0, 0.5), 30.0)
         walkStrideLengthM = d.object(forKey: K.walkStrideLength) as? Double
-            ?? min(max(heightCm / 100.0 * 0.415, 0.35), 0.85)
+            ?? min(max(resolvedHeightCm / 100.0 * 0.415, 0.35), 0.85)
         runStrideLengthM = d.object(forKey: K.runStrideLength) as? Double
-            ?? min(max(heightCm / 100.0 * 0.53, 0.55), 1.40)
+            ?? min(max(resolvedHeightCm / 100.0 * 0.53, 0.55), 1.40)
         walkStrideCalibrationSamples = max(0, d.integer(forKey: K.walkStrideSamples))
         runStrideCalibrationSamples = max(0, d.integer(forKey: K.runStrideSamples))
         stepsCalibrationCoefficient = d.object(forKey: K.stepsCoeff) as? Double ?? 0
