@@ -613,7 +613,12 @@ final class GpsWorkoutRecorder: NSObject, ObservableObject {
         lastLocationAt = nil
         isStationary = false
         self.startMs = startMs
-        captureNotBeforeMs = startMs
+        // CoreLocation timestamps use the iPhone's wall clock. Automatic workout startMs comes
+        // from the WHOOP strap clock, which can be offset from the phone; comparing the two can
+        // reject every otherwise-valid GPS fix when the strap clock is ahead. Use the instant
+        // this recorder is armed as the cached-location cutoff. Manual workouts are unchanged
+        // (their start and arm times are effectively the same).
+        captureNotBeforeMs = Int64(Date().timeIntervalSince1970 * 1000)
         pausedAtMs = nil
         pausedDurationMs = 0
         distanceM = 0
