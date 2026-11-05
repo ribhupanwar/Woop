@@ -639,7 +639,8 @@ final class AppModel: ObservableObject {
         }
 
         AppModel.shared = self   // publish for App Intents (Shortcuts) , see the static above (#42)
-        // Keep the detector attached even when Today/Inbox is not on screen: live strap persistence is its trigger.
+        // Keep the detector attached even when Today/Inbox is not on screen. BLEManager arms the WHOOP 5 type-43
+        // raw-IMU producer after backfill; this callback consumes only its integrity-verified live frames.
         ActivitySuggestionCenter.shared.attach(repo)
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
         ble.onLiveWhoop5ImuFrame = { [weak self] frame in
