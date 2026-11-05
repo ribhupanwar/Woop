@@ -2785,6 +2785,13 @@ struct LiquidTodayView: View {
                                       dateStyle: .none, timeStyle: .short)
     }
 
+    private func timelineWeekday(_ timestamp: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLanguage.activeLocale
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
+    }
+
     private func timelineDuration(_ seconds: Int) -> String {
         let minutes = max(0, seconds) / 60
         return minutes / 60 > 0 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
@@ -2796,9 +2803,7 @@ struct LiquidTodayView: View {
         case .sleep(let night):
             let start = night.session.startTs
             let end = night.session.endTs
-            let day = DateFormatter.localizedString(from: Date(timeIntervalSince1970: TimeInterval(start)),
-                                                    dateStyle: .weekday, timeStyle: .none)
-                .components(separatedBy: ",").first ?? ""
+            let day = timelineWeekday(start)
             HStack(spacing: NoopMetrics.space3) {
                 Image(systemName: "moon.zzz.fill")
                     .font(.system(size: 19, weight: .semibold))
@@ -2888,7 +2893,7 @@ struct LiquidTodayView: View {
                     .padding(.vertical, NoopMetrics.space3)
                 } else {
                     VStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                             switch item {
                             case .sleep:
                                 activityTimelineRow(item)
