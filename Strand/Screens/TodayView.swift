@@ -4438,7 +4438,7 @@ struct TodayView: View {
                                         }
                                         Spacer(minLength: NoopMetrics.space2)
                                         VStack(alignment: .trailing, spacing: 3) {
-                                            Text("\(distance.map { "[\\($0)] " } ?? "")\\(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))")
+                                            Text("\(distance.map { "[\($0)] " } ?? "")\(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))")
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textPrimary)
                                             Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.endTs))))
