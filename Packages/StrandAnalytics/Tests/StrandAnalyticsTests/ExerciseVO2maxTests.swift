@@ -194,4 +194,62 @@ final class ExerciseVO2maxTests: XCTestCase {
         XCTAssertEqual(ExerciseVO2max.climbVO2(ascentM: -5, minutes: 30, gait: .running), 0)
         XCTAssertEqual(ExerciseVO2max.weekly([flat, hilly]).first?.sessionsWithGrade, 1)
     }
+
+    // MARK: - GPS / time-aligned field estimate
+
+    private func gpsSeries(minutes: Int, accuracy: Double = 5) -> ([ExerciseVO2max.GPSPoint], [ExerciseVO2max.HeartRatePoint]) {
+        let start = 1_800_000_000
+        let route = (0...(minutes * 60)).map { second in
+            ExerciseVO2max.GPSPoint(latitude: 0,
+                                    longitude: Double(second) * 3.0 / 111_195.0,
+                                    accuracyM: accuracy,
+                                    timestampMs: Int64(start + second) * 1_000)
+        }
+        let hr = (0...(minutes * 60)).map {
+            ExerciseVO2max.HeartRatePoint(timestampS: start + $0, bpm: 158)
+        }
+        return (route, hr)
+    }
+
+    func testGPSFieldEstimateNeedsTenContinuousMinutesAndRecoversInjectedLevel() {
+        let (route, hr) = gpsSeries(minutes: 11)
+        let estimate = ExerciseVO2max.estimateFromGPS(day: "2026-11-05", startTs: 1_800_000_000,
+                                                       route: route, heartRate: hr,
+                                                       restingHR: 50, maxHR: 190)
+        XCTAssertNotNil(estimate)
+        XCTAssertEqual(estimate?.gait, .running)
+        XCTAssertEqual(estimate?.vo2max ?? 0, 50.2, accuracy: 1.2)
+    }
+
+    func testGPSFieldEstimateRejectsShortOrFragmentedEfforts() {
+        let (shortRoute, shortHR) = gpsSeries(minutes: 9)
+        XCTAssertNil(ExerciseVO2max.estimateFromGPS(day: "2026-11-05", startTs: 1_800_000_000,
+                                                     route: shortRoute, heartRate: shortHR,
+                                                     restingHR: 50, maxHR: 190))
+
+        let (route, hr) = gpsSeries(minutes: 15)
+        let fragmentedHR = hr.filter {
+            let elapsed = $0.timestampS - 1_800_000_000
+            return elapsed < 300 || elapsed >= 600
+        }
+        XCTAssertNil(ExerciseVO2max.estimateFromGPS(day: "2026-11-05", startTs: 1_800_000_000,
+                                                     route: route, heartRate: fragmentedHR,
+                                                     restingHR: 50, maxHR: 190))
+    }
+
+    func testGPSFieldEstimateRejectsPoorAccuracyAndLowIntensity() {
+        let (poorRoute, hr) = gpsSeries(minutes: 12, accuracy: 30)
+        XCTAssertNil(ExerciseVO2max.estimateFromGPS(day: "2026-11-05", startTs: 1_800_000_000,
+                                                     route: poorRoute, heartRate: hr,
+                                                     restingHR: 50, maxHR: 190))
+
+        let (route, _) = gpsSeries(minutes: 12)
+        let easyHR = (0...720).map {
+            ExerciseVO2max.HeartRatePoint(timestampS: 1_800_000_000 + $0, bpm: 120)
+        }
+        XCTAssertNil(ExerciseVO2max.estimateFromGPS(day: "2026-11-05", startTs: 1_800_000_000,
+                                                     route: route, heartRate: easyHR,
+                                                     restingHR: 50, maxHR: 190))
+    }
+
 }
