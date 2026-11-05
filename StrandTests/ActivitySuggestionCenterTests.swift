@@ -103,6 +103,34 @@ final class ActivitySuggestionCenterTests: XCTestCase {
         }
     }
 
+    func testStepConfirmedWalkAutoLogsWithoutAverageHeartRate() async throws {
+        try await withDetection {
+            let store = try await WhoopStore.inMemory()
+            let start = Int(Date().timeIntervalSince1970) - 6 * 3_600
+            try await store.replaceActivityCandidates(deviceId: deviceId,
+                from: start - 86_400, to: start + 86_400, rows: [
+                    ActivityCandidateRow(deviceId: deviceId, track: "walk",
+                        startTs: start, endTs: start + 1_200,
+                        ruleVersion: ActivityCandidates.ruleVersion, avgBpm: nil, peakBpm: nil,
+                        load: 0, cadence: 104, locomotionShare: nil, kinds: ["walk"]),
+                ])
+            let repo = Repository(deviceId: deviceId)
+            repo.setStoreForTesting(store)
+            ActivitySuggestionCenter.shared.attach(repo)
+            defer { withExtendedLifetime(repo) {} }
+
+            await ActivitySuggestionCenter.shared.reload()
+
+            let rows = try await store.workouts(deviceId: deviceId, from: start - 1,
+                                                to: start + 1_300, limit: 10)
+            XCTAssertEqual(rows.map(\\.sport), ["Walking"],
+                           "A ten-minute step-confirmed walk must auto-log even when HR average is unavailable.")
+            let answers = try await store.activitySuggestionAnswers(from: start - 1, to: start + 1_300)
+            XCTAssertEqual(answers.first?.origin, .automatic)
+            XCTAssertEqual(answers.first?.track, .walk)
+        }
+    }
+
     func testAHandLoggedSessionOverASuggestionAnswersIt() async throws {
         try await withDetection {
             let store = try await WhoopStore.inMemory()
