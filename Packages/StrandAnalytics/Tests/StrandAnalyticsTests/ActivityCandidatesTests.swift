@@ -55,6 +55,18 @@ final class ActivityCandidatesTests: XCTestCase {
         XCTAssertTrue(A.walkCandidates(minutes, hrMax: 180).isEmpty)
     }
 
+    func testMinimumStepOnlyWalkCadenceIsInclusive() {
+        let below = day { i in
+            (60..<70).contains(i) ? (85, 79, nil, nil, nil) : self.still
+        }
+        XCTAssertTrue(A.walkCandidates(below, hrMax: 180).isEmpty)
+
+        let atThreshold = day { i in
+            (60..<70).contains(i) ? (85, 80, nil, nil, nil) : self.still
+        }
+        XCTAssertEqual(A.walkCandidates(atThreshold, hrMax: 180).map(\\.durationMinutes), [10])
+    }
+
     func testARunIsNamedARun() {
         let minutes = day { i in (60..<90).contains(i) ? (150, 165, 5, 55, 60) : self.still }
         XCTAssertEqual(A.walkCandidates(minutes, hrMax: 185).first?.kinds, [.run])
