@@ -101,6 +101,29 @@ extension Repository {
         await refresh()
     }
 
+    /// One-time repair for earlier automatic motion rows: their stored HR fallback prevented the
+    /// strap's own session-energy buckets from ever being considered by Workouts/Workout Detail.
+    /// Only rows created by this detector are touched; manual/imported/entered energy is preserved.
+    func clearAutoMotionEnergyFallbacks() async {
+        guard let store = await storeHandle() else { return }
+        let stale = await workoutRows(days: ActivitySuggestions.listDays + 2).filter {
+            WorkoutSource.classify($0.source) == .confirmed
+                && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+                && $0.energyKcal != nil
+        }
+        guard !stale.isEmpty else { return }
+        let cleared = stale.map { row in
+            WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: row.sport, source: row.source,
+                       durationS: row.durationS, energyKcal: nil, avgHr: row.avgHr, maxHr: row.maxHr,
+                       strain: row.strain, distanceM: row.distanceM, zonesJSON: row.zonesJSON,
+                       notes: row.notes, steps: row.steps)
+        }
+        do { _ = try await store.upsertWorkouts(cleared, deviceId: deviceId) }
+        catch { return }
+        if let earliest = stale.map(\.startTs).min() { scheduleEnergyRefresh(coveringStart: earliest) }
+        await refresh()
+    }
+
     /// Persist a cadence-confirmed WHOOP 5 motion bout without a prompt. Repeated detector updates
     /// extend the existing confirmed workout's end time while preserving its stable identity.
     @discardableResult

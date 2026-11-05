@@ -649,6 +649,12 @@ final class AppModel: ObservableObject {
         // Keep the detector attached even when Today/Inbox is not on screen. BLEManager arms the WHOOP 5 type-43
         // raw-IMU producer after backfill; this callback consumes only its integrity-verified live frames.
         ActivitySuggestionCenter.shared.attach(repo)
+        // Clear legacy HR-fallback calories on motion-detected rows once. The strap-first
+        // session-energy resolver can then price existing runs as well as new ones.
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.repo.clearAutoMotionEnergyFallbacks()
+        }
         ble.onLiveSamplesPersisted = { [weak self] in self?.scheduleLocalActivityDetectionScan() }
         ble.onLiveWhoop5ImuFrame = { [weak self] frame in
             guard let self else { return }
