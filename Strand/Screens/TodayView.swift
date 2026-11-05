@@ -4405,48 +4405,53 @@ struct TodayView: View {
                         ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { index, entry in
                             if let w = entry.workout {
                                 Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                    let tint = w.strain.map {
-                                        StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain)
-                                    } ?? StrandPalette.textTertiary
-                                    let displayedEffort = (w.strain ?? 0) * (effortScale == .whoop ? 0.21 : 1.0)
                                     let isEstimated = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
                                     let distance = w.distanceM.map { metres in
                                         let value = metres >= 1000 ? String(format: "%.1f km", metres / 1000)
                                             : String(format: "%.0f m", metres)
                                         return (isEstimated ? "~" : "") + value
                                     }
-                                    HStack(spacing: NoopMetrics.space3) {
-                                        Image(systemName: Self.activitySymbol(for: w.sport))
-                                            .font(.system(size: 20, weight: .semibold))
-                                            .foregroundStyle(tint)
-                                            .frame(width: 34)
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            if let strain = w.strain {
+                                    let displayedEffort = (w.strain ?? 0) * (effortScale == .whoop ? 0.21 : 1.0)
+                                    HStack(spacing: 14) {
+                                        // WHOOP-style coloured metric block: activity icon + effort score.
+                                        HStack(spacing: 7) {
+                                            Image(systemName: Self.activitySymbol(for: w.sport))
+                                                .font(.system(size: 21, weight: .semibold))
+                                            if w.strain != nil {
                                                 Text(String(format: "%.1f", displayedEffort))
                                                     .font(StrandFont.number(18))
-                                                    .foregroundStyle(StrandPalette.textPrimary)
+                                                    .monospacedDigit()
                                             }
-                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased()
-                                                 + (isEstimated ? " · ESTIMATED" : ""))
+                                        }
+                                        .foregroundStyle(.white)
+                                        .frame(width: 112, height: 58)
+                                        .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 12))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
-                                                .foregroundStyle(StrandPalette.textSecondary)
+                                                .foregroundStyle(StrandPalette.textPrimary)
                                                 .lineLimit(1)
-                                            Text(workoutDuration(w))
-                                                .font(StrandFont.caption)
-                                                .foregroundStyle(StrandPalette.textTertiary)
+                                            if let distance {
+                                                Text(distance + (isEstimated ? " EST." : ""))
+                                                    .font(StrandFont.caption)
+                                                    .foregroundStyle(StrandPalette.textTertiary)
+                                                    .lineLimit(1)
+                                            }
                                         }
-                                        Spacer(minLength: NoopMetrics.space2)
-                                        VStack(alignment: .trailing, spacing: 3) {
-                                            Text("\(distance.map { "[\($0)] " } ?? "")\(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))")
+                                        Spacer(minLength: 2)
+                                        VStack(alignment: .trailing, spacing: 5) {
+                                            Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textPrimary)
+                                                .monospacedDigit()
                                             Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.endTs))))
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textTertiary)
+                                                .monospacedDigit()
                                         }
                                     }
-                                    .padding(.vertical, NoopMetrics.space3)
+                                    .padding(.vertical, 9)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
@@ -4454,28 +4459,35 @@ struct TodayView: View {
                                 let asleepMinutes = max(0, Int(SleepView.decodedAsleepMinutes(
                                     sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
                                 ).rounded()))
-                                HStack(spacing: NoopMetrics.space3) {
-                                    Image(systemName: "moon.zzz.fill")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .foregroundStyle(StrandPalette.textTertiary)
-                                        .frame(width: 34)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(String(format: "%dh %02dm", asleepMinutes / 60, asleepMinutes % 60))
+                                // Sleep uses the same three-column WHOOP timeline layout.
+                                HStack(spacing: 14) {
+                                    HStack(spacing: 7) {
+                                        Image(systemName: "moon.zzz.fill")
+                                            .font(.system(size: 21, weight: .semibold))
+                                        Text(String(format: "%d:%02d", asleepMinutes / 60, asleepMinutes % 60))
                                             .font(StrandFont.number(18))
-                                            .foregroundStyle(StrandPalette.textPrimary)
-                                        Text("SLEEP").font(StrandFont.overline)
-                                            .tracking(StrandFont.overlineTracking)
-                                            .foregroundStyle(StrandPalette.textSecondary)
+                                            .monospacedDigit()
                                     }
-                                    Spacer()
-                                    VStack(alignment: .trailing, spacing: 3) {
+                                    .foregroundStyle(.white)
+                                    .frame(width: 112, height: 58)
+                                    .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 12))
+                                    Text("SLEEP")
+                                        .font(StrandFont.overline)
+                                        .tracking(StrandFont.overlineTracking)
+                                        .foregroundStyle(StrandPalette.textPrimary)
+                                    Spacer(minLength: 2)
+                                    VStack(alignment: .trailing, spacing: 5) {
                                         Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
-                                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                                            .font(StrandFont.caption)
+                                            .foregroundStyle(StrandPalette.textPrimary)
+                                            .monospacedDigit()
                                         Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.endTs))))
-                                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                                            .font(StrandFont.caption)
+                                            .foregroundStyle(StrandPalette.textTertiary)
+                                            .monospacedDigit()
                                     }
                                 }
-                                .padding(.vertical, NoopMetrics.space3)
+                                .padding(.vertical, 9)
                             }
                             if index < min(ordered.count, 7) - 1 {
                                 Divider().overlay(StrandPalette.hairline)
