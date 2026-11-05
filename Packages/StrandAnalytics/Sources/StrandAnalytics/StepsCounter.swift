@@ -94,4 +94,4 @@ public enum StepsCounter {
         let rounded = Int(totalTicks.rounded())
         return rounded > 0 ? rounded : nil
     }
-}\n}
+}

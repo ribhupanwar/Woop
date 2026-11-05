@@ -97,4 +97,4 @@ final class StepsCounterTests: XCTestCase {
         let samples = [step(0, 100, 1), step(60, 700, 1), step(120, 760, 1)]
         XCTAssertNil(StepsCounter.stepsInWindow(samples, from: 20, to: 40))
     }
-}\n}
+}
