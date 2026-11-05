@@ -2801,18 +2801,21 @@ struct LiquidTodayView: View {
     private func activityTimelineRow(_ item: TodayActivityTimelineItem) -> some View {
         switch item {
         case .sleep(let night):
-            let start = night.session.startTs
+            let start = night.session.effectiveStartTs
             let end = night.session.endTs
             let day = timelineWeekday(start)
+            let asleepSeconds = Int((night.stages.asleep * 60).rounded())
             HStack(spacing: NoopMetrics.space3) {
                 Image(systemName: "moon.zzz.fill")
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(StrandPalette.accent)
                     .frame(width: 34)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(timelineDuration(end - start))
-                        .font(StrandFont.number(rowNumberSize))
-                        .foregroundStyle(StrandPalette.textPrimary)
+                    if asleepSeconds > 0 {
+                        Text(timelineDuration(asleepSeconds))
+                            .font(StrandFont.number(rowNumberSize))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                    }
                     Text("SLEEP").font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                         .foregroundStyle(StrandPalette.textSecondary)
                 }
@@ -2834,15 +2837,15 @@ struct LiquidTodayView: View {
                     : String(format: "%.0f m", value)
                 return isEstimatedDistance ? "~" + label : label
             }
-            let primary = row.strain.map { String(format: "%.1f", $0) }
-                ?? timelineDuration(Int(row.durationS))
             HStack(spacing: NoopMetrics.space3) {
                 WorkoutTypeIcon(workoutType: row.sport, size: 20, weight: .semibold, color: tint)
                     .frame(width: 34)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(primary).font(StrandFont.number(rowNumberSize))
-                        .foregroundStyle(StrandPalette.textPrimary)
+                    if let strain = row.strain {
+                        Text(String(format: "%.1f", strain)).font(StrandFont.number(rowNumberSize))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                    }
                     Text(WorkoutSource.localizedDisplaySport(row.sport).uppercased()
                          + (isEstimatedDistance ? " · ESTIMATED" : ""))
                         .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
