@@ -1057,6 +1057,9 @@ public final class BLEManager: NSObject, ObservableObject {
     public var onLiveSamplesPersisted: (() -> Void)?
     /// Receives integrity-verified live WHOOP 5 type-43 IMU frames only; historical/offload packets never cross this seam.
     public var onLiveWhoop5ImuFrame: ((Whoop5ImuFrame) -> Void)?
+    /// Clears app-owned live motion windows whenever this BLE link ends, preventing a pre-disconnect bout
+    /// from being stitched to samples received after reconnect.
+    public var onLiveLinkDropped: (() -> Void)?
     /// Multi-WHOOP Add-a-WHOOP wizard surface: straps seen while `isPresentingScan` is true, WITHOUT
     /// auto-connecting. Cleared at the start of each `scanForWhoops()`. Empty/unused on the default path.
     @Published public private(set) var discoveredWhoops: [(uuid: String, name: String, rssi: Int)] = []
@@ -6677,6 +6680,7 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
                                                alreadyBonded: didBond,
                                                family: selectedModel.deviceFamily)
         resetLinkState()
+        onLiveLinkDropped?()
         if helloRefused {
             recordWhoop5BondRefusal(authRefusal: false, peripheralUUID: peripheralUUID)
         }
