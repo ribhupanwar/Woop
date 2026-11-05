@@ -110,11 +110,15 @@ extension Repository {
         var linked = answer
         linked.workout = .init(deviceId: deviceId, startTs: confirmed.startTs, sport: confirmed.sport)
         _ = try? await store.recordActivitySuggestionAnswer(linked)
+        scheduleEnergyRefresh(coveringStart: confirmed.startTs)
         _ = await autoLogMotionDetectedWorkout(
             startTs: confirmed.startTs, endTs: confirmed.endTs, sport: confirmed.sport,
             averageBpm: confirmed.avgHr,
             stepTicksPerStep: ProfileStore.persistedStepTicksPerStep,
             strideLengthM: ProfileStore.persistedStrideLengthM(for: confirmed.sport))
+        // The auto-log can be an idempotent no-op when the suggestion already had the same fields.
+        // Publish the new workout/answer regardless so Today Activity updates immediately.
+        await refresh()
     }
 
     /// One-time repair for earlier automatic motion rows: their stored HR fallback prevented the
