@@ -76,8 +76,48 @@ if [ "$APP" = 1 ]; then
   echo "local-tests: xcodegen generate"
   xcodegen generate >/dev/null
   echo "local-tests: macOS Strand + StrandTests"
-  xcodebuild -project Strand.xcodeproj -scheme Strand -destination 'platform=macOS' \
-    -derivedDataPath "$DERIVED/mac" CODE_SIGNING_ALLOWED=NO test -quiet
+  TEST_RESULTS="${NOOP_TEST_RESULT_BUNDLE:-$DERIVED/StrandTests.xcresult}"
+  mkdir -p "$(dirname "$TEST_RESULTS")"
+  rm -rf "$TEST_RESULTS"
+  if ! xcodebuild -project Strand.xcodeproj -scheme Strand -destination 'platform=macOS' \
+    -derivedDataPath "$DERIVED/mac" -resultBundlePath "$TEST_RESULTS" CODE_SIGNING_ALLOWED=NO test -quiet; then
+    echo "local-tests: XCTest failed; extracting assertion details from $TEST_RESULTS" >&2
+    RESULT_JSON="$DERIVED/StrandTests-result.json"
+    if [ -d "$TEST_RESULTS" ] && xcrun xcresulttool get --legacy --format json --path "$TEST_RESULTS" > "$RESULT_JSON"; then
+      python3 - "$RESULT_JSON" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as f:
+    root = json.load(f)
+
+def value(node):
+    if isinstance(node, dict):
+        if "_value" in node:
+            return node["_value"]
+        return {k: value(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [value(v) for v in node]
+    return node
+
+def failures(node):
+    if isinstance(node, dict):
+        summaries = node.get("testFailureSummaries")
+        if isinstance(summaries, dict):
+            items = summaries.get("_values", [])
+            for item in items:
+                print(json.dumps(value(item), ensure_ascii=False, indent=2))
+        for child in node.values():
+            failures(child)
+    elif isinstance(node, list):
+        for child in node:
+            failures(child)
+
+failures(root)
+PY
+    else
+      echo "local-tests: xcresulttool could not decode the result bundle; bundle path: $TEST_RESULTS" >&2
+    fi
+    exit 1
+  fi
   echo "local-tests: iOS NOOPiOS build"
   IOS_LOG="$DERIVED/ios-build.log"
   xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -destination 'generic/platform=iOS Simulator' \
