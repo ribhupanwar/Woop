@@ -2843,7 +2843,8 @@ struct LiquidTodayView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(primary).font(StrandFont.number(rowNumberSize))
                         .foregroundStyle(StrandPalette.textPrimary)
-                    Text(WorkoutSource.localizedDisplaySport(row.sport).uppercased())
+                    Text(WorkoutSource.localizedDisplaySport(row.sport).uppercased()
+                         + (isEstimatedDistance ? " · ESTIMATED" : ""))
                         .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                         .foregroundStyle(StrandPalette.textSecondary).lineLimit(1)
                 }
