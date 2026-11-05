@@ -4400,43 +4400,85 @@ struct TodayView: View {
                     .padding(.vertical, 4)
                 }
             } else {
-                LazyVGrid(columns: grid, alignment: .leading, spacing: NoopMetrics.gap) {
-                    ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { _, entry in
-                        if let w = entry.workout {
-                            // Opens THIS workout's detail directly as a sheet.
-                            Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                HStack(alignment: .top, spacing: 8) {
-                                    Image(systemName: Self.activitySymbol(for: w.sport))
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundStyle(w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
-                                            ?? StrandPalette.textTertiary)
-                                        .frame(width: 28)
-                                    StatTile(
-                                        label: LocalizedStringKey(WorkoutSource.localizedDisplaySport(w.sport)),
-                                        value: workoutDuration(w),
-                                        caption: Self.workoutCaption(w),
-                                        accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
-                                            ?? StrandPalette.textTertiary
-                                    )
+                NoopCard {
+                    VStack(spacing: 0) {
+                        ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { index, entry in
+                            if let w = entry.workout {
+                                Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
+                                    let tint = w.strain.map {
+                                        StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain)
+                                    } ?? StrandPalette.textTertiary
+                                    let displayedEffort = (w.strain ?? 0) * (effortScale == .whoop ? 0.21 : 1.0)
+                                    let isEstimated = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+                                    let distance = w.distanceM.map { metres in
+                                        let value = metres >= 1000 ? String(format: "%.1f km", metres / 1000)
+                                            : String(format: "%.0f m", metres)
+                                        return (isEstimated ? "~" : "") + value
+                                    }
+                                    HStack(spacing: NoopMetrics.space3) {
+                                        Image(systemName: Self.activitySymbol(for: w.sport))
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(tint)
+                                            .frame(width: 34)
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            if let strain = w.strain {
+                                                Text(String(format: "%.1f", displayedEffort))
+                                                    .font(StrandFont.number(18))
+                                                    .foregroundStyle(StrandPalette.textPrimary)
+                                            }
+                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased()
+                                                 + (isEstimated ? " · ESTIMATED" : ""))
+                                                .font(StrandFont.overline)
+                                                .tracking(StrandFont.overlineTracking)
+                                                .foregroundStyle(StrandPalette.textSecondary)
+                                                .lineLimit(1)
+                                            Text(workoutDuration(w))
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textTertiary)
+                                        }
+                                        Spacer(minLength: NoopMetrics.space2)
+                                        VStack(alignment: .trailing, spacing: 3) {
+                                            Text("\(distance.map { "[\\($0)] " } ?? "")\\(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))")
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                            Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.endTs))))
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textTertiary)
+                                        }
+                                    }
+                                    .padding(.vertical, NoopMetrics.space3)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
+                            } else if let sleep = sleepToday {
+                                let asleepMinutes = max(0, Int(SleepView.decodedAsleepMinutes(
+                                    sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
+                                ).rounded()))
+                                HStack(spacing: NoopMetrics.space3) {
+                                    Image(systemName: "moon.zzz.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundStyle(StrandPalette.textTertiary)
+                                        .frame(width: 34)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(String(format: "%dh %02dm", asleepMinutes / 60, asleepMinutes % 60))
+                                            .font(StrandFont.number(18))
+                                            .foregroundStyle(StrandPalette.textPrimary)
+                                        Text("SLEEP").font(StrandFont.overline)
+                                            .tracking(StrandFont.overlineTracking)
+                                            .foregroundStyle(StrandPalette.textSecondary)
+                                    }
+                                    Spacer()
+                                    VStack(alignment: .trailing, spacing: 3) {
+                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
+                                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.endTs))))
+                                            .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                                    }
+                                }
+                                .padding(.vertical, NoopMetrics.space3)
                             }
-                            .buttonStyle(.plain)
-                        } else if let sleep = sleepToday {
-                            let asleepMinutes = max(0, Int(SleepView.decodedAsleepMinutes(
-                                sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
-                            ).rounded()))
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "moon.zzz.fill")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(StrandPalette.textTertiary)
-                                    .frame(width: 28)
-                                StatTile(
-                                    label: "Sleep",
-                                    value: String(format: "%dh %02dm", asleepMinutes / 60, asleepMinutes % 60),
-                                    caption: Date(timeIntervalSince1970: Double(sleep.endTs))
-                                        .formatted(date: .abbreviated, time: .omitted),
-                                    accent: StrandPalette.textTertiary
-                                )
+                            if index < min(ordered.count, 7) - 1 {
+                                Divider().overlay(StrandPalette.hairline)
                             }
                         }
                     }
