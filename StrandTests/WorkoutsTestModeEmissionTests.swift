@@ -36,13 +36,12 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
 
     // Two well-separated, high-accuracy fixes a few seconds apart: the TrackFilter accepts both, so `ingest`
     // reaches the GPS-fix emit branch (two accepted points → a non-zero distance).
-    private func fixes() -> [CLLocation] {
-        let now = Date()
+    private func fixes(start: Date) -> [CLLocation] {
         let a = CLLocation(coordinate: CLLocationCoordinate2D(latitude: 51.5000, longitude: -0.1000),
-                           altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: now)
+                           altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, timestamp: start.addingTimeInterval(1))
         let b = CLLocation(coordinate: CLLocationCoordinate2D(latitude: 51.5003, longitude: -0.1000),
                            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5,
-                           timestamp: now.addingTimeInterval(3))
+                           timestamp: start.addingTimeInterval(4))
         return [a, b]
     }
 
@@ -51,8 +50,9 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
         var captured: [String] = []
         let rec = makeRecorder()
         rec.workoutsLog = { captured.append($0) }
-        rec.start(startMs: Int64(Date().timeIntervalSince1970 * 1000))
-        rec.receiveLocations(fixes())
+        let start = Date.now.addingTimeInterval(1)
+        rec.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
+        rec.receiveLocations(fixes(start: start))
         XCTAssertTrue(captured.isEmpty, "mode OFF must emit zero .workouts lines, got \(captured)")
         rec.stop()
     }
@@ -77,7 +77,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     /// must not become the route's first point: otherwise the first current fix can turn a stationary
     /// session into tens of metres of invented movement.
     func testCachedFixFromBeforeWorkoutDoesNotCreateStationaryDistance() {
-        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let start = Date.now.addingTimeInterval(10)
         let startMs = Int64(start.timeIntervalSince1970 * 1000)
         let cached = CLLocation(
             coordinate: CLLocationCoordinate2D(latitude: 51.50036, longitude: -0.1000),
@@ -127,7 +127,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
 
     func testUnavailableOrApproximateLocationsCannotStartARoute() {
         for approximate in [false, true] {
-            let start = Date.now
+            let start = Date.now.addingTimeInterval(1)
             let recorder = GpsWorkoutRecorder()
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
             recorder.journal = ActiveRouteJournal(url: folder.appendingPathComponent("route.txt"))
@@ -194,7 +194,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
         recorder.journal = ActiveRouteJournal(url: folder.appendingPathComponent("route.txt"))
         defer { recorder.stop(); try? FileManager.default.removeItem(at: folder) }
         recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
-        recorder.receiveLocations(fixes())
+        recorder.receiveLocations(fixes(start: start))
         let retained = recorder.distanceM
         let recovery = CLLocation(coordinate: CLLocationCoordinate2D(latitude: 51.50135, longitude: -0.1),
                                     altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5,
