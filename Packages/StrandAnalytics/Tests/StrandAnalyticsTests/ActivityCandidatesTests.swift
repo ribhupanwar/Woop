@@ -64,7 +64,7 @@ final class ActivityCandidatesTests: XCTestCase {
         let atThreshold = day { i in
             (60..<70).contains(i) ? (85, 80, nil, nil, nil) : self.still
         }
-        XCTAssertEqual(A.walkCandidates(atThreshold, hrMax: 180).map(\\.durationMinutes), [10])
+        XCTAssertEqual(A.walkCandidates(atThreshold, hrMax: 180).map(\.durationMinutes), [10])
     }
 
     func testARunIsNamedARun() {
