@@ -62,6 +62,17 @@ final class ActivitySuggestionsTests: XCTestCase {
         XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[0], settings: .init(walks: false), now: now))
     }
 
+
+    func testHighCadenceRunOnTheStepTrackQualifiesForAutomaticLogging() {
+        // Run and walk candidates share the step track; the kind comes from sustained cadence.
+        let run = candidate(10_000, minutes: 40, track: "walk", load: 120, avgBpm: 150, kinds: ["run"])
+        let suggestion = S.resolve(candidates: [run], answers: [], workouts: [], settings: .init())[0]
+        XCTAssertEqual(suggestion.track, .walk)
+        XCTAssertEqual(suggestion.likelyKind, .run)
+        XCTAssertTrue(S.qualifiesForAutomaticLogging(
+            suggestion, settings: .init(), now: run.endTs + S.settleSeconds))
+    }
+
     func testOnlySettledOpenSuggestionsAboveTheLevelAreAskedNewestFirst() {
         let rows = [candidate(10_000), candidate(20_000), candidate(30_000, load: 40), candidate(40_000)]
         let all = S.resolve(candidates: rows, answers: [], workouts: [], settings: .init())
