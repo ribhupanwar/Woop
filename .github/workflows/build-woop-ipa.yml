@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: woop-ios-ipa
+  group: woop-ios-ipa-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
