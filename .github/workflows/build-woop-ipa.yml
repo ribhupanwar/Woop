@@ -2,7 +2,7 @@ name: Woop iOS unsigned IPA
 
 on:
   push:
-    branches: [main, feature/whoop-575-ui-parity, feature/auto-workout-10min, feature/cadence-primary-walk-detection, feature/whoop-auto-activity-engine]
+    branches: [main, feature/whoop-575-ui-parity, feature/auto-workout-10min, feature/cadence-primary-walk-detection, feature/whoop-auto-activity-engine, fix/unified-today-auto-gps-sleep]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
       - "Strand/**"

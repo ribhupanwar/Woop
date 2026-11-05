@@ -238,6 +238,11 @@ struct LiquidTodayView: View {
         get { snapshot.hostedSleepModel }
         nonmutating set { snapshot.hostedSleepModel = newValue }
     }
+    /// The latest merged sleep session also feeds the unified Today Activity timeline.
+    private var activitySleepNight: Night? {
+        get { snapshot.activitySleepNight }
+        nonmutating set { snapshot.activitySleepNight = newValue }
+    }
 
     /// Wraps a tapped row so `.sheet(item:)` can present its detail (`WorkoutRow` isn't `Identifiable`) —
     /// mirrors `WorkoutsView.WorkoutDetailTarget` exactly.
@@ -2742,37 +2747,158 @@ struct LiquidTodayView: View {
         }
     }
 
-    // MARK: - Last workouts
+    // MARK: - Today activity timeline
 
-    /// One grouped card: the five newest workouts, each opening its own detail, and `All` for the full
-    /// chronological history. Renders nothing until there is a workout (the section has no empty state).
+    private enum TodayActivityTimelineItem: Identifiable {
+        case sleep(Night)
+        case workout(WorkoutRow)
+
+        var id: String {
+            switch self {
+            case .sleep(let night): return "sleep:\(night.session.startTs):\(night.session.endTs)"
+            case .workout(let row): return "workout:\(row.startTs):\(row.sport)"
+            }
+        }
+
+        var sortTimestamp: Int {
+            switch self {
+            case .sleep(let night): return night.session.endTs
+            case .workout(let row): return row.endTs
+            }
+        }
+    }
+
+    private var todayActivityItems: [TodayActivityTimelineItem] {
+        var items = workouts
+            .filter { Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey }
+            .map(TodayActivityTimelineItem.workout)
+        if let night = activitySleepNight,
+           Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(night.session.endTs))) == selectedDayKey {
+            items.append(.sleep(night))
+        }
+        return items.sorted { $0.sortTimestamp > $1.sortTimestamp }
+            .prefix(7).map { $0 }
+    }
+
+    private func timelineClock(_ timestamp: Int) -> String {
+        DateFormatter.localizedString(from: Date(timeIntervalSince1970: TimeInterval(timestamp)),
+                                      dateStyle: .none, timeStyle: .short)
+    }
+
+    private func timelineDuration(_ seconds: Int) -> String {
+        let minutes = max(0, seconds) / 60
+        return minutes / 60 > 0 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m"
+    }
+
+    @ViewBuilder
+    private func activityTimelineRow(_ item: TodayActivityTimelineItem) -> some View {
+        switch item {
+        case .sleep(let night):
+            let start = night.session.startTs
+            let end = night.session.endTs
+            let day = DateFormatter.localizedString(from: Date(timeIntervalSince1970: TimeInterval(start)),
+                                                    dateStyle: .weekday, timeStyle: .none)
+                .components(separatedBy: ",").first ?? ""
+            HStack(spacing: NoopMetrics.space3) {
+                Image(systemName: "moon.zzz.fill")
+                    .font(.system(size: 19, weight: .semibold))
+                    .foregroundStyle(StrandPalette.accent)
+                    .frame(width: 34)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(timelineDuration(end - start))
+                        .font(StrandFont.number(rowNumberSize))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                    Text("SLEEP").font(StrandFont.overline).tracking(StrandFont.overlineTracking)
+                        .foregroundStyle(StrandPalette.textSecondary)
+                }
+                Spacer(minLength: NoopMetrics.space2)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("[\(day)] \(timelineClock(start))")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                    Text(timelineClock(end)).font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+            .padding(.vertical, NoopMetrics.space3)
+            .contentShape(Rectangle())
+        case .workout(let row):
+            let tint = AppleInspiredColors.role(forSport: row.sport).color
+            let distance = row.distanceM.map { $0 >= 1000
+                ? String(format: "%.1f km", $0 / 1000)
+                : String(format: "%.0f m", $0) }
+            let primary = row.strain.map { String(format: "%.1f", $0) }
+                ?? timelineDuration(Int(row.durationS))
+            HStack(spacing: NoopMetrics.space3) {
+                WorkoutTypeIcon(workoutType: row.sport, size: 20, weight: .semibold, color: tint)
+                    .frame(width: 34)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(primary).font(StrandFont.number(rowNumberSize))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                    Text(WorkoutSource.localizedDisplaySport(row.sport).uppercased())
+                        .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
+                        .foregroundStyle(StrandPalette.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: NoopMetrics.space2)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(distance.map { "[\($0)] " } ?? "")\(timelineClock(row.startTs))")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                    Text(timelineClock(row.endTs)).font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                }
+            }
+            .padding(.vertical, NoopMetrics.space3)
+            .contentShape(Rectangle())
+        }
+    }
+
+    /// One newest-first timeline for sleep and confirmed activities. The empty state keeps this section
+    /// visible on quiet days instead of making the dashboard layout jump.
     @ViewBuilder
     private var lastWorkoutsSection: some View {
-        if !workouts.isEmpty {
-            let rows = Array(workouts.prefix(LiquidTodayDefaults.workoutRows))
-            VStack(spacing: NoopMetrics.space2) {
-                HStack(alignment: .firstTextBaseline) {
-                    sectionHead("LAST WORKOUTS")
-                    NavigationLink(value: TabRoute.workouts) {
-                        HStack(spacing: 3) {
-                            Text("All").font(StrandFont.caption)
-                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
-                        }
-                        .foregroundStyle(StrandPalette.accent)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
+        let items = todayActivityItems
+        VStack(spacing: NoopMetrics.space2) {
+            HStack(alignment: .firstTextBaseline) {
+                sectionHead("TODAY'S ACTIVITY")
+                NavigationLink(value: TabRoute.workouts) {
+                    HStack(spacing: 3) {
+                        Text("All").font(StrandFont.caption)
+                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
                     }
-                    .buttonStyle(.plain)
+                    .foregroundStyle(StrandPalette.accent)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
-                card {
+                .buttonStyle(.plain)
+            }
+            card {
+                if items.isEmpty {
+                    HStack(spacing: NoopMetrics.space3) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .frame(width: 34)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("No activity yet").font(StrandFont.number(rowTextSize))
+                                .foregroundStyle(StrandPalette.textSecondary)
+                            Text("Your sleep and detected workouts will appear here.")
+                                .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        }
+                    }
+                    .padding(.vertical, NoopMetrics.space3)
+                } else {
                     VStack(spacing: 0) {
-                        // `WorkoutRow` isn't Identifiable, hence the offset key.
-                        ForEach(Array(rows.enumerated()), id: \.offset) { index, w in
-                            // Opens THIS workout's detail directly as a sheet — not a push through the
-                            // Workouts overview screen (see `workoutDetailTarget`'s doc comment).
-                            Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: { workoutRow(w) }
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            switch item {
+                            case .sleep:
+                                activityTimelineRow(item)
+                            case .workout(let row):
+                                Button { workoutDetailTarget = WorkoutDetailTarget(row: row) } label: {
+                                    activityTimelineRow(item)
+                                }
                                 .buttonStyle(LiquidPressStyle())
-                            if index < rows.count - 1 {
+                            }
+                            if index < items.count - 1 {
                                 Divider().overlay(StrandPalette.hairline)
                             }
                         }
@@ -2867,6 +2993,7 @@ struct LiquidTodayView: View {
         var hrSegments: [String] = []
         var workouts: [WorkoutRow] = []
         var hostedSleepModel: SleepModel? = nil
+        var activitySleepNight: Night? = nil
         var kSparks: [String: [(String, Double)]] = [:]
         var cachedDisplayDay: DailyMetric?
         /// `repo.today?.day`, resolved in load() with the display day. `selectedDayKey` is read dozens of
@@ -2895,7 +3022,8 @@ struct LiquidTodayView: View {
         let now = Date()
         return DashboardLoadKey(repo: repo, selection: selectedDayKey,
             preferences: "\(hydrationEnabled)-\(hostedCardsRaw)-\(dayCycleModeRaw)-"
-                + "\(Repository.logicalDayKey(now))-\(Repository.localDayKey(now))", profile: profile)
+                + "\(Repository.logicalDayKey(now))-\(Repository.localDayKey(now))-"
+                + "refresh:\(repo.refreshSeq)", profile: profile)
     }
 
     private func load() async {
@@ -3135,14 +3263,12 @@ struct LiquidTodayView: View {
         // Sleep tab loads them, then handed to the SAME pure `SleepModel.build`, so a hosted card renders
         // numbers byte-identical to the Sleep tab. Reused by every SleepModel-backed hosted card (built once).
         let sleepOrigin = String(localized: "Sleep")
-        if HostedCardPrefs.decodeEnabled(hostedCardsRaw).contains(where: { $0.origin == sleepOrigin }) {
-            let revision = key.revision
-            let result = try? await sleepStore.model(repo: repo, revision: revision)
-            guard !Task.isCancelled, revision == SleepPresentationRevision(repo: repo) else { return }
-            next.hostedSleepModel = result
-        } else {
-            next.hostedSleepModel = nil
-        }
+        let revision = key.revision
+        let sleepResult = try? await sleepStore.model(repo: repo, revision: revision)
+        guard !Task.isCancelled, revision == SleepPresentationRevision(repo: repo) else { return }
+        next.activitySleepNight = sleepResult?.night
+        next.hostedSleepModel = HostedCardPrefs.decodeEnabled(hostedCardsRaw)
+            .contains(where: { $0.origin == sleepOrigin }) ? sleepResult : nil
 
         // #2040: and today's stress, on the same "only when hosted" rule.
         if HostedCardPrefs.decodeEnabled(hostedCardsRaw).contains(.stressToday) {
