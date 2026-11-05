@@ -154,12 +154,15 @@ public enum ActivitySuggestions {
             let next = Int(calendar.date(byAdding: .day, value: 1, to: Date(timeIntervalSince1970: TimeInterval(day)))!
                 .timeIntervalSince1970)
             let key = dayKey(day, calendar), previous = dayKey(day - 43_200, calendar)
-            if let rest = restingByDay[key] ?? restingByDay[previous] {
-                let dayMinutes = slice(minutes, day, next)
-                let everyday = ActivityCandidates.everydayHRR(history: slice(minutes, day - 14 * 86_400, day),
-                                                              restingHR: rest, hrMax: hrMax)
-                found += ActivityCandidates.candidates(dayMinutes, restingHR: rest, hrMax: hrMax, everydayHRR: everyday)
+            let rest = restingByDay[key] ?? restingByDay[previous]
+            let dayMinutes = slice(minutes, day, next)
+            let everyday = rest.flatMap {
+                ActivityCandidates.everydayHRR(history: slice(minutes, day - 14 * 86_400, day),
+                                               restingHR: $0, hrMax: hrMax)
             }
+            // Step-based walking remains detectable without a resting-HR baseline.
+            found += ActivityCandidates.candidates(dayMinutes, restingHR: rest, hrMax: hrMax,
+                                                   everydayHRR: everyday)
             day = next
         }
         try await store.replaceActivityCandidates(deviceId: deviceId, from: firstDay, to: now + 1,
@@ -176,10 +179,11 @@ public enum ActivitySuggestions {
                                                 from: dayStart - 14 * 86_400, to: dayEnd)
         let resting = try await restingByDay(store: store, deviceId: deviceId, computedId: computedId,
                                              from: dayKey(dayStart - 43_200, calendar), to: dayKey(dayStart, calendar))
-        guard let rest = resting[dayKey(dayStart, calendar)] ?? resting[dayKey(dayStart - 43_200, calendar)]
-        else { return [] }
-        let everyday = ActivityCandidates.everydayHRR(history: slice(minutes, dayStart - 14 * 86_400, dayStart),
-                                                      restingHR: rest, hrMax: hrMax)
+        let rest = resting[dayKey(dayStart, calendar)] ?? resting[dayKey(dayStart - 43_200, calendar)]
+        let everyday = rest.flatMap {
+            ActivityCandidates.everydayHRR(history: slice(minutes, dayStart - 14 * 86_400, dayStart),
+                                           restingHR: $0, hrMax: hrMax)
+        }
         return ActivityCandidates.candidates(slice(minutes, dayStart, dayEnd), restingHR: rest, hrMax: hrMax,
                                              everydayHRR: everyday)
     }
