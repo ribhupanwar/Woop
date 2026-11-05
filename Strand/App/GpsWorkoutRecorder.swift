@@ -578,6 +578,19 @@ final class GpsWorkoutRecorder: NSObject, ObservableObject {
         }
     }
 
+    /// Called only after three stable gait frames: request When-In-Use then if undecided,
+    /// never merely because the strap connected.
+    @discardableResult
+    func startForAutomaticWorkout(startMs: Int64, maxSpeedMps: Double = 12) -> Bool {
+        switch manager.authorizationStatus {
+        case .notDetermined, .authorizedWhenInUse, .authorizedAlways:
+            start(startMs: startMs, maxSpeedMps: maxSpeedMps)
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Begin recording a fresh route for a workout started at `startMs` (unix milliseconds). Requests
     /// When-In-Use if not yet decided; fails safe (records nothing) if denied / restricted / unavailable.
     /// A re-arm resets the track. Returns immediately — fixes arrive on the native async stream (or the

@@ -662,7 +662,7 @@ final class AppModel: ObservableObject {
             // while the 10-minute motion detector is still qualifying the bout.
             if let candidateStart = self.motionCadenceEngine.preliminaryMovementStart(for: frame),
                self.autoGpsCandidateStartTs == nil, self.activeWorkout == nil,
-               self.gpsRecorder.startIfAuthorized(startMs: Int64(candidateStart) * 1000, maxSpeedMps: 12) {
+               self.gpsRecorder.startForAutomaticWorkout(startMs: Int64(candidateStart) * 1000, maxSpeedMps: 12) {
                 self.autoGpsCandidateStartTs = candidateStart
             }
             let resting = self.repo.today?.restingHr
