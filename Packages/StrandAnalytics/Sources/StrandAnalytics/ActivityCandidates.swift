@@ -20,7 +20,7 @@ import Foundation
 public enum ActivityCandidates {
 
     /// Bumped whenever a threshold or rule below changes, so stored suggestions and answers can be told apart.
-    public static let ruleVersion = "activity-v2-cadence-primary"
+    public static let ruleVersion = "activity-v3-cadence-run-override"
 
     public static let minimumMinutes = 10
     public static let boutShare = 0.8
@@ -132,10 +132,11 @@ public enum ActivityCandidates {
             let walk = span.reduce(0) { $0 + ($1.walkSeconds ?? 0) }
             let run = span.reduce(0) { $0 + ($1.runSeconds ?? 0) }
             let cadence = span.compactMap(\.steps).sorted()
-            // When class labels exist they can distinguish running from walking. Without them,
-            // use sustained high cadence as a conservative run hint; the HR profile remains metadata.
-            let likelyRun = run > walk || (walk + run == 0 && cadence.count >= minimumMinutes
-                && cadence[cadence.count / 2] >= 150)
+            // Cadence is the decisive run signal when sustained at running rates. WHOOP's optional
+            // locomotion labels can lag or classify a fast run as walking; do not let that label
+            // downgrade a 150+ spm bout. Explicit run labels remain sufficient at lower cadence.
+            let medianCadence = cadence.count >= minimumMinutes ? cadence[cadence.count / 2] : 0
+            let likelyRun = run > walk || medianCadence >= 150
             return candidate(.walk, span, hrMax: hrMax, kinds: [likelyRun ? .run : .walk])
         }
     }
