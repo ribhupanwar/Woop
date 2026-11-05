@@ -198,8 +198,10 @@ extension Repository {
         let hrMax = strainProfile?.hrMax ?? analyticsProfile.maxHR
         let hasHRCoverage = WorkoutHeartRateFill.hasUsableCoverage(hrSamples, start: startTs, end: finalEnd)
         let hrSummary = hasHRCoverage
-            ? WorkoutHeartRateFill.resolve(band: hrSamples, watchMinutes: [], start: startTs, end: finalEnd,
-                                           maxHR: hrMax, restingHR: restingHR)
+            ? restingHR.map { value in
+                WorkoutHeartRateFill.resolve(band: hrSamples, watchMinutes: [], start: startTs, end: finalEnd,
+                                              maxHR: hrMax, restingHR: value)
+            }
             : nil
         let resolvedAverageHR = hrSummary?.averageHR ?? averageBpm ?? existing?.avgHr
         let resolvedMaxHR = hrSummary?.maxHR ?? existing?.maxHr
