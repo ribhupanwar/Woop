@@ -666,7 +666,9 @@ final class AppModel: ObservableObject {
                 self.autoGpsCandidateStartTs = candidateStart
             }
             let resting = self.repo.today?.restingHr
-            let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.bpm, restingBpm: resting)
+            // Use raw strap BPM for the workout average. `self.bpm` is a 10-second,
+            // spike-filtered UI median and can materially suppress exercise peaks.
+            let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.live.heartRate, restingBpm: resting)
             for bout in bouts {
                 let sport = bout.kind == .run ? "Running" : "Walking"
                 let candidateStart = self.autoGpsCandidateStartTs
