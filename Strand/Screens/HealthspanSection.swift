@@ -35,6 +35,9 @@ enum HealthspanEmptyReason: Equatable {
 }
 
 struct HealthspanSection: View {
+    /// Today shows the two activity-derived ages together; the lab-only KDM card remains on Health.
+    var showsBiologicalAge = true
+
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var profile: ProfileStore
     @State private var snapshot: HealthspanSnapshot?
@@ -46,11 +49,11 @@ struct HealthspanSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            BiologicalAgeSection()
-            SectionHeader("AgeLess", overline: "Weekly",
+            if showsBiologicalAge { BiologicalAgeSection() }
+            SectionHeader("Healthspan Age", overline: "Weekly",
                           trailing: snapshot?.latest.isProvisional == true ? String(localized: "Provisional") : String(localized: "Beta"))
             if sex == nil {
-                ComingSoon(what: "Set your sex in your profile to see your AgeLess age.", symbol: "person")
+                ComingSoon(what: "Set your sex in your profile to see your Healthspan Age.", symbol: "person")
             } else if let snapshot {
                 Button { showsDetail = true } label: { card(snapshot.latest) }
                     .buttonStyle(.plain)
@@ -58,7 +61,7 @@ struct HealthspanSection: View {
             } else if loaded {
                 emptyState
             } else {
-                ComingSoon.loading("Reading your AgeLess age…", title: "AgeLess", symbol: "hourglass")
+                ComingSoon.loading("Reading your Healthspan Age…", title: "AgeLess", symbol: "hourglass")
             }
         }
         .task(id: repo.refreshSeq) { await load() }
@@ -76,13 +79,13 @@ struct HealthspanSection: View {
     @ViewBuilder private var emptyState: some View {
         switch emptyReason {
         case .steps:
-            ComingSoon(what: "AgeLess needs your daily steps. Bring them in from Apple Health, or set up the step estimate in Settings.",
+            ComingSoon(what: "Healthspan Age needs your daily steps. Bring them in from Apple Health, or set up the step estimate in Settings.",
                        symbol: "figure.walk")
         case .measures(let missing):
             let names = missing.map(HealthspanSection.componentName).formatted(.list(type: .and))
-            ComingSoon(what: "AgeLess still needs: \(names)", symbol: "hourglass")
+            ComingSoon(what: "Healthspan Age still needs: \(names)", symbol: "hourglass")
         case .nights(let nights):
-            ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data. \(nights) so far.",
+            ComingSoon(what: "Your Healthspan Age appears after 30 nights of sleep data. \(nights) so far.",
                        symbol: "hourglass")
         case .unknown:
             ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data.", symbol: "hourglass")
