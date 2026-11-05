@@ -1496,17 +1496,25 @@ final class Repository: ObservableObject {
         return Self.latestActivityClass(perId)
     }
 
-    /// Raw strap step TICKS over `[from, to]` for a manual-workout summary (#398): the wrap-aware
-    /// `step_motion_counter@57` delta-sum (shared `StepsCounter` kernel) from the FIRST id that has a
-    /// countable window — the active strap wins, mirroring `stepActivityClassLatest`. Never MERGED across
-    /// ids: two devices' cumulative counters must not be interleaved (that would fabricate huge deltas).
+    /// Raw strap step TICKS over an exact workout window: the wrap-aware
+    /// `step_motion_counter@57` delta-sum from the FIRST id that has a countable window — the active strap
+    /// wins, mirroring `stepActivityClassLatest`. Never MERGED across ids: two devices' cumulative counters
+    /// must not be interleaved (that would fabricate huge deltas). Read one sample on either side and prorate
+    /// the boundary intervals, matching auto-save so the detail screen and saved row report the same count.
     /// `nil` when no strap counter covers the window — a WHOOP 4.0 (no @57 counter) or an MG/5.0 that hasn't
     /// offloaded the window yet. The caller applies `stepTicksPerStep` and reconciles with the phone pedometer.
     func strapStepTicks(from: Int, to: Int) async -> Int? {
-        guard let store = await ensureStore() else { return nil }
+        guard to > from, let store = await ensureStore() else { return nil }
         for id in importedReadIds {   // active strap FIRST
+            let prior = try? await store.stepSampleBefore(deviceId: id, before: from)
             let samples = (try? await store.stepSamples(deviceId: id, from: from, to: to, limit: Int.max)) ?? []
-            if let ticks = StepsCounter.stepsInWindow(samples) { return ticks }
+            let next = (try? await store.stepSamples(deviceId: id, from: to + 1,
+                                                      to: to + 600, limit: 1))?.first
+            var window: [StepSample] = []
+            if let prior { window.append(prior) }
+            window.append(contentsOf: samples)
+            if let next { window.append(next) }
+            if let ticks = StepsCounter.stepsInWindow(window, from: from, to: to) { return ticks }
         }
         return nil
     }
