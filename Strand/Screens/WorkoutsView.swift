@@ -1124,8 +1124,24 @@ struct WorkoutsView: View {
         // distance is nil, and an explicit 0 is not a real distance) — matches `distanceLabel`'s `m > 0`
         // guard on the per-workout rows. When nothing in the window has distance, the tile shows "–"
         // instead of a misleading "0.0 km covered" (#reddit: rugby read as data loss).
-        let distancesM = rows.compactMap(\.distanceM).filter { $0 > 0 }
-        let totalKmRaw = distancesM.reduce(0, +) / 1000.0
+        let estimatedDistanceRows = rows.filter {
+            $0.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+        }
+        let recordedDistanceRows = rows.filter {
+            $0.notes?.localizedCaseInsensitiveContains("Estimated stride distance") != true
+        }
+        let recordedDistancesM = recordedDistanceRows.compactMap(\.distanceM).filter { $0 > 0 }
+        let estimatedDistancesM = estimatedDistanceRows.compactMap(\.distanceM).filter { $0 > 0 }
+        let totalRecordedKm = recordedDistancesM.reduce(0, +) / 1000.0
+        let totalEstimatedKm = estimatedDistancesM.reduce(0, +) / 1000.0
+        let distanceValue = !recordedDistancesM.isEmpty
+            ? UnitFormatter.distanceFromKilometers(totalRecordedKm, system: distanceUnitSystem)
+            : (!estimatedDistancesM.isEmpty
+                ? "~" + UnitFormatter.distanceFromKilometers(totalEstimatedKm, system: distanceUnitSystem)
+                : "–")
+        let distanceCaption = !recordedDistancesM.isEmpty
+            ? (estimatedDistancesM.isEmpty ? String(localized: "recorded") : String(localized: "recorded · estimates excluded"))
+            : (!estimatedDistancesM.isEmpty ? String(localized: "estimated stride") : String(localized: "covered"))
         let modal = modalSport(from: groups)
 
         return LazyVGrid(columns: tileColumns, alignment: .leading, spacing: NoopMetrics.gap) {
@@ -1142,8 +1158,8 @@ struct WorkoutsView: View {
                      caption: "kcal",
                      accent: StrandPalette.metricAmber)
             StatTile(label: "Total Distance",
-                     value: distancesM.isEmpty ? "–" : UnitFormatter.distanceFromKilometers(totalKmRaw, system: distanceUnitSystem),
-                     caption: String(localized: "covered"),
+                     value: distanceValue,
+                     caption: distanceCaption,
                      accent: StrandPalette.metricCyan)
             StatTile(label: "Most Active",
                      value: modal.sport,
@@ -1623,7 +1639,7 @@ struct WorkoutsView: View {
             let energy = resolvedEnergy(row)
             cell(WorkoutEnergyDisplay.text(energy) ?? "–", width: ColWidth.kcal,
                  color: energy != nil ? StrandPalette.metricAmber : nil)
-            cell(distanceLabel(row.distanceM), width: ColWidth.dist)
+            cell(distanceLabel(row.distanceM, estimated: row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true), width: ColWidth.dist)
             // #796 - per-session Effort, on the user's scale, tinted the Effort colour when present.
             cell(Self.effortCellLabel(strain: row.strain, scale: effortScale), width: ColWidth.effort,
                  color: row.strain != nil ? StrandPalette.effortColor : nil)
@@ -1768,7 +1784,7 @@ struct WorkoutsView: View {
         // Estimated where nothing recorded it, with the same tilde the table column and the detail
         // tile use — this subtitle IS the calorie readout on a phone, and it was the empty one.
         if let kcal = WorkoutEnergyDisplay.text(resolvedEnergy(row)) { parts.append("\(kcal) kcal") }
-        if let d = row.distanceM, d > 0 { parts.append(distanceLabel(row.distanceM)) }
+        if let d = row.distanceM, d > 0 { parts.append(distanceLabel(row.distanceM, estimated: row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true)) }
         if let hr = row.avgHr { parts.append(String(localized: "\(hr) bpm")) }
         return parts.joined(separator: " · ")
     }
@@ -2010,9 +2026,10 @@ struct WorkoutsView: View {
         return durationLabel(s)
     }
 
-    private func distanceLabel(_ m: Double?) -> String {
+    private func distanceLabel(_ m: Double?, estimated: Bool = false) -> String {
         guard let m, m > 0 else { return "–" }
-        return UnitFormatter.distanceFromMeters(m, system: distanceUnitSystem)
+        let value = UnitFormatter.distanceFromMeters(m, system: distanceUnitSystem)
+        return estimated ? "~" + value : value
     }
 
     private func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }

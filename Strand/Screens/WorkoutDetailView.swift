@@ -375,8 +375,10 @@ struct WorkoutDetailView: View {
             }
             if row.distanceM != nil {
                 StatTile(label: "Distance",
-                         value: distanceLabel(row.distanceM),
-                         caption: String(localized: "covered"),
+                         value: distanceLabel(row.distanceM,
+                                              estimated: row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true),
+                         caption: row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+                            ? String(localized: "estimated stride") : String(localized: "recorded"),
                          accent: StrandPalette.metricCyan)
             }
             // Steps for an on-foot sport (#398). Shown for the on-foot set even before the value lands, so
@@ -767,9 +769,10 @@ struct WorkoutDetailView: View {
         if h > 0 { return String(localized: "\(h)h \(m)m") }
         return String(localized: "\(m)m")
     }
-    private func distanceLabel(_ m: Double?) -> String {
+    private func distanceLabel(_ m: Double?, estimated: Bool = false) -> String {
         guard let m, m > 0 else { return "–" }
-        return UnitFormatter.distanceFromMeters(m, system: distanceUnitSystem)
+        let value = UnitFormatter.distanceFromMeters(m, system: distanceUnitSystem)
+        return estimated ? "~" + value : value
     }
     private func grouped(_ v: Double) -> String {
         Self.intFmt.string(from: NSNumber(value: Int(v.rounded()))) ?? "\(Int(v.rounded()))"
