@@ -841,10 +841,6 @@ public final class BLEManager: NSObject, ObservableObject {
     /// preference intent; the effective want is window-gated through `continuousCaptureWantsNow()` when
     /// "overnight only" is on, re-derived at every arm site.
     private var keepRealtimeForData = false
-    /// WHOOP 5 only: keep the lightweight realtime toggle armed so verified live type-43 IMU frames
-    /// reach the automatic walk/run detector even when the Live screen and Continuous HRV capture are off.
-    /// This does not enable the heavier WHOOP 4 R10/R11 burst.
-    private var keepMotionDetection = false
     /// #477 battery (parity with Android): STRAP battery-% at/below which the periodic offload cadence
     /// stretches to `lowBatteryBackfillIntervalSeconds` (0 = off), and at/below which the background
     /// continuous-HRV stream is released. Both key off the STRAP's charge (not the phone's), and both are
@@ -3509,14 +3505,6 @@ public final class BLEManager: NSObject, ObservableObject {
         reconcileRealtime()
     }
 
-    /// Keep WHOOP 5 live IMU notifications available for background walk/run detection.
-    /// AppModel seeds this from the automatic-activity preference at launch and on reconnect.
-    /// WHOOP 4 is deliberately excluded: it has no verified live type-43 IMU stream.
-    public func setKeepMotionDetection(_ keep: Bool) {
-        keepMotionDetection = keep
-        reconcileRealtime()
-    }
-
     /// #477 (Settings): battery-% at/below which the offload cadence stretches while discharging (0 = off).
     /// Applies on the next re-arm; a live sync in flight is never interrupted.
     public func setLowBatteryOffloadThrottle(_ thresholdPct: Int) {
@@ -3618,7 +3606,6 @@ public final class BLEManager: NSObject, ObservableObject {
     /// `reconcileRealtime`.
     private func reconcileRealtime() {
         let want = screenWantsRealtime || continuousCaptureWantsNow()
-            || (selectedModel.deviceFamily == .whoop5 && keepMotionDetection)
         wantsRealtime = want   // keep-alive + post-bond arm-on-connect read this derived value
         guard want != realtimeArmed else { return }                      // no edge — nothing to send
         guard selectedModel.deviceFamily == .whoop4 || state.bonded else { return }   // can't reach the strap yet
@@ -7436,7 +7423,6 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
             // be up to a keep-alive tick (30 s) stale, and a reconnect just OUTSIDE the overnight window
             // would re-arm the flood from it and stay armed until the next tick.
             let realtimeWantNow = screenWantsRealtime || continuousCaptureWantsNow()
-                || (selectedModel.deviceFamily == .whoop5 && keepMotionDetection)
             wantsRealtime = realtimeWantNow
             if realtimeWantNow && !whoop5RealtimeArmed {
                 whoop5RealtimeArmed = true
@@ -7569,7 +7555,6 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
         // outside the overnight window must not arm the flood from a stale precomputed `wantsRealtime`
         // (up to a keep-alive tick stale); the keep-alive would then hold it armed for another 30 s.
         let realtimeWantNow = screenWantsRealtime || continuousCaptureWantsNow()
-            || (selectedModel.deviceFamily == .whoop5 && keepMotionDetection)
         wantsRealtime = realtimeWantNow
         if realtimeWantNow {
             if standardHRFallback {
