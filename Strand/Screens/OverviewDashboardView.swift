@@ -403,9 +403,11 @@ struct OverviewDashboardView: View {
         if sections.contains(.activity) || sections.contains(.workoutsList) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
-            next.recentWorkouts = (selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
+            // This section is explicitly day-scoped, including Today. Showing the latest 14-day
+            // rows on the current day made yesterday's workout look like today's activity.
+            next.recentWorkouts = allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }).prefix(3).map { $0 }
+            }.prefix(3).map { $0 }
         } else {
             next.recentWorkouts = []
         }
