@@ -29,12 +29,37 @@ extension Repository {
         let resolution = await cardioLoads(for: unified)
         let resting = await restingHrByDay(fromDay: Self.localDayKey(now.addingTimeInterval(-Double(days) * 86_400)),
                                            toDay: Self.localDayKey(now))
-        let nowTs = Int(now.timeIntervalSince1970)
-        let elevations = await workoutElevations(from: nowTs - (days + 1) * 86_400, to: nowTs)
-        return Self.trainingVO2maxEstimates(sessions: unified, resolution: resolution, restingByDay: resting,
-                                            maxHR: Self.cardioLoadMaxHR(strainProfile),
-                                            offset: TimeZone.current.secondsFromGMT(),
-                                            elevations: elevations).estimates
+        let maxHR = Self.cardioLoadMaxHR(strainProfile)
+        var estimates: [ExerciseVO2max.SessionEstimate] = []
+
+        // A GPS route is required. Do not fall back to whole-workout average pace/HR when the
+        // route or a time-aligned measured HR trace is missing.
+        for session in unified where !resolution.duplicateSessionIds.contains(session.id) {
+            let metrics = CardioSession.metrics(for: session.row,
+                                                tzOffsetSeconds: TimeZone.current.secondsFromGMT())
+            guard metrics.modality == .foot, metrics.endTs > metrics.startTs else { continue }
+            let key = RouteStore.key(startTs: metrics.startTs, sport: session.row.sport)
+            guard let points = RoutePointStore.load(for: key), points.count >= 2 else { continue }
+
+            let samples = await hrSamples(from: metrics.startTs, to: metrics.endTs, limit: 20_000)
+            guard !samples.isEmpty else { continue }
+            let route = points.map {
+                ExerciseVO2max.GPSPoint(latitude: $0.lat, longitude: $0.lon,
+                                        accuracyM: $0.accuracyM, timestampMs: $0.tMs,
+                                        segment: $0.segment ?? 0)
+            }
+            let heartRate = samples.map {
+                ExerciseVO2max.HeartRatePoint(timestampS: $0.ts, bpm: Double($0.bpm))
+            }
+            let restingHR = CardioLoadPricing.cardioLoadRestingHR(day: metrics.day,
+                                                                  restingByDay: resting)
+            if let estimate = ExerciseVO2max.estimateFromGPS(
+                day: metrics.day, startTs: metrics.startTs, route: route,
+                heartRate: heartRate, restingHR: restingHR, maxHR: maxHR) {
+                estimates.append(estimate)
+            }
+        }
+        return estimates
     }
 
     /// The VO₂max inputs AgeLess and the VO₂max goal resolve with `HealthspanVO2`, so the two cannot follow
