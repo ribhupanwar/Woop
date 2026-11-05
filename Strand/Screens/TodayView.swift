@@ -4341,6 +4341,17 @@ struct TodayView: View {
         }
     }
 
+    /// SF Symbols used by the Today Activity feed; keep sport naming independent from display localization.
+    static func activitySymbol(for sport: String) -> String {
+        let kind = sport.lowercased()
+        if kind.contains("run") { return "figure.run" }
+        if kind.contains("walk") || kind.contains("hike") { return "figure.walk" }
+        if kind.contains("cycle") || kind.contains("bike") { return "bicycle" }
+        if kind.contains("swim") { return "figure.pool.swim" }
+        if kind.contains("strength") || kind.contains("weight") || kind.contains("gym") { return "dumbbell.fill" }
+        return "figure.mixed.cardio"
+    }
+
     // MARK: (c) LAST WORKOUTS, SAME grid, uniform 104pt workout tiles.
 
     /// Android's Today feed contract (`TodayScreen.recentCutoff`): sessions starting on or after the
@@ -4367,33 +4378,66 @@ struct TodayView: View {
             recent.map { (startTs: $0.startTs, workout: Optional($0)) }
             + (sleepEntry.map { [$0] } ?? [])
         let ordered = entries.sorted { $0.startTs > $1.startTs }
-        if !ordered.isEmpty {
-            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                SectionHeader("Today's Activities", overline: "Sleep & workouts",
-                              trailing: String(localized: "14 days"))
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Today's Activities", overline: "Sleep & workouts",
+                          trailing: String(localized: "14 days"))
+            if ordered.isEmpty {
+                NoopCard {
+                    HStack(spacing: 12) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .frame(width: 36, height: 36)
+                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("No activities yet").font(.subheadline.weight(.semibold))
+                                .foregroundStyle(StrandPalette.textPrimary)
+                            Text("Walks, runs, workouts and sleep will appear here.")
+                                .font(.caption).foregroundStyle(StrandPalette.textTertiary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else {
                 LazyVGrid(columns: grid, alignment: .leading, spacing: NoopMetrics.gap) {
                     ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { _, entry in
                         if let w = entry.workout {
                             // Opens THIS workout's detail directly as a sheet.
                             Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                StatTile(
-                                    label: LocalizedStringKey(WorkoutSource.localizedDisplaySport(w.sport)),
-                                    value: workoutDuration(w),
-                                    caption: Self.workoutCaption(w),
-                                    accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
-                                        ?? StrandPalette.textTertiary
-                                )
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: Self.activitySymbol(for: w.sport))
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
+                                            ?? StrandPalette.textTertiary)
+                                        .frame(width: 28)
+                                    StatTile(
+                                        label: LocalizedStringKey(WorkoutSource.localizedDisplaySport(w.sport)),
+                                        value: workoutDuration(w),
+                                        caption: Self.workoutCaption(w),
+                                        accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
+                                            ?? StrandPalette.textTertiary
+                                    )
+                                }
                             }
                             .buttonStyle(.plain)
                         } else if let sleep = sleepToday {
-                            let minutes = max(0, (sleep.endTs - sleep.startTs) / 60)
-                            StatTile(
-                                label: "Sleep",
-                                value: String(format: "%dh %02dm", minutes / 60, minutes % 60),
-                                caption: Date(timeIntervalSince1970: Double(sleep.endTs))
-                                    .formatted(date: .abbreviated, time: .omitted),
-                                accent: StrandPalette.textTertiary
-                            )
+                            let asleepMinutes = max(0, Int(SleepView.decodedAsleepMinutes(
+                                sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
+                            ).rounded()))
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "moon.zzz.fill")
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(StrandPalette.textTertiary)
+                                    .frame(width: 28)
+                                StatTile(
+                                    label: "Sleep",
+                                    value: String(format: "%dh %02dm", asleepMinutes / 60, asleepMinutes % 60),
+                                    caption: Date(timeIntervalSince1970: Double(sleep.endTs))
+                                        .formatted(date: .abbreviated, time: .omitted),
+                                    accent: StrandPalette.textTertiary
+                                )
+                            }
                         }
                     }
                 }
