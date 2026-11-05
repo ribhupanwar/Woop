@@ -61,7 +61,7 @@ struct HealthspanSection: View {
             } else if loaded {
                 emptyState
             } else {
-                ComingSoon.loading("Reading your Healthspan Age…", title: "AgeLess", symbol: "hourglass")
+                ComingSoon.loading("Reading your Healthspan Age…", title: "Healthspan Age", symbol: "hourglass")
             }
         }
         .task(id: repo.refreshSeq) { await load() }
@@ -88,7 +88,7 @@ struct HealthspanSection: View {
             ComingSoon(what: "Your Healthspan Age appears after 30 nights of sleep data. \(nights) so far.",
                        symbol: "hourglass")
         case .unknown:
-            ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data.", symbol: "hourglass")
+            ComingSoon(what: "Your Healthspan Age appears after 30 nights of sleep data.", symbol: "hourglass")
         }
     }
 
