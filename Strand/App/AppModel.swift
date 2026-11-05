@@ -544,6 +544,7 @@ final class AppModel: ObservableObject {
         live.$bonded.removeDuplicates().sink { [weak self] _ in
             guard let self else { return }
             self.ble.setKeepRealtimeForData(PuffinExperiment.keepRealtimeForDataEnabled)
+            self.ble.setKeepMotionDetection(ActivitySuggestionCenter.isEnabled)
             self.applyPowerSaving()
         }.store(in: &hrCancellables)
         // A completed backfill has just written strap history. Refresh the dashboard cache,
@@ -656,10 +657,13 @@ final class AppModel: ObservableObject {
             }
         }
 
-        // Seed the BLE client with the persisted "Continuous HRV capture" intent so `wantsRealtime`
+        // Seed the BLE client with both persisted realtime intents. WHOOP 5 automatic activity detection
+        // needs the live type-43 IMU stream even when the Live screen and Continuous HRV capture are off.
+        // Seed the persisted "Continuous HRV capture" intent so `wantsRealtime`
         // reflects it from launch , the reconciler then arms the dense stream as soon as the strap bonds
         // (and the bond sink above re-applies it on every reconnect).
         ble.setKeepRealtimeForData(PuffinExperiment.keepRealtimeForDataEnabled)
+        ble.setKeepMotionDetection(ActivitySuggestionCenter.isEnabled)
         applyPowerSaving()
 
         // Turn the strap's offloaded raw data into dashboard scores on launch and every 15
