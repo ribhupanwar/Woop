@@ -177,6 +177,137 @@ public enum ExerciseVO2max {
                                          gradeIncluded: input.ascentM != nil))
     }
 
+
+    // MARK: - GPS + time-aligned heart-rate estimator
+
+    /// A filtered on-device GPS fix. Timestamps are milliseconds since Unix epoch.
+    public struct GPSPoint: Equatable, Sendable {
+        public let latitude: Double
+        public let longitude: Double
+        public let accuracyM: Double
+        public let timestampMs: Int64
+        public let segment: Int
+
+        public init(latitude: Double, longitude: Double, accuracyM: Double,
+                    timestampMs: Int64, segment: Int = 0) {
+            self.latitude = latitude; self.longitude = longitude
+            self.accuracyM = accuracyM; self.timestampMs = timestampMs; self.segment = segment
+        }
+    }
+
+    /// A measured heart-rate sample, timestamped in Unix seconds.
+    public struct HeartRatePoint: Equatable, Sendable {
+        public let timestampS: Int
+        public let bpm: Double
+        public init(timestampS: Int, bpm: Double) {
+            self.timestampS = timestampS; self.bpm = bpm
+        }
+    }
+
+    private struct MinuteObservation {
+        let minute: Int
+        let speedMPerMin: Double
+        let heartRate: Double
+        let fractionOfReserve: Double
+        let vo2: Double
+        let vo2max: Double
+    }
+
+    /// Estimates from sustained outdoor GPS running, not a workout-wide average.
+    ///
+    /// GPS speed and measured HR are paired by timestamp. Poor fixes, pauses, implausible jumps,
+    /// segment breaks, HR gaps, low intensity and very hard efforts are excluded. A result requires
+    /// at least ten consecutive qualifying minutes. This is a transparent Garmin-inspired field
+    /// estimate using ACSM running oxygen cost and the published HR-reserve extrapolation; it is
+    /// not Garmin/Firstbeat's proprietary algorithm and is not a lab measurement.
+    public static func estimateFromGPS(day: String, startTs: Int,
+                                       route: [GPSPoint], heartRate: [HeartRatePoint],
+                                       restingHR: Double, maxHR: Double) -> SessionEstimate? {
+        guard restingHR > 0, maxHR > restingHR, maxHR <= 240 else { return nil }
+        let fixes = route.filter {
+            $0.latitude.isFinite && (-90...90).contains($0.latitude)
+                && $0.longitude.isFinite && (-180...180).contains($0.longitude)
+                && $0.accuracyM.isFinite && (0...20).contains($0.accuracyM)
+                && $0.timestampMs > 0
+        }.sorted { $0.timestampMs < $1.timestampMs }
+        let hrs = heartRate.filter {
+            $0.timestampS > 0 && $0.bpm.isFinite && (35...230).contains($0.bpm)
+        }.sorted { $0.timestampS < $1.timestampS }
+        guard fixes.count >= 2, !hrs.isEmpty else { return nil }
+
+        var buckets: [Int: [(speed: Double, hr: Double)]] = [:]
+        var hrIndex = 0
+        for index in 1..<fixes.count {
+            let a = fixes[index - 1], b = fixes[index]
+            guard a.segment == b.segment else { continue }
+            let deltaMs = b.timestampMs - a.timestampMs
+            guard (1_000...8_000).contains(deltaMs) else { continue }
+            let distance = haversineMeters(a.latitude, a.longitude, b.latitude, b.longitude)
+            let speed = distance / (Double(deltaMs) / 1_000) * 60
+            // Running equation only: reject walks, gait ambiguity and implausible GPS spikes.
+            guard speed >= runningMinimumSpeed, speed <= 390 else { continue }
+
+            let midpointS = Int((a.timestampMs + deltaMs / 2) / 1_000)
+            while hrIndex + 1 < hrs.count,
+                  abs(hrs[hrIndex + 1].timestampS - midpointS) <= abs(hrs[hrIndex].timestampS - midpointS) {
+                hrIndex += 1
+            }
+            let sample = hrs[hrIndex]
+            guard abs(sample.timestampS - midpointS) <= 5 else { continue }
+            let minute = Int((Double(midpointS) - Double(startTs)) / 60)
+            guard minute >= 0 else { continue }
+            buckets[minute, default: []].append((speed, sample.bpm))
+        }
+
+        var observations: [MinuteObservation] = []
+        for minute in buckets.keys.sorted() {
+            guard let values = buckets[minute], values.count >= 6,
+                  let speed = median(values.map(\.speed)),
+                  let hr = median(values.map(\.hr)) else { continue }
+            let fraction = (hr - restingHR) / (maxHR - restingHR)
+            // Garmin-style sustained aerobic qualification plus the valid HR-reserve extrapolation band.
+            guard hr >= 0.70 * maxHR, intensityRange.contains(fraction) else { continue }
+            let oxygenCost = acsmVO2(speedMPerMin: speed, gait: .running)
+            let estimate = extrapolate(vo2: oxygenCost, fractionOfReserve: fraction)
+            guard estimate.isFinite, (20...90).contains(estimate) else { continue }
+            observations.append(MinuteObservation(minute: minute, speedMPerMin: speed,
+                                                  heartRate: hr, fractionOfReserve: fraction,
+                                                  vo2: oxygenCost, vo2max: estimate))
+        }
+
+        // A pause, HR dropout, GPS gap or low-intensity minute breaks continuity rather than
+        // being averaged away. Require ten adjacent qualifying minute windows.
+        var qualifying: [MinuteObservation] = []
+        var run: [MinuteObservation] = []
+        for item in observations {
+            if let last = run.last, item.minute != last.minute + 1 {
+                if run.count >= 10 { qualifying += run }
+                run.removeAll(keepingCapacity: true)
+            }
+            run.append(item)
+        }
+        if run.count >= 10 { qualifying += run }
+        guard qualifying.count >= 10,
+              let speed = median(qualifying.map(\.speedMPerMin)),
+              let hr = median(qualifying.map(\.heartRate)),
+              let fraction = median(qualifying.map(\.fractionOfReserve)),
+              let vo2 = median(qualifying.map(\.vo2)),
+              let vo2max = median(qualifying.map(\.vo2max)) else { return nil }
+
+        return SessionEstimate(day: day, startTs: startTs, gait: .running,
+                               speedMPerMin: speed, fractionOfReserve: fraction,
+                               vo2: vo2, vo2max: vo2max, gradeIncluded: false)
+    }
+
+    private static func haversineMeters(_ lat1: Double, _ lon1: Double, _ lat2: Double, _ lon2: Double) -> Double {
+        let radians = Double.pi / 180
+        let p1 = lat1 * radians, p2 = lat2 * radians
+        let dp = (lat2 - lat1) * radians, dl = (lon2 - lon1) * radians
+        let h = sin(dp / 2) * sin(dp / 2)
+            + cos(p1) * cos(p2) * sin(dl / 2) * sin(dl / 2)
+        return 6_371_000 * 2 * atan2(sqrt(h), sqrt(max(0, 1 - h)))
+    }
+
     // MARK: - Weeks
 
     /// The median estimate of each Monday–Sunday week that has one, oldest first.
