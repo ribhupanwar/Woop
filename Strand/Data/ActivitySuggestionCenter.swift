@@ -96,17 +96,8 @@ final class ActivitySuggestionCenter: ObservableObject {
             // WHOOP-style auto logging is deliberately conservative: the dedicated motion/step track is
             // high-confidence; HR-only spans qualify only when the strap's own locomotion classifier
             // independently calls them Running or Walking. Strength/cycling/ambiguous HR rises stay prompts.
-            let ready = all.filter { s in
-                guard s.state == .open,
-                      s.end + ActivitySuggestions.settleSeconds <= now else { return false }
-                // Step/cadence-confirmed walks are independently high-confidence. HR is
-                // corroboration only for this track, so a missing minute-level HR average
-                // must never suppress a verified ten-minute walk.
-                if s.track == .walk { return true }
-                // The HR-only track still needs measured HR before it can be auto-logged.
-                guard s.avgBpm != nil else { return false }
-                return (s.likelyKind == .run || s.likelyKind == .walk)
-                    && s.load >= Self.settings.level.minimumLoad
+            let ready = all.filter {
+                ActivitySuggestions.qualifiesForAutomaticLogging($0, settings: Self.settings, now: now)
             }
             for suggestion in ready {
                 let kind = suggestion.track == .walk ? suggestion.likelyKind : suggestion.likelyKind

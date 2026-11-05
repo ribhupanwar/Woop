@@ -79,6 +79,17 @@ public enum ActivitySuggestions {
         }
     }
 
+    /// Whether a settled candidate is safe to log automatically. A step-confirmed walk does not need
+    /// an HR sample: the walk track is intentionally independent of HR so easy walks and HR dropouts survive.
+    /// HR-only spans still need measured HR, a locomotion classification, and the selected load threshold.
+    public static func qualifiesForAutomaticLogging(_ s: Suggestion, settings: Settings, now: Int) -> Bool {
+        guard s.state == .open, s.end + settleSeconds <= now else { return false }
+        if s.track == .walk { return settings.walks }
+        guard s.avgBpm != nil else { return false }
+        return (s.likelyKind == .run || s.likelyKind == .walk)
+            && s.load >= settings.level.minimumLoad
+    }
+
     /// What the Today prompt and a notification ask about: open suggestions above the level whose heart rate
     /// has settled, newest first. `snoozed` are ids the wearer put off with "Later" in this launch.
     public static func toAsk(_ all: [Suggestion], now: Int, snoozed: Set<String> = []) -> [Suggestion] {

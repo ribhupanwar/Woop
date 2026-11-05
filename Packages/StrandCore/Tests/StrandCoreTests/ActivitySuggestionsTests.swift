@@ -8,9 +8,9 @@ final class ActivitySuggestionsTests: XCTestCase {
     typealias S = ActivitySuggestions
 
     private func candidate(_ start: Int, minutes: Int = 30, track: String = "heartRate", load: Double = 100,
-                           kinds: [String] = ["strength", "cycle", "other"]) -> ActivityCandidateRow {
+                           avgBpm: Int? = 128, kinds: [String] = ["strength", "cycle", "other"]) -> ActivityCandidateRow {
         ActivityCandidateRow(deviceId: "my-whoop", track: track, startTs: start, endTs: start + minutes * 60,
-                             ruleVersion: ActivityCandidates.ruleVersion, avgBpm: 128, peakBpm: 150, load: load,
+                             ruleVersion: ActivityCandidates.ruleVersion, avgBpm: avgBpm, peakBpm: avgBpm == nil ? nil : 150, load: load,
                              cadence: nil, locomotionShare: nil, kinds: kinds)
     }
     private func workout(_ start: Int, _ end: Int, source: String = "manual") -> WorkoutRow {
@@ -48,6 +48,18 @@ final class ActivitySuggestionsTests: XCTestCase {
         XCTAssertEqual(more.map(\.asks), [true, true])
         let noWalks = S.resolve(candidates: rows, answers: [], workouts: [], settings: .init(walks: false))
         XCTAssertEqual(noWalks.map(\.track), [.heartRate])
+    }
+
+    func testStepConfirmedWalkAutoLogsWithoutHeartRateButHROnlySpanDoesNot() {
+        let walkRow = candidate(10_000, minutes: 12, track: "walk", avgBpm: nil, kinds: ["walk"])
+        let hrRow = candidate(30_000, minutes: 12, avgBpm: nil, kinds: ["walk", "strength", "other"])
+        let rows = S.resolve(candidates: [walkRow, hrRow], answers: [], workouts: [], settings: .init())
+        let now = 50_000 + S.settleSeconds
+        XCTAssertTrue(S.qualifiesForAutomaticLogging(rows[0], settings: .init(), now: now),
+                      "A sustained step-confirmed walk must not be blocked by missing HR.")
+        XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[1], settings: .init(), now: now),
+                       "An HR-only span still requires measured HR.")
+        XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[0], settings: .init(walks: false), now: now))
     }
 
     func testOnlySettledOpenSuggestionsAboveTheLevelAreAskedNewestFirst() {
