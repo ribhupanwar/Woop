@@ -63,8 +63,9 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
         var captured: [String] = []
         let rec = makeRecorder()
         rec.workoutsLog = { captured.append($0) }
-        rec.start(startMs: Int64(Date().timeIntervalSince1970 * 1000))
-        rec.receiveLocations(fixes())
+        let start = Date.now.addingTimeInterval(1)
+        rec.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
+        rec.receiveLocations(fixes(start: start))
         XCTAssertFalse(captured.isEmpty, "mode ON must emit a GPS-fix line")
         XCTAssertTrue(captured.last?.hasPrefix("gps rawFixes=") ?? false, captured.last ?? "nil")
         let fixLines = captured.filter { $0.hasPrefix("gpsfix ") }
@@ -133,7 +134,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
             recorder.journal = ActiveRouteJournal(url: folder.appendingPathComponent("route.txt"))
             defer { recorder.stop(); try? FileManager.default.removeItem(at: folder) }
             recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
-            recorder.receiveLocations(fixes(), locationUnavailable: !approximate, accuracyLimited: approximate)
+            recorder.receiveLocations(fixes(start: start), locationUnavailable: !approximate, accuracyLimited: approximate)
             XCTAssertEqual(recorder.distanceM, 0)
             XCTAssertEqual(recorder.pointCount, 0)
             XCTAssertEqual(recorder.state, .acquiring)
