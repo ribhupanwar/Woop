@@ -104,7 +104,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     }
 
     func testIndoorDriftDoesNotReachDisplayedOrRecordedDistance() {
-        let start = Date.now
+        let start = Date.now.addingTimeInterval(1)
         let recorder = GpsWorkoutRecorder()
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         recorder.journal = ActiveRouteJournal(url: folder.appendingPathComponent("route.txt"))
@@ -234,7 +234,7 @@ final class WorkoutsTestModeEmissionTests: XCTestCase {
     /// measured leg: it must not mark the kilometre as a measurement gap (seen on two 2026-10-07 walks,
     /// one continuous route with every split flagged). An unexplained jump still is one.
     func testBridgedSilenceIsNoMeasurementGapButAnUnexplainedJumpIs() {
-        let start = Date.now.addingTimeInterval(-300)
+        let start = Date.now.addingTimeInterval(1)
         let recorder = makeRecorder()
         defer { recorder.stop() }
         recorder.start(startMs: Int64(start.timeIntervalSince1970 * 1000))
