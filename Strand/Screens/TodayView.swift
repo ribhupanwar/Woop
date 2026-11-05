@@ -2732,6 +2732,14 @@ struct TodayView: View {
                 }
                 ForEach(enabledDashboardCards) { card in
                     dashboardCardRow(card)
+                    // Keep the two activity-derived ages adjacent. Healthspan reads the same six-month
+                    // engine/history as the Health tab; the lab-only KDM card stays on Health.
+                    if card == .fitnessAge {
+                        HealthspanSection(showsBiologicalAge: false)
+                    }
+                }
+                if !enabledDashboardCards.contains(.fitnessAge) {
+                    HealthspanSection(showsBiologicalAge: false)
                 }
             }
         }
