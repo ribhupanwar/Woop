@@ -285,6 +285,23 @@ final class ProfileStore: ObservableObject {
                            basalFormula: EnergyPlanStore.formulaLog.current)
     }
 
+    nonisolated static var persistedStepTicksPerStep: Double {
+        let value = UserDefaults.standard.object(forKey: K.stepScale) as? Double ?? 1.0
+        return min(max(value, 0.5), 30.0)
+    }
+
+    nonisolated static func persistedStrideLengthM(for sport: String) -> Double {
+        let defaults = UserDefaults.standard
+        let isRun = sport.localizedCaseInsensitiveContains("run")
+        let key = isRun ? K.runStrideLength : K.walkStrideLength
+        if let stored = defaults.object(forKey: key) as? Double, stored.isFinite, stored > 0 {
+            return stored
+        }
+        let height = defaults.object(forKey: K.height) as? Double ?? 178
+        return min(max(height / 100.0 * (isRun ? 0.53 : 0.415),
+                       isRun ? 0.55 : 0.35), isRun ? 1.40 : 0.85)
+    }
+
     /// The trimmed name, or nil when none is set — what greeting surfaces read so they never have to
     /// repeat the trim-and-check dance (and can never render "Good morning, ").
     var displayName: String? {

@@ -80,9 +80,22 @@ extension Repository {
         guard let store = await storeHandle() else { return }
         let existing = (try? await store.activitySuggestionAnswers(from: s.start, to: s.end)) ?? []
         guard !existing.contains(where: { $0.track == answer.track && $0.candidateStartTs == s.start }) else { return }
+        // If the cadence detector already persisted this same session, link the suggestion answer
+        // to it rather than creating a second workout row.
+        let recent = await workoutRows(days: ActivitySuggestions.listDays + 2)
+        if let detected = recent.first(where: {
+            $0.startTs == row.startTs && WorkoutSource.classify($0.source) == .confirmed
+                && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+        }) {
+            var linked = answer
+            linked.workout = .init(deviceId: deviceId, startTs: detected.startTs, sport: detected.sport)
+            _ = try? await store.recordActivitySuggestionAnswer(linked)
+            await refresh()
+            return
+        }
         let confirmed = WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: row.sport,
                                    source: WorkoutSource.confirmedSuggestionSource, durationS: row.durationS,
-                                   energyKcal: row.energyKcal, avgHr: row.avgHr, maxHr: row.maxHr,
+                                   energyKcal: nil, avgHr: row.avgHr, maxHr: row.maxHr,
                                    strain: row.strain, distanceM: row.distanceM, zonesJSON: row.zonesJSON,
                                    notes: "Automatically detected from strap motion + heart-rate data",
                                    steps: row.steps)
@@ -97,8 +110,11 @@ extension Repository {
         var linked = answer
         linked.workout = .init(deviceId: deviceId, startTs: confirmed.startTs, sport: confirmed.sport)
         _ = try? await store.recordActivitySuggestionAnswer(linked)
-        scheduleEnergyRefresh(coveringStart: confirmed.startTs)
-        await refresh()
+        _ = await autoLogMotionDetectedWorkout(
+            startTs: confirmed.startTs, endTs: confirmed.endTs, sport: confirmed.sport,
+            averageBpm: confirmed.avgHr,
+            stepTicksPerStep: ProfileStore.persistedStepTicksPerStep,
+            strideLengthM: ProfileStore.persistedStrideLengthM(for: confirmed.sport))
     }
 
     /// One-time repair for earlier automatic motion rows: their stored HR fallback prevented the
@@ -108,7 +124,8 @@ extension Repository {
         guard let store = await storeHandle() else { return }
         let stale = await workoutRows(days: ActivitySuggestions.listDays + 2).filter {
             WorkoutSource.classify($0.source) == .confirmed
-                && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+                && (($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+                    || ($0.notes?.hasPrefix("Automatically detected from strap motion + heart-rate data") ?? false))
                 && $0.energyKcal != nil
         }
         guard !stale.isEmpty else { return }
@@ -136,24 +153,14 @@ extension Repository {
         let existing = await workoutRows(days: ActivitySuggestions.listDays + 2).first(where: {
             $0.startTs == startTs
                 && WorkoutSource.classify($0.source) == .confirmed
-                && ($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+                && (($0.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") ?? false)
+                    || ($0.notes?.hasPrefix("Automatically detected from strap motion + heart-rate data") ?? false))
         })
         let finalEnd = max(endTs, existing?.endTs ?? endTs)
 
-        // @57 is a cumulative u16 counter. Include the last sample before the workout so the first
-        // in-window increment is not lost, then apply the wearer's existing counter-tick correction.
-        let priorStep = try? await store.stepSampleBefore(deviceId: deviceId, before: startTs)
-        let stepRows = (try? await store.stepSamples(deviceId: deviceId, from: startTs,
-                                                       to: finalEnd, limit: Int.max)) ?? []
-        // The next counter sample closes the final partial interval. The 10-minute look-ahead
-        // covers the strap's normal minute cadence without pulling an unbounded history window.
-        let nextStep = (try? await store.stepSamples(deviceId: deviceId, from: finalEnd + 1,
-                                                      to: finalEnd + 600, limit: 1))?.first
-        var stepWindow: [StepSample] = []
-        if let priorStep { stepWindow.append(priorStep) }
-        stepWindow.append(contentsOf: stepRows)
-        if let nextStep { stepWindow.append(nextStep) }
-        let rawTicks = StepsCounter.stepsInWindow(stepWindow, from: startTs, to: finalEnd)
+        // Use Repository's active-strap-first, clipped counter window so auto-save and workout detail
+        // report exactly the same steps, including both partial boundary intervals.
+        let rawTicks = await strapStepTicks(from: startTs, to: finalEnd)
         let correction = stepTicksPerStep.isFinite ? min(max(stepTicksPerStep, 0.5), 30.0) : 1.0
         let counterSteps = rawTicks.map { max(0, Int((Double($0) / correction).rounded())) }
         let cadenceSteps = medianCadenceHz.flatMap { cadence -> Int? in
@@ -197,7 +204,9 @@ extension Repository {
         // resolve this window against the strap's own five-minute energy buckets after the
         // confirmed-workout refresh, then use the same HR/pace estimate only if strap coverage
         // is insufficient. A stored fallback would prevent that higher-quality strap price.
-        var noteParts = ["Automatically detected from WHOOP 5 live motion cadence"]
+        let noteBase = existing?.notes?.components(separatedBy: " · ").first
+            ?? "Automatically detected from WHOOP 5 live motion cadence"
+        var noteParts = [noteBase]
         if gpsDistance != nil { noteParts.append("GPS distance") }
         else if estimatedDistance != nil { noteParts.append("Estimated stride distance") }
         if stepsAreEstimated { noteParts.append("Estimated cadence steps") }

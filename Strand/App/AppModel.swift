@@ -1136,7 +1136,9 @@ final class AppModel: ObservableObject {
 
     private func refreshAutomaticallyDetectedWorkoutMetrics() async {
         let rows = await repo.workoutRows(days: ActivitySuggestions.listDays + 2)
-        for row in rows where row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true {
+        for row in rows where
+            (row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true
+             || row.notes?.hasPrefix("Automatically detected from strap motion + heart-rate data") == true) {
             let route = RouteStore.load(startTs: row.startTs, sport: row.sport)
             let counterSteps = await repo.autoLogMotionDetectedWorkout(
                 startTs: row.startTs, endTs: row.endTs, sport: row.sport,
