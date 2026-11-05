@@ -2362,7 +2362,7 @@ public final class BLEManager: NSObject, ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
             guard let self, self.autoMotionCaptureStartGeneration == generation,
                   self.autoMotionCaptureInFlight, self.autoMotionCaptureFrameCount == 0,
-                  self.state.connected, !self.backfilling else { return }
+                  self.state.connected else { return }
             if self.autoMotionCaptureStartAttempts < 2 {
                 self.log("Auto activity motion capture: no verified type-43 frame after 8s; retrying once")
                 self.sendAutomaticMotionCaptureStartAttempt()
