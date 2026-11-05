@@ -74,6 +74,21 @@ final class MotionCadenceSessionEngineTests: XCTestCase {
         }
     }
 
+    func testDisconnectResetPreventsStitchingCadenceAcrossReconnect() {
+        var engine = MotionCadenceSessionEngine()
+        for second in 0..<(6 * 60) {
+            XCTAssertTrue(engine.append(frame(second, frequency: 2.0), averageBpm: 55).isEmpty)
+        }
+
+        engine.reset()
+
+        // Six more minutes after reconnect must not combine with the six pre-disconnect minutes.
+        for second in (6 * 60)..<(12 * 60) {
+            XCTAssertTrue(engine.append(frame(second, frequency: 2.0), averageBpm: 55).isEmpty)
+        }
+        XCTAssertTrue(engine.finish().isEmpty)
+    }
+
     func testStationaryMotionNeverCreatesBout() {
         var engine = MotionCadenceSessionEngine()
         var candidates: [MotionCadenceBoutDetector.Candidate] = []
