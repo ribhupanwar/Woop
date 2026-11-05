@@ -2338,7 +2338,7 @@ public final class BLEManager: NSObject, ObservableObject {
 
     /// Arm continuous WHOOP 5 type-43 motion for local walk/run detection after history offload.
     private func startAutomaticMotionCaptureIfReady() {
-        guard state.connected, selectedModel.deviceFamily == .whoop5, !backfilling,
+        guard state.connected, selectedModel.deviceFamily == .whoop5,
               !autoMotionCaptureInFlight, !rawCaptureInFlight,
               !UserDefaults.standard.bool(forKey: "enableRawCapture") else { return }
         autoMotionCaptureInFlight = true
@@ -2351,7 +2351,7 @@ public final class BLEManager: NSObject, ObservableObject {
     /// by its first integrity-checked frame and retry once if no frame arrives. Previously the in-flight
     /// latch stayed true until disconnect, suppressing any further start attempt after one silent command.
     private func sendAutomaticMotionCaptureStartAttempt() {
-        guard autoMotionCaptureInFlight, state.connected, !backfilling else { return }
+        guard autoMotionCaptureInFlight, state.connected else { return }
         autoMotionCaptureStartAttempts += 1
         autoMotionCaptureStartGeneration &+= 1
         let generation = autoMotionCaptureStartGeneration
@@ -7471,6 +7471,10 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
             if !whoop5SessionStarted {
                 whoop5SessionStarted = true
                 connectHandshakeDone = true     // unblocks beginBackfill()'s guard
+                // Start live IMU detection immediately after the WHOOP 5 handshake, BEFORE the
+                // first historical offload. A long backfill must not blind automatic walk/run
+                // detection for the entire sync window.
+                startAutomaticMotionCaptureIfReady()
                 state.historyReady = true       // and the sync controls, which must not offer what it declines
                 log("WHOOP 5/MG: connect handshake done — backfill unblocked")
                 noteRebootReconnectIfNeeded()
