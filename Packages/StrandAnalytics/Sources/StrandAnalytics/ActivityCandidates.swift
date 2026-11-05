@@ -26,7 +26,7 @@ public enum ActivityCandidates {
     public static let boutShare = 0.8
     /// Longest run of non-qualifying minutes inside a span.
     public static let maxGapMinutes = 2
-    public static let walkCadence = 80
+    public static let walkCadence = 60
     public static let everydayMarginHRR = 0.12
     public static let everydayQuantile = 0.75
     /// Without enough history, the heart-rate track uses this fixed reserve instead of the everyday level.
@@ -224,17 +224,24 @@ public enum ActivityCandidates {
 
     /// Walk spans plus the heart-rate spans with the walks cut out; a heart-rate span still overlapping a
     /// walk span at the bench's match overlap is dropped, so one stretch is never asked about twice.
-    public static func candidates(_ minutes: [Minute], restingHR: Int, hrMax: Int,
+    public static func candidates(_ minutes: [Minute], restingHR: Int?, hrMax: Int,
                                   everydayHRR: Double?) -> [Candidate] {
+        // Walking is a direct step/cadence observation and must not depend on a daily resting-HR
+        // value being available. Only the general HR-effort track needs resting HR to calculate HRR.
         let walks = walkCandidates(minutes, hrMax: hrMax)
-        let hr = heartRateCandidates(minutes, restingHR: restingHR, hrMax: hrMax, everydayHRR: everydayHRR,
+        let hr: [Candidate]
+        if let restingHR {
+            hr = heartRateCandidates(minutes, restingHR: restingHR, hrMax: hrMax, everydayHRR: everydayHRR,
                                      walks: walks)
-            .filter { h in
-                !walks.contains {
-                    ActivityDetectionScore.iou(.init(start: h.start, end: h.end), .init(start: $0.start, end: $0.end))
-                        >= ActivityDetectionScore.minimumIoU
+                .filter { h in
+                    !walks.contains {
+                        ActivityDetectionScore.iou(.init(start: h.start, end: h.end), .init(start: $0.start, end: $0.end))
+                            >= ActivityDetectionScore.minimumIoU
+                    }
                 }
-            }
+        } else {
+            hr = []
+        }
         return (walks + hr).sorted { ($0.start, $0.track.rawValue) < ($1.start, $1.track.rawValue) }
     }
 
