@@ -262,8 +262,8 @@ public enum ExerciseVO2max {
         var observations: [MinuteObservation] = []
         for minute in buckets.keys.sorted() {
             guard let values = buckets[minute], values.count >= 6,
-                  let speed = median(values.map(\.speed)),
-                  let hr = median(values.map(\.hr)) else { continue }
+                  let speed = median(values.map { $0.speed }),
+                  let hr = median(values.map { $0.hr }) else { continue }
             let fraction = (hr - restingHR) / (maxHR - restingHR)
             // Garmin-style sustained aerobic qualification plus the valid HR-reserve extrapolation band.
             guard hr >= 0.70 * maxHR, intensityRange.contains(fraction) else { continue }
