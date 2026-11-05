@@ -1119,7 +1119,12 @@ struct WorkoutsView: View {
     private func summarySection(rows: [WorkoutRow], effectiveRange: Range, groups: [SportGroup]) -> some View {
         let totalCount = rows.count
         let totalTimeH = rows.compactMap(\.durationS).reduce(0, +) / 3600.0
-        let totalKcal = rows.compactMap { resolvedEnergy($0)?.kcal }.reduce(0, +)
+        let resolvedKcalRows = rows.compactMap { resolvedEnergy($0) }
+        let totalKcal = resolvedKcalRows.reduce(0) { $0 + $1.kcal }
+        let totalKcalValue = resolvedKcalRows.isEmpty ? "–"
+            : (resolvedKcalRows.contains(where: \.isEstimated) ? "~" : "") + grouped(totalKcal)
+        let totalKcalCaption = resolvedKcalRows.contains(where: \.isEstimated)
+            ? String(localized: "estimated kcal") : String(localized: "kcal")
         // Only POSITIVE distances count as "has distance" (a strap-detected sport with no GPS/manual
         // distance is nil, and an explicit 0 is not a real distance) — matches `distanceLabel`'s `m > 0`
         // guard on the per-workout rows. When nothing in the window has distance, the tile shows "–"
@@ -1154,8 +1159,8 @@ struct WorkoutsView: View {
                      caption: String(localized: "active"),
                      accent: StrandPalette.textPrimary)
             StatTile(label: "Total Calories",
-                     value: grouped(totalKcal),
-                     caption: "kcal",
+                     value: totalKcalValue,
+                     caption: totalKcalCaption,
                      accent: StrandPalette.metricAmber)
             StatTile(label: "Total Distance",
                      value: distanceValue,
