@@ -961,6 +961,10 @@ public final class BLEManager: NSObject, ObservableObject {
     private var rawCaptureInFlight = false
     /// Continuous WHOOP 5 motion stream owned by automatic walk/run detection.
     private var autoMotionCaptureInFlight = false
+    /// The start command is asynchronous. Retry once if no integrity-verified type-43 frame arrives.
+    private var autoMotionCaptureStartAttempts = 0
+    private var autoMotionCaptureFrameCount = 0
+    private var autoMotionCaptureStartGeneration = 0
     private var rawCaptureStoppedAt = Date.distantPast
     private var unexpectedImuStopAt = Date.distantPast
     /// Keep each main-actor drain slice small enough that SwiftUI can process input/paint between slices.
@@ -2338,10 +2342,34 @@ public final class BLEManager: NSObject, ObservableObject {
               !autoMotionCaptureInFlight, !rawCaptureInFlight,
               !UserDefaults.standard.bool(forKey: "enableRawCapture") else { return }
         autoMotionCaptureInFlight = true
+        autoMotionCaptureStartAttempts = 0
+        autoMotionCaptureFrameCount = 0
+        sendAutomaticMotionCaptureStartAttempt()
+    }
+
+    /// A start command can be ACKed without the strap actually producing type-43 data. Verify the stream
+    /// by its first integrity-checked frame and retry once if no frame arrives. Previously the in-flight
+    /// latch stayed true until disconnect, suppressing any further start attempt after one silent command.
+    private func sendAutomaticMotionCaptureStartAttempt() {
+        guard autoMotionCaptureInFlight, state.connected, !backfilling else { return }
+        autoMotionCaptureStartAttempts += 1
+        autoMotionCaptureStartGeneration &+= 1
+        let generation = autoMotionCaptureStartGeneration
         // Hardware-verified order: START_RAW_DATA (81), then realtime IMU selector (106, [1,1]).
         send(.startRawData, payload: [0x01], writeType: .withResponse)
         send(.toggleIMUMode, payload: [0x01, 0x01], writeType: .withResponse)
-        log("Auto activity motion capture: WHOOP 5 live IMU stream armed after backfill")
+        log("Auto activity motion capture: start attempt \(autoMotionCaptureStartAttempts)/2")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+            guard let self, self.autoMotionCaptureStartGeneration == generation,
+                  self.autoMotionCaptureInFlight, self.autoMotionCaptureFrameCount == 0,
+                  self.state.connected, !self.backfilling else { return }
+            if self.autoMotionCaptureStartAttempts < 2 {
+                self.log("Auto activity motion capture: no verified type-43 frame after 8s; retrying once")
+                self.sendAutomaticMotionCaptureStartAttempt()
+            } else {
+                self.log("Auto activity motion capture: no verified type-43 frame after two attempts; awaiting reconnect")
+            }
+        }
     }
 
     /// Capture raw accelerometer (type-43 IMU) frames on demand for a bounded window, then stop.
@@ -6767,6 +6795,9 @@ extension BLEManager: @preconcurrency CBCentralManagerDelegate {
     private func resetLinkState() {
         // Link is already down: close the local command gate; reconnect re-arms after backfill.
         autoMotionCaptureInFlight = false
+        autoMotionCaptureStartGeneration &+= 1
+        autoMotionCaptureStartAttempts = 0
+        autoMotionCaptureFrameCount = 0
         Task { @MainActor in await collector?.flush() }
         bondedAt = nil   // cleared after the bond-loop detector above read it (#617)
         state.connected = false
@@ -8057,6 +8088,13 @@ extension BLEManager: @preconcurrency CBPeripheralDelegate {
                     if frame.count > 8, frame[8] == 43,
                        verifyFrame(frame, family: .whoop5).ok,
                        let imu = Whoop5RawImu.decode(frame) {
+                        if autoMotionCaptureInFlight {
+                            autoMotionCaptureFrameCount += 1
+                            if autoMotionCaptureFrameCount == 1 {
+                                autoMotionCaptureStartGeneration &+= 1 // cancel the no-frame watchdog
+                                log("Auto activity motion capture: first verified live type-43 frame received")
+                            }
+                        }
                         onLiveWhoop5ImuFrame?(imu)
                     }
                     router.handle(frame: frame)
