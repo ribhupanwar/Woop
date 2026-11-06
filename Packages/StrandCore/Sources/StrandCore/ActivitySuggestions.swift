@@ -87,7 +87,12 @@ public enum ActivitySuggestions {
     /// HR-only spans still need measured HR, a locomotion classification and the selected load threshold.
     public static func qualifiesForAutomaticLogging(_ s: Suggestion, settings: Settings, now: Int) -> Bool {
         guard s.state == .open, s.end + settleSeconds <= now else { return false }
-        if s.track == .walk { return settings.walks && (s.locomotionShare ?? 0) >= 0.8 }
+        if s.track == .walk {
+            // A persisted `.walk` kind is already the strap's explicit gait classification. The
+            // locomotion share may be nil when WHOOP omits optional class ticks; don't reject that
+            // independently step-confirmed candidate (including when average HR is unavailable).
+            return settings.walks && ((s.locomotionShare ?? 0) >= 0.8 || s.likelyKind == .walk)
+        }
         guard s.avgBpm != nil else { return false }
         return (s.likelyKind == .run || s.likelyKind == .walk)
             && s.load >= settings.level.minimumLoad
