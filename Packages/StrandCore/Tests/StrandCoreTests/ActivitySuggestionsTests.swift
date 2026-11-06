@@ -57,8 +57,8 @@ final class ActivitySuggestionsTests: XCTestCase {
         let rows = S.resolve(candidates: [walkRow, hrRow], answers: [], workouts: [], settings: .init())
         // Evaluate after the latest labelled walk has ended and its settle window has elapsed.
         let now = 60_000 + 12 * 60 + S.settleSeconds
-        XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[0], settings: .init(), now: now),
-                       "Steps without strap locomotion labels must not be auto-saved as a walk.")
+        XCTAssertTrue(S.qualifiesForAutomaticLogging(rows[0], settings: .init(), now: now),
+                      "A persisted step-classified walk can auto-log even without HR or optional locomotion labels.")
         let labelledWalk = candidate(60_000, minutes: 12, track: "walk", avgBpm: nil,
                                      locomotionShare: 1.0, kinds: ["walk"])
         let labelled = S.resolve(candidates: [labelledWalk], answers: [], workouts: [], settings: .init())[0]
