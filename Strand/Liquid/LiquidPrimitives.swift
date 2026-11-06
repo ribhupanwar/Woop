@@ -501,7 +501,7 @@ struct LiquidTube: View {
     var body: some View { rendered.dashboardAnimationVisibility($isVisible) }
 
     @ViewBuilder private var rendered: some View {
-        if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) { liveTube } else { staticTube }
+        if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) && !atRest { liveTube } else { staticTube }
     }
 
     private var liveTube: some View {
