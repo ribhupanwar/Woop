@@ -46,7 +46,7 @@ enum TodayDashboardStyle: String, CaseIterable, Identifiable {
         if let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool {
             defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
         } else {
-            defaults.set(TodayDashboardStyle.overview.rawValue, forKey: storageKey)
+            defaults.set(TodayDashboardStyle.liquid.rawValue, forKey: storageKey)
         }
     }
 }
