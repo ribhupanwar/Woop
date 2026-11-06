@@ -35,7 +35,7 @@ final class VO2MaxModelSelectorTests: XCTestCase {
         let result = VO2MaxModelSelector.resolve(.init(
             today: "2026-11-06", passive: value("2026-11-06", 47),
             lab: value("2026-10-20", 52),
-            passiveAtLab: value("2026-10-18", 49)))
+            passiveAtLab: value("2026-10-22", 49)))
         XCTAssertEqual(result?.value, 50)
         XCTAssertEqual(result?.mode, .labCalibrated)
         XCTAssertEqual(result?.offset, 3)
