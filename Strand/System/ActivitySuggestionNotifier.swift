@@ -87,6 +87,30 @@ enum ActivitySuggestionNotifier {
         post(next, now: now, calendar: calendar)
     }
 
+    /// Announces a workout that the live WHOOP 5 motion detector has already saved.
+    /// This is intentionally separate from candidate notifications: there is no confirmation prompt,
+    /// and repeated updates to the same bout must not generate duplicate banners.
+    static func postAutoDetectedWorkout(sport: String, startTs: Int, endTs: Int) {
+        let defaults = UserDefaults.standard
+        guard defaults.object(forKey: ActivitySuggestions.notificationsKey) as? Bool ?? true,
+              endTs > startTs else { return }
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized
+                    || settings.authorizationStatus == .provisional
+                    || settings.authorizationStatus == .ephemeral else { return }
+            let content = UNMutableNotificationContent()
+            let isWalk = sport.localizedCaseInsensitiveContains("walk")
+            content.title = isWalk ? String(localized: "Walk detected") : String(localized: "Run detected")
+            let minutes = max(1, Int((Double(endTs - startTs) / 60).rounded()))
+            content.body = String(localized: "\(minutes)-minute workout added to Today Activity.")
+            content.threadIdentifier = "noop.auto-workout"
+            let request = UNNotificationRequest(
+                identifier: "noop.auto-workout.\\(startTs)", content: content, trigger: nil)
+            center.add(request)
+        }
+    }
+
     /// An answer from anywhere: the notification goes, and the unanswered count no longer includes it.
     static func answered(_ id: String) {
         var state = load()
