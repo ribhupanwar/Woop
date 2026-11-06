@@ -21,6 +21,14 @@ final class VO2MaxModelSelectorTests: XCTestCase {
         XCTAssertEqual(result?.mode, .gpsAugmented)
     }
 
+    func testQualifiedGPSCanProduceAnActiveEstimateWithoutPassiveHistory() {
+        let result = VO2MaxModelSelector.resolve(.init(
+            today: "2026-11-06", passive: nil,
+            gps: value("2026-11-01", 54)))
+        XCTAssertEqual(result?.value, 54)
+        XCTAssertEqual(result?.mode, .gpsAugmented)
+    }
+
     func testGPSEvidenceExpiresAfterNinetyDays() {
         let result = VO2MaxModelSelector.resolve(.init(
             today: "2026-11-06", passive: value("2026-11-06", 46),
