@@ -2748,11 +2748,10 @@ struct LiquidTodayView: View {
     /// chronological history. Renders nothing until there is a workout (the section has no empty state).
     @ViewBuilder
     private var lastWorkoutsSection: some View {
-        if !workouts.isEmpty {
-            let rows = Array(workouts.prefix(LiquidTodayDefaults.workoutRows))
-            VStack(spacing: NoopMetrics.space2) {
+        let rows = Array(workouts.prefix(LiquidTodayDefaults.workoutRows))
+        VStack(spacing: NoopMetrics.space2) {
                 HStack(alignment: .firstTextBaseline) {
-                    sectionHead("LAST WORKOUTS")
+                    sectionHead("TODAY'S ACTIVITIES")
                     NavigationLink(value: TabRoute.workouts) {
                         HStack(spacing: 3) {
                             Text("All").font(StrandFont.caption)
@@ -2765,6 +2764,18 @@ struct LiquidTodayView: View {
                     .buttonStyle(.plain)
                 }
                 card {
+                    if rows.isEmpty {
+                        HStack(spacing: NoopMetrics.space3) {
+                            Image(systemName: "figure.walk")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundStyle(StrandPalette.textTertiary)
+                            Text("Your workouts will appear here when synced.")
+                                .font(StrandFont.body)
+                                .foregroundStyle(StrandPalette.textSecondary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, NoopMetrics.space2)
+                    } else {
                     VStack(spacing: 0) {
                         // `WorkoutRow` isn't Identifiable, hence the offset key.
                         ForEach(Array(rows.enumerated()), id: \.offset) { index, w in
@@ -2777,9 +2788,9 @@ struct LiquidTodayView: View {
                             }
                         }
                     }
+                    }
                 }
             }
-        }
     }
 
     /// A workout without a stored Effort says so in words and draws no bar: a zero-length bar would read
