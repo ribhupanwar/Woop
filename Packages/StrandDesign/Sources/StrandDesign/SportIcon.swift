@@ -60,6 +60,7 @@ public enum KnownWorkoutType: String, CaseIterable, Sendable {
     case volleyball = "Volleyball"
     case martialArts = "Martial arts"
     case dancing = "Dancing"
+    case dance = "Dance"
     case golf = "Golf"
     case climbing = "Climbing"
     case stretching = "Stretching"
