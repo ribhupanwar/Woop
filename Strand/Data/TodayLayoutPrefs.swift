@@ -67,7 +67,7 @@ enum TodaySection: String, CaseIterable, Identifiable {
         case .keyMetrics:     return String(localized: "Key Metrics")
         case .trainingLoad:   return String(localized: "Training Load")
         case .energy:         return String(localized: "Energy")
-        case .workouts:       return String(localized: "Workouts")
+        case .workouts:       return String(localized: "Today’s Activities")
         case .heartRate:      return String(localized: "Heart Rate")
         case .recoveryVitals: return String(localized: "Recovery Vitals")
         case .yourCards:      return String(localized: "Your Cards")
