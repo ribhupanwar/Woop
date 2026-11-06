@@ -63,12 +63,11 @@ public enum VO2MaxModelSelector {
     public static func resolve(_ input: Input) -> Result? {
         guard validDay(input.today) != nil else { return nil }
 
-        guard let passive = eligible(input.passive, on: input.today, maximumAgeDays: nil),
-              plausible(passive.value) else { return nil }
+        let passive = eligible(input.passive, on: input.today, maximumAgeDays: nil)
 
         // A paired clinical gas-exchange result is the strongest calibration anchor. Apply its
         // measured-vs-passive offset to the current passive trend, even if a recent GPS candidate exists.
-        if let lab = eligible(input.lab, on: input.today, maximumAgeDays: nil),
+        if let passive, let lab = eligible(input.lab, on: input.today, maximumAgeDays: nil),
            plausible(lab.value),
            let baseline = nearestPair(input.passiveAtLab, to: lab.day),
            plausible(baseline.value) {
@@ -80,6 +79,7 @@ public enum VO2MaxModelSelector {
                           offset: correction, evidenceDay: lab.day)
         }
 
+        // A recent qualifying GPS run can stand on its own; a passive model is not required.
         // A recent qualifying GPS run is the active model when no paired clinical calibration exists.
         if let gps = eligible(input.gps, on: input.today, maximumAgeDays: gpsLookbackDays),
            plausible(gps.value) {
@@ -87,6 +87,8 @@ public enum VO2MaxModelSelector {
                           confidence: "GPS + measured heart-rate evidence",
                           offset: nil, evidenceDay: gps.day)
         }
+
+        guard let passive else { return nil }
 
         // When GPS evidence expires, retain the last GPS-vs-passive offset. This is a continuity
         // mechanism disclosed by the patent; it is not a fresh GPS measurement.
