@@ -234,6 +234,9 @@ extension Repository {
 
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
         catch { return counterSteps }
+        if existing == nil {
+            ActivitySuggestionNotifier.postAutoDetectedWorkout(sport: sport, startTs: startTs, endTs: finalEnd)
+        }
         noteWorkoutFeedChanged()
         if let existing, existing.sport != sport {
             _ = try? await store.deleteWorkouts(deviceId: deviceId, sport: existing.sport,
