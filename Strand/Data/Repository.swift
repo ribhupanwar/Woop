@@ -218,6 +218,10 @@ final class Repository: ObservableObject {
     /// Health rows, `WorkoutHeartRateFillSeries`). The rows themselves are unchanged, so `refreshSeq`
     /// cannot describe it; the Workouts list keys its reload on this too.
     @Published var workoutAnnotationRevision = 0
+    /// Bumped when a workout row is inserted, extended, or removed. Workout-only writes do not alter
+    /// the daily metric cache or `refreshSeq`, so Today owns this narrow feed invalidation signal.
+    @Published private(set) var workoutFeedRevision = 0
+    func noteWorkoutFeedChanged() { workoutFeedRevision &+= 1 }
     func noteEnergyPresentationChanged() {
         // A finished day's burn-rate grid is only fixed until the model re-prices it. The memo used to
         // outlive every refresh, so a past day kept the training share of its first read — before a
