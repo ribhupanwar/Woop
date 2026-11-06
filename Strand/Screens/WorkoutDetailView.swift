@@ -88,6 +88,8 @@ struct WorkoutDetailView: View {
     /// Still being worked out, so the tile shows progress instead of the "–" that means "no data".
     @State private var stepsPending = true
     @State private var energyPending = true
+    /// Lets a wearer correct a detector's activity label without changing the Today Activity card layout.
+    @State private var showEditActivity = false
 
     var body: some View {
         ScreenScaffold(title: "\(WorkoutSource.displaySport(row.sport))",
@@ -125,9 +127,27 @@ struct WorkoutDetailView: View {
                            durationS: row.durationS ?? Double(row.endTs - row.startTs))
         }
         .toolbar {
-            // A Done affordance for the sheet on both platforms (iOS gets the grabber too).
+            // Detected/manual sessions are editable. Imported provider history remains read-only.
+            ToolbarItem(placement: .primaryAction) {
+                if [.detected, .manual, .confirmed].contains(WorkoutSource.classify(row.source)) {
+                    Button {
+                        showEditActivity = true
+                    } label: {
+                        Label("Edit activity", systemImage: "pencil")
+                    }
+                }
+            }
             ToolbarItem(placement: .cancellationAction) {
                 Button("Done") { dismiss() }
+            }
+        }
+        .sheet(isPresented: $showEditActivity) {
+            ManualWorkoutSheet(editing: row, hrSource: repo) { updated, replacing in
+                Task {
+                    await repo.saveManualWorkout(updated, replacing: replacing)
+                    await repo.refresh()
+                    dismiss()
+                }
             }
         }
         .task { await load() }
