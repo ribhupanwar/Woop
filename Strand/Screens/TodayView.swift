@@ -257,7 +257,11 @@ struct TodayView: View {
 
     // Imperial/Metric display preference (D#103). Only the Weight tile carries a convertible unit here.
     @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
+    @AppStorage(UnitPrefs.distanceSystemKey) private var distanceSystemRaw = ""
     private var unitSystem: UnitSystem { UnitSystem(rawValue: unitSystemRaw) ?? .metric }
+    private var distanceUnitSystem: UnitSystem {
+        UnitPrefs.resolveDistance(system: unitSystem, override: distanceSystemRaw)
+    }
     /// °C / °F for the Skin Temp card, resolved the way every other screen resolves it (`FullDayChartView`,
     /// `MetricExplorerView`, Liquid Today): the explicit override when set, else derived from the unit
     /// system. This screen used to print a bare `%+.1f°` and was the last one ignoring the preference.
@@ -4366,12 +4370,32 @@ struct TodayView: View {
     /// SF Symbols used by the Today Activity feed; keep sport naming independent from display localization.
     static func activitySymbol(for sport: String) -> String {
         let kind = sport.lowercased()
+        if kind.contains("sleep") { return "moon.zzz.fill" }
+        if kind.contains("dance") || kind.contains("zumba") { return "figure.dance" }
         if kind.contains("run") { return "figure.run" }
-        if kind.contains("walk") || kind.contains("hike") { return "figure.walk" }
+        if kind.contains("walk") || kind.contains("hike") || kind.contains("ruck") { return "figure.walk" }
         if kind.contains("cycle") || kind.contains("bike") { return "bicycle" }
         if kind.contains("swim") { return "figure.pool.swim" }
         if kind.contains("strength") || kind.contains("weight") || kind.contains("gym") { return "dumbbell.fill" }
         return "figure.mixed.cardio"
+    }
+
+    static func activityDurationLabel(_ seconds: Double) -> String {
+        guard seconds.isFinite, seconds > 0 else { return "—" }
+        let total = Int(seconds.rounded())
+        let hours = total / 3_600
+        let minutes = (total % 3_600) / 60
+        return hours > 0 ? String(localized: "\(hours)h \(minutes)m")
+                         : String(localized: "\(minutes)m")
+    }
+
+    static func activityDistanceLabel(_ meters: Double?, estimated: Bool,
+                                      system: UnitSystem) -> String {
+        guard let meters, meters.isFinite, meters > 0 else {
+            return String(localized: "Distance unavailable")
+        }
+        let value = UnitFormatter.distanceFromMeters(meters, system: system)
+        return estimated ? "~" + value : value
     }
 
     // MARK: (c) LAST WORKOUTS, SAME grid, uniform 104pt workout tiles.
@@ -4388,34 +4412,47 @@ struct TodayView: View {
 
     @ViewBuilder
     private var workoutsSection: some View {
-        // #1702: window HERE, not on `workouts`. That array is shared — it also feeds the Data Sources
-        // Apple-workout count and the HR chart's sport glyphs, both all-time by design.
+        // The section is a permanent part of Today, including its honest empty state. Recent sessions and
+        // the main sleep span share one chronological feed; steps remain their own metric and are never
+        // duplicated here as a pseudo-workout.
         let recent = Self.recentWorkoutsFeed(workouts)
-        // The selected day's main sleep span and recent workouts share ONE time-sorted feed. Sleep is
-        // derived by SleepView.mainNightSpan above, so fragmented blocks are represented as one night.
         let sleepEntry: (startTs: Int, workout: WorkoutRow?)? = sleepToday.map {
-            (startTs: $0.startTs, workout: Optional<WorkoutRow>.none)
+            (startTs: $0.effectiveStartTs, workout: Optional<WorkoutRow>.none)
         }
         let entries: [(startTs: Int, workout: WorkoutRow?)] =
             recent.map { (startTs: $0.startTs, workout: Optional($0)) }
             + (sleepEntry.map { [$0] } ?? [])
         let ordered = entries.sorted { $0.startTs > $1.startTs }
+
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("Today's Activities", overline: "Sleep & workouts",
-                          trailing: String(localized: "14 days"))
+            HStack(alignment: .firstTextBaseline) {
+                SectionHeader("Today's Activity", overline: "Sleep & workouts",
+                              trailing: String(localized: "14 days"))
+                Spacer(minLength: 8)
+                NavigationLink(value: TabRoute.workouts) {
+                    Text("View all")
+                        .font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(StrandPalette.accent)
+                }
+                .buttonStyle(.plain)
+            }
+
             if ordered.isEmpty {
                 NoopCard {
                     HStack(spacing: 12) {
                         Image(systemName: "figure.walk")
-                            .font(.system(size: 20, weight: .medium))
+                            .font(.system(size: 21, weight: .medium))
                             .foregroundStyle(StrandPalette.textTertiary)
-                            .frame(width: 36, height: 36)
-                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 10))
+                            .frame(width: 42, height: 42)
+                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("No activities yet").font(.subheadline.weight(.semibold))
+                            Text("No activities yet today")
+                                .font(StrandFont.headline)
                                 .foregroundStyle(StrandPalette.textPrimary)
-                            Text("Walks, runs, workouts and sleep will appear here.")
-                                .font(.caption).foregroundStyle(StrandPalette.textTertiary)
+                            Text("Your walks, runs, workouts and sleep will appear here automatically.")
+                                .font(StrandFont.caption)
+                                .foregroundStyle(StrandPalette.textTertiary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
                     }
@@ -4429,38 +4466,51 @@ struct TodayView: View {
                                 Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
                                     let startDate = Date(timeIntervalSince1970: TimeInterval(w.startTs))
                                     let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
-                                    let displayedEffort = (w.strain ?? 0) * 0.21
-                                    HStack(spacing: 14) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(w.strain.map { _ in String(format: "%.1f", displayedEffort) } ?? "—")
-                                                .font(StrandFont.number(24))
-                                                .monospacedDigit()
+                                    let estimatedDistance = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+                                    let distance = Self.activityDistanceLabel(w.distanceM, estimated: estimatedDistance,
+                                                                               system: distanceUnitSystem)
+                                    let strain = w.strain.map { String(format: "%.1f", $0 * 0.21) + " / 21" } ?? "— / 21"
+                                    HStack(spacing: 12) {
+                                        Image(systemName: Self.activitySymbol(for: w.sport))
+                                            .font(.system(size: 21, weight: .semibold))
+                                            .foregroundStyle(StrandPalette.effortColor)
+                                            .frame(width: 44, height: 48)
+                                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
+                                        VStack(alignment: .leading, spacing: 5) {
                                             Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.75)
-                                        }
-                                        .foregroundStyle(StrandPalette.textPrimary)
-                                        .frame(minWidth: 100, alignment: .leading)
-                                        Spacer(minLength: 2)
-                                        VStack(alignment: .trailing, spacing: 6) {
-                                            Text(Self.activityDayFmt.string(from: startDate).uppercased() + " · " + Self.hrTimeFmt.string(from: startDate))
-                                                .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textPrimary)
-                                                .monospacedDigit()
+                                                .lineLimit(1)
+                                            Text("\(Self.activityDurationLabel(w.durationS))  ·  \(distance)")
+                                                .font(StrandFont.subhead)
+                                                .foregroundStyle(StrandPalette.textSecondary)
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.8)
-                                            Text(Self.hrTimeFmt.string(from: endDate))
+                                            Text("Strain  \(strain)")
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textTertiary)
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        VStack(alignment: .trailing, spacing: 5) {
+                                            Text(Self.activityDayFmt.string(from: startDate).uppercased())
+                                                .font(StrandFont.caption.weight(.semibold))
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                            Text(Self.hrTimeFmt.string(from: startDate))
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textSecondary)
                                                 .monospacedDigit()
+                                            Text(Self.hrTimeFmt.string(from: endDate))
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textTertiary)
+                                                .monospacedDigit()
                                         }
                                     }
-                                    .padding(.vertical, 9)
+                                    .padding(.vertical, 10)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("\(WorkoutSource.localizedDisplaySport(w.sport)), \(Self.activityDurationLabel(w.durationS)), \(distance), strain \(strain), started \(Self.hrTimeFmt.string(from: startDate)), ended \(Self.hrTimeFmt.string(from: endDate))")
                             } else if let sleep = sleepToday {
                                 let decodedMinutes = SleepView.decodedAsleepMinutes(
                                     sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
@@ -4468,27 +4518,29 @@ struct TodayView: View {
                                 let asleepMinutes = max(0, Int((decodedMinutes > 0
                                     ? decodedMinutes
                                     : Double(max(0, sleep.endTs - sleep.effectiveStartTs)) / 60.0).rounded()))
-                                // Sleep uses the same three-column WHOOP timeline layout.
-                                HStack(spacing: 14) {
-                                    HStack(spacing: 7) {
-                                        Image(systemName: "moon.zzz.fill")
-                                            .font(.system(size: 21, weight: .semibold))
-                                        Text(String(format: "%d:%02d", asleepMinutes / 60, asleepMinutes % 60))
-                                            .font(StrandFont.number(18))
-                                            .monospacedDigit()
-                                    }
-                                    .foregroundStyle(.white)
-                                    .frame(width: 112, height: 58)
-                                    .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 12))
-                                    Text("SLEEP")
-                                        .font(StrandFont.overline)
-                                        .tracking(StrandFont.overlineTracking)
-                                        .foregroundStyle(StrandPalette.textPrimary)
-                                    Spacer(minLength: 2)
-                                    VStack(alignment: .trailing, spacing: 5) {
-                                        Text(Self.activityDayFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))).uppercased() + " · " + Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
-                                            .font(StrandFont.caption)
+                                HStack(spacing: 12) {
+                                    Image(systemName: "moon.zzz.fill")
+                                        .font(.system(size: 21, weight: .semibold))
+                                        .foregroundStyle(StrandPalette.metricCyan)
+                                        .frame(width: 44, height: 48)
+                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
+                                    VStack(alignment: .leading, spacing: 5) {
+                                        Text("SLEEP")
+                                            .font(StrandFont.overline)
+                                            .tracking(StrandFont.overlineTracking)
                                             .foregroundStyle(StrandPalette.textPrimary)
+                                        Text(String(format: "%d h %02d m asleep", asleepMinutes / 60, asleepMinutes % 60))
+                                            .font(StrandFont.subhead)
+                                            .foregroundStyle(StrandPalette.textSecondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    VStack(alignment: .trailing, spacing: 5) {
+                                        Text(Self.activityDayFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))).uppercased())
+                                            .font(StrandFont.caption.weight(.semibold))
+                                            .foregroundStyle(StrandPalette.textPrimary)
+                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
+                                            .font(StrandFont.caption)
+                                            .foregroundStyle(StrandPalette.textSecondary)
                                             .monospacedDigit()
                                         Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.endTs))))
                                             .font(StrandFont.caption)
@@ -4496,7 +4548,8 @@ struct TodayView: View {
                                             .monospacedDigit()
                                     }
                                 }
-                                .padding(.vertical, 9)
+                                .padding(.vertical, 10)
+                                .accessibilityElement(children: .combine)
                             }
                             if index < min(ordered.count, 7) - 1 {
                                 Divider().overlay(StrandPalette.hairline)
