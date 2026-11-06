@@ -700,10 +700,20 @@ final class AppModel: ObservableObject {
             // spike-filtered UI median and can materially suppress exercise peaks.
             let bouts = self.motionCadenceEngine.append(frame, averageBpm: self.live.heartRate, restingBpm: resting)
             for bout in bouts {
-                let sport = bout.kind == .run ? "Running" : "Walking"
                 let candidateStart = self.autoGpsCandidateStartTs
                 let routeMatchesBout = candidateStart.map { abs($0 - bout.startTs) <= 90 } ?? false
                 let route = routeMatchesBout ? self.gpsRecorder.capturedRoute() : nil
+                // Do not turn a fast gym/strength wrist rhythm into "Running". A named walk/run
+                // requires a real GPS route with enough distance and a plausible average speed;
+                // cadence-only bouts remain a neutral Workout instead of guessing a sport.
+                let locomotion = MotionCadenceBoutDetector.classifyLocomotion(
+                    gpsDistanceM: route?.distanceM, durationSeconds: bout.endTs - bout.startTs)
+                let sport: String
+                if let locomotion {
+                    sport = locomotion == .run ? "Running" : "Walking"
+                } else {
+                    sport = "Workout"
+                }
                 if routeMatchesBout {
                     self.autoGpsConfirmedStartTs = bout.startTs
                     self.autoGpsConfirmedEndTs = max(self.autoGpsConfirmedEndTs ?? bout.endTs, bout.endTs)
