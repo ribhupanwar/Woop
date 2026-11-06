@@ -45,7 +45,8 @@ final class ActivityCandidatesTests: XCTestCase {
         XCTAssertEqual(walks.first?.cadence, 102)
         XCTAssertNil(walks.first?.locomotionShare)
         XCTAssertEqual(walks.first?.avgBpm, 72)
-        XCTAssertEqual(walks.first?.kinds, [.walk])
+        XCTAssertEqual(walks.first?.kinds, [.other],
+                       "Steps without strap locomotion labels must not be named Walking.")
     }
 
     func testCadenceBelowWalkThresholdDoesNotTriggerWithoutActivityClass() {
