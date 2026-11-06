@@ -79,6 +79,9 @@ final class BackfillDrain {
     }
 
     private func drain(link started: Int) async {
+        let drainStartedAt = ProcessInfo.processInfo.systemUptime
+        var drainedFrames = 0
+        var slowIngests = 0
         while !queue.isEmpty {
             // The link ended while this drain waited for the previous one: the queue is the next link's.
             guard link == started else { return }
@@ -88,8 +91,15 @@ final class BackfillDrain {
 
             for (i, f) in batch.enumerated() {
                 ingestLink = started
+                let ingestStartedAt = ProcessInfo.processInfo.systemUptime
                 await ingest(f)
+                let ingestMilliseconds = (ProcessInfo.processInfo.systemUptime - ingestStartedAt) * 1_000
+                drainedFrames += 1
                 ingestLink = nil
+                if ingestMilliseconds >= 500 {
+                    slowIngests += 1
+                    log("Backfill: slow frame ingest \(Int(ingestMilliseconds))ms (frame \(drainedFrames), queued \(queue.count))")
+                }
                 guard link == started else {
                     // Rare-event evidence: the only trace of an ingest that outlived its link.
                     let dropped = batch.count - i - 1
@@ -107,6 +117,13 @@ final class BackfillDrain {
                 await Task.yield()
             }
         }
-        if link == started { draining = false }
+        if link == started {
+            draining = false
+            let elapsedMilliseconds = (ProcessInfo.processInfo.systemUptime - drainStartedAt) * 1_000
+            if drainedFrames > 0 {
+                let averageMilliseconds = elapsedMilliseconds / Double(drainedFrames)
+                log("Backfill: drain complete frames=\(drainedFrames) elapsed=\(Int(elapsedMilliseconds))ms avg=\(Int(averageMilliseconds))ms/frame slow=\(slowIngests)")
+            }
+        }
     }
 }
