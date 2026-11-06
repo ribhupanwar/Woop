@@ -4486,7 +4486,7 @@ struct TodayView: View {
                                         .foregroundStyle(StrandPalette.textPrimary)
                                     Spacer(minLength: 2)
                                     VStack(alignment: .trailing, spacing: 5) {
-                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
+                                        Text(Self.activityDayFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))).uppercased() + " · " + Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
                                             .font(StrandFont.caption)
                                             .foregroundStyle(StrandPalette.textPrimary)
                                             .monospacedDigit()
