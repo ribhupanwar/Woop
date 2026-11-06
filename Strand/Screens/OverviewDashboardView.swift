@@ -33,12 +33,12 @@ struct OverviewDashboardView: View {
     private var unitSystem: UnitSystem { UnitSystem(rawValue: unitSystemRaw) ?? .metric }
     // Same source TodayView/LiquidTodayView's own Effort rings read (Units.swift) — the Belastung ring
     // shows whichever scale the user picked in Settings (0…100 or WHOOP's 0…21), never an invented one.
-    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
+    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.whoop.rawValue
     @AppStorage(OverviewHealthCardsPrefs.selectionKey) private var healthCardsRaw = ""
     @AppStorage(OverviewFocusPrefs.slotKeys[0]) private var focusSlot1Raw = OverviewFocusPrefs.defaults[0].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[1]) private var focusSlot2Raw = OverviewFocusPrefs.defaults[1].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[2]) private var focusSlot3Raw = OverviewFocusPrefs.defaults[2].rawValue
-    private var effortScale: EffortScale { UnitPrefs.resolveEffortScale(effortScaleRaw) }
+    private var effortScale: EffortScale { .whoop }
 
     private var displayDay: DailyMetric? {
         get { snapshot.displayDay }
@@ -307,6 +307,9 @@ struct OverviewDashboardView: View {
         var resolvedWeightKg: Double?
         var vitalCarry: DashboardVitalCarry = DashboardVitalCarry()
         var recentWorkouts: [WorkoutRow] = []
+        var sleepStartTs: Int?
+        var sleepEndTs: Int?
+        var sleepMinutes: Double?
         var journalLoggedDays: Set<String>?
     }
     @State private var snapshot = Snapshot()
@@ -403,13 +406,33 @@ struct OverviewDashboardView: View {
         if sections.contains(.activity) || sections.contains(.workoutsList) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
-            // This section is explicitly day-scoped, including Today. Showing the latest 14-day
-            // rows on the current day made yesterday's workout look like today's activity.
+            // Keep the activity feed scoped to the selected logical day.
             next.recentWorkouts = allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }.prefix(3).map { $0 }
+            }.prefix(7).map { $0 }
+
+            // Use the same imported + computed sleep union and main-night grouping as the Sleep screen.
+            // Wake-day scoping keeps a night that began yesterday on today's activity timeline.
+            let allSleep = await repo.allSleepSessions(days: max(14, selectedDayOffset + 2))
+            let daySleep = allSleep.filter {
+                Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.endTs))) == selectedDayKey
+            }
+            let midsleep = await repo.habitualMidsleepSec()
+            if let span = SleepView.mainNightSpan(daySleep, habitualMidsleepSec: midsleep) {
+                next.sleepStartTs = span.start
+                next.sleepEndTs = span.end
+            }
+            let mainGroup = SleepView.mainNightGroup(daySleep, habitualMidsleepSec: midsleep)
+            let stagedMinutes = mainGroup.reduce(0.0) { total, session in
+                total + SleepView.decodedAsleepMinutes(session.stagesJSON,
+                                                        effectiveStartTs: session.effectiveStartTs)
+            }
+            next.sleepMinutes = next.displayDay?.totalSleepMin ?? (stagedMinutes > 0 ? stagedMinutes : nil)
         } else {
             next.recentWorkouts = []
+            next.sleepStartTs = nil
+            next.sleepEndTs = nil
+            next.sleepMinutes = nil
         }
         if sections.contains(.journal) {
             let journalKeys = Self.journalDayKeys(anchor: selectedLogicalDay)
@@ -1036,6 +1059,14 @@ struct OverviewDashboardView: View {
 
     @ViewBuilder
     private var workoutsListSection: some View {
+        let sleepStart = sleepStartTs
+        let sleepEnd = sleepEndTs
+        let hasSleep = sleepMinutes != nil || sleepStart != nil
+        let entries: [(startTs: Int, workout: WorkoutRow?)] =
+            recentWorkouts.map { (startTs: $0.startTs, workout: Optional($0)) }
+            + (sleepStart.map { [(startTs: $0, workout: Optional<WorkoutRow>.none)] } ?? [])
+        let ordered = entries.sorted { $0.startTs > $1.startTs }
+
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             HStack {
                 Text("Today's Activities").strandOverline()
@@ -1044,7 +1075,7 @@ struct OverviewDashboardView: View {
                     Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
                 }
             }
-            if recentWorkouts.isEmpty {
+            if ordered.isEmpty && !hasSleep {
                 NoopCard(padding: 14) {
                     HStack(spacing: 10) {
                         Image(systemName: "figure.walk")
@@ -1054,7 +1085,7 @@ struct OverviewDashboardView: View {
                             Text("No activities yet today")
                                 .font(StrandFont.subhead.weight(.semibold))
                                 .foregroundStyle(StrandPalette.textPrimary)
-                            Text("Detected walks and workouts will appear here.")
+                            Text("Detected walks, runs, workouts and sleep will appear here.")
                                 .font(StrandFont.footnote)
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
@@ -1062,51 +1093,133 @@ struct OverviewDashboardView: View {
                     }
                 }
             } else {
-                VStack(spacing: 6) {
-                    ForEach(Array(recentWorkouts.enumerated()), id: \.offset) { _, w in
-                        NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
-                        NoopCard(padding: 10) {
-                            HStack(spacing: 8) {
-                                ZStack {
-                                    Circle().fill(StrandPalette.chargeColor.opacity(0.16))
-                                    Image(systemName: sportSymbol(w.sport))
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(StrandPalette.chargeColor)
+                NoopCard(padding: 10) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(ordered.enumerated()), id: \.offset) { index, entry in
+                            if let w = entry.workout {
+                                NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
+                                    HStack(spacing: 12) {
+                                        VStack(spacing: 3) {
+                                            Image(systemName: activitySymbol(w.sport))
+                                                .font(.system(size: 19, weight: .semibold))
+                                            Text(workoutDurationLabel(w))
+                                                .font(StrandFont.number(15))
+                                                .monospacedDigit()
+                                            Text(w.strain.map { String(format: "EFFORT %.1f / 21", min(21, max(0, $0 * 0.21))) }
+                                                 ?? "EFFORT — / 21")
+                                                .font(StrandFont.overline)
+                                                .tracking(StrandFont.overlineTracking)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.75)
+                                        }
+                                        .foregroundStyle(StrandPalette.textPrimary)
+                                        .frame(width: 100, minHeight: 72)
+                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 11))
+                                        VStack(alignment: .leading, spacing: 5) {
+                                            Text(WorkoutSource.localizedDisplaySport(w.sport))
+                                                .font(StrandFont.subhead.weight(.semibold))
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                            Text("\(activityDateLabel(w.startTs)) · \(activityTimeRange(w.startTs, w.endTs))")
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textSecondary)
+                                                .monospacedDigit()
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
+                                        }
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(StrandPalette.textTertiary)
+                                    }
+                                    .padding(.vertical, 7)
+                                    .contentShape(Rectangle())
                                 }
-                                .frame(width: 28, height: 28)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(w.sport).font(StrandFont.footnote.weight(.semibold)).foregroundStyle(StrandPalette.textPrimary)
-                                    Text(workoutSubtitle(w)).font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                                .buttonStyle(.plain)
+                            } else {
+                                NavigationLink(value: TabRoute.sleep) {
+                                    HStack(spacing: 12) {
+                                        VStack(spacing: 3) {
+                                            Image(systemName: "moon.zzz.fill")
+                                                .font(.system(size: 19, weight: .semibold))
+                                            Text(sleepMinutes.map { durationLabel($0) } ?? "—")
+                                                .font(StrandFont.number(15))
+                                                .monospacedDigit()
+                                            Text("SLEEP")
+                                                .font(StrandFont.overline)
+                                                .tracking(StrandFont.overlineTracking)
+                                        }
+                                        .foregroundStyle(.white)
+                                        .frame(width: 100, minHeight: 72)
+                                        .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 11))
+                                        VStack(alignment: .leading, spacing: 5) {
+                                            Text("Sleep")
+                                                .font(StrandFont.subhead.weight(.semibold))
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                            if let sleepStart, let sleepEnd {
+                                                Text(activityTimeRange(sleepStart, sleepEnd))
+                                                    .font(StrandFont.caption)
+                                                    .foregroundStyle(StrandPalette.textSecondary)
+                                                    .monospacedDigit()
+                                            } else {
+                                                Text("Last night")
+                                                    .font(StrandFont.caption)
+                                                    .foregroundStyle(StrandPalette.textSecondary)
+                                            }
+                                        }
+                                        Spacer(minLength: 0)
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(StrandPalette.textTertiary)
+                                    }
+                                    .padding(.vertical, 7)
+                                    .contentShape(Rectangle())
                                 }
-                                Spacer(minLength: 8)
-                                if let kcal = w.energyKcal {
-                                    Text("\(Int(kcal.rounded())) kcal").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
-                                }
+                                .buttonStyle(.plain)
+                            }
+                            if index < ordered.count - 1 {
+                                Divider().overlay(StrandPalette.hairline).padding(.leading, 112)
                             }
                         }
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
             }
         }
     }
 
-    private func workoutSubtitle(_ w: WorkoutRow) -> String {
-        let minutes = Int(((w.durationS ?? Double(w.endTs - w.startTs)) / 60).rounded())
-        let date = Date(timeIntervalSince1970: TimeInterval(w.startTs))
-        let dayPrefix: String? = selectedDayOffset == 0 && !Calendar.current.isDateInToday(date)
-            ? (Calendar.current.isDateInYesterday(date)
-                ? String(localized: "Yesterday")
-                : DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none))
-            : nil
-        if let strain = w.strain {
-            let format = String(localized: "%lld min · %.1f effort")
-            let base = String(format: format, locale: AppLanguage.activeLocale, Int64(minutes), strain)
-            return dayPrefix.map { "\($0) · \(base)" } ?? base
-        }
-        let base = String(format: String(localized: "%lld min"), locale: AppLanguage.activeLocale, Int64(minutes))
-        return dayPrefix.map { "\($0) · \(base)" } ?? base
+    private func activitySymbol(_ sport: String) -> String {
+        let kind = sport.lowercased()
+        if kind.contains("run") { return "figure.run" }
+        if kind.contains("walk") || kind.contains("hike") { return "figure.walk" }
+        if kind.contains("cycle") || kind.contains("bike") { return "bicycle" }
+        if kind.contains("swim") { return "figure.pool.swim" }
+        if kind.contains("strength") || kind.contains("weight") || kind.contains("gym") { return "dumbbell.fill" }
+        if kind.contains("dance") { return "figure.dance" }
+        return "figure.mixed.cardio"
+    }
+
+    private func workoutDurationLabel(_ workout: WorkoutRow) -> String {
+        let seconds = workout.durationS ?? Double(workout.endTs - workout.startTs)
+        return durationLabel(seconds / 60)
+    }
+
+    private func durationLabel(_ minutes: Double) -> String {
+        let total = max(0, Int(minutes.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func activityDateLabel(_ timestamp: Int) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        if Calendar.current.isDateInToday(date) { return String(localized: "Today") }
+        if Calendar.current.isDateInYesterday(date) { return String(localized: "Yesterday") }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private func activityTimeRange(_ start: Int, _ end: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLanguage.activeLocale
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return "\(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(start)))) – \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(end))))"
     }
 
     // MARK: - Energy detail (opt-in, DashboardExtraSection.energyDetail)
