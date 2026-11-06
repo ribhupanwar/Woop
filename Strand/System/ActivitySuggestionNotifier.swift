@@ -96,9 +96,14 @@ enum ActivitySuggestionNotifier {
               endTs > startTs else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
-            guard settings.authorizationStatus == .authorized
-                    || settings.authorizationStatus == .provisional
-                    || settings.authorizationStatus == .ephemeral else { return }
+            let status = settings.authorizationStatus
+            let isAuthorized = status == .authorized || status == .provisional
+            #if os(iOS)
+            let isEphemeral = status == .ephemeral
+            #else
+            let isEphemeral = false
+            #endif
+            guard isAuthorized || isEphemeral else { return }
             let content = UNMutableNotificationContent()
             let isWalk = sport.localizedCaseInsensitiveContains("walk")
             content.title = isWalk ? String(localized: "Walk detected") : String(localized: "Run detected")
