@@ -1064,7 +1064,7 @@ struct OverviewDashboardView: View {
         let sleepTimelineStart = sleepStart ?? Int(selectedLogicalDay.timeIntervalSince1970)
         let entries: [(startTs: Int, workout: WorkoutRow?)] =
             recentWorkouts.map { (startTs: $0.startTs, workout: Optional($0)) }
-            + (sleepTimelineStart.map { [(startTs: $0, workout: Optional<WorkoutRow>.none)] } ?? [])
+            + [(startTs: sleepTimelineStart, workout: Optional<WorkoutRow>.none)]
         let ordered = entries.sorted { $0.startTs > $1.startTs }
 
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
