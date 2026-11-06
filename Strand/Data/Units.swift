@@ -31,8 +31,8 @@ enum TemperatureUnit: String, CaseIterable, Identifiable {
 }
 
 /// How the Effort score is displayed (#268). NOOP's Effort is stored 0–100 (StrainScorer.maxStrain = 100);
-/// people coming from WHOOP often think in its 0–21 Day Strain axis, so this purely cosmetic toggle lets
-/// the SAME stored value be shown on either scale. Default is NOOP's own 0–100 — the data never changes.
+/// people coming from WHOOP use its 0–21 Day Strain axis, so this purely cosmetic toggle lets
+/// the SAME stored value be shown on either scale. Default is WHOOP's 0–21 — the data never changes.
 enum EffortScale: String, CaseIterable, Identifiable {
     /// NOOP's native 0–100 axis (the stored value, one decimal).
     case hundred
@@ -94,7 +94,7 @@ enum UnitPrefs {
     /// stored ever changes. Same key string as the Android `units.skinTempDisplay` pref.
     static let skinTempDisplayKey = "units.skinTempDisplay"
     /// Effort display scale (#268). Stored raw is an `EffortScale` rawValue; an unset/unknown value
-    /// resolves to `.hundred` (NOOP's native axis). Mirrored on Android by NoopPrefs("effort.scale").
+    /// resolves to `.whoop` (WHOOP's 0–21 Day Strain axis). Mirrored on Android by NoopPrefs("effort.scale").
     static let effortScaleKey = "effort.scale"
 
     /// Trend chart style (line vs bar). Stored raw is a `TrendChartStyle` rawValue; an unset/unknown
@@ -172,9 +172,9 @@ enum UnitPrefs {
         UnitSystem(rawValue: raw) ?? system
     }
 
-    /// Resolve the stored Effort-scale raw value, defaulting to NOOP's native 0–100 axis.
+    /// Resolve the stored Effort-scale raw value, defaulting to WHOOP's 0–21 Day Strain axis.
     static func resolveEffortScale(_ raw: String) -> EffortScale {
-        EffortScale(rawValue: raw) ?? .hundred
+        EffortScale(rawValue: raw) ?? .whoop
     }
 }
 
