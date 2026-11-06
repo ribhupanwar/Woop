@@ -4438,7 +4438,7 @@ struct TodayView: View {
                                             Text(workoutDuration(w))
                                                 .font(StrandFont.number(15))
                                                 .monospacedDigit()
-                                            Text(w.strain == nil ? "EFFORT —" : "EFFORT " + String(format: "%.1f", displayedEffort))
+                                            Text(w.strain == nil ? "EFFORT — / 21" : "EFFORT " + String(format: "%.1f / 21", displayedEffort))
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
                                                 .lineLimit(1)
@@ -5647,8 +5647,8 @@ struct TodayView: View {
     private func workoutDuration(_ w: WorkoutRow) -> String {
         let secs = w.durationS ?? Double(max(w.endTs - w.startTs, 0))
         let mins = Int((secs / 60).rounded())
-        if mins >= 60 { return String(localized: "\(mins / 60)h \(mins % 60)m") }
-        return String(localized: "\(mins)m")
+        if mins >= 60 { return String(localized: "\(mins / 60) hr \(mins % 60) min") }
+        return String(localized: "\(mins) min")
     }
 
     /// "d MMM · HH:mm" — the date and the START time, never a range.
