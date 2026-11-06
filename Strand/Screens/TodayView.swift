@@ -4466,9 +4466,12 @@ struct TodayView: View {
                                 }
                                 .buttonStyle(.plain)
                             } else if let sleep = sleepToday {
-                                let asleepMinutes = max(0, Int(SleepView.decodedAsleepMinutes(
+                                let decodedMinutes = SleepView.decodedAsleepMinutes(
                                     sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
-                                ).rounded()))
+                                )
+                                let asleepMinutes = max(0, Int((decodedMinutes > 0
+                                    ? decodedMinutes
+                                    : Double(max(0, sleep.endTs - sleep.effectiveStartTs)) / 60.0).rounded()))
                                 // Sleep uses the same three-column WHOOP timeline layout.
                                 HStack(spacing: 14) {
                                     HStack(spacing: 7) {
