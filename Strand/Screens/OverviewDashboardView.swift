@@ -414,8 +414,11 @@ struct OverviewDashboardView: View {
             // Use the same imported + computed sleep union and main-night grouping as the Sleep screen.
             // Wake-day scoping keeps a night that began yesterday on today's activity timeline.
             let allSleep = await repo.allSleepSessions(days: max(14, selectedDayOffset + 2))
+            let logicalDayStart = Int(selectedLogicalDay.timeIntervalSince1970)
+            let logicalDayEnd = Int((Calendar.current.date(byAdding: .day, value: 1, to: selectedLogicalDay)
+                ?? selectedLogicalDay.addingTimeInterval(86_400)).timeIntervalSince1970)
             let daySleep = allSleep.filter {
-                Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.endTs))) == selectedDayKey
+                $0.endTs > logicalDayStart && $0.startTs < logicalDayEnd
             }
             let midsleep = await repo.habitualMidsleepSec()
             if let span = SleepView.mainNightSpan(daySleep, habitualMidsleepSec: midsleep) {
@@ -1156,7 +1159,11 @@ struct OverviewDashboardView: View {
                                                 .font(StrandFont.subhead.weight(.semibold))
                                                 .foregroundStyle(StrandPalette.textPrimary)
                                             if let sleepStart, let sleepEnd {
-                                                Text(activityTimeRange(sleepStart, sleepEnd))
+                                                Text(activityDateLabel(sleepStart) + " · " + activityTimeOnly(sleepStart))
+                                                    .font(StrandFont.caption)
+                                                    .foregroundStyle(StrandPalette.textPrimary)
+                                                    .monospacedDigit()
+                                                Text(activityTimeOnly(sleepEnd))
                                                     .font(StrandFont.caption)
                                                     .foregroundStyle(StrandPalette.textSecondary)
                                                     .monospacedDigit()
