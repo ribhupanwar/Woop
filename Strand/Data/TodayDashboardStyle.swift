@@ -40,8 +40,12 @@ enum TodayDashboardStyle: String, CaseIterable, Identifiable {
     /// new key exists.
     static func migrateLegacyBoolIfNeeded(in defaults: UserDefaults = .standard) {
         guard defaults.string(forKey: storageKey) == nil else { return }
-        // Legacy default (before this type existed) was Liquid-on.
-        let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool ?? true
-        defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
+        // Preserve a real legacy choice. Only a fresh install (no old key at all) gets the new Overview
+        // default; an existing Liquid user stays on Liquid and an existing Classic user stays on Classic.
+        if let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool {
+            defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
+        } else {
+            defaults.set(TodayDashboardStyle.overview.rawValue, forKey: storageKey)
+        }
     }
 }
