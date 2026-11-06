@@ -1181,15 +1181,32 @@ final class AppModel: ObservableObject {
         for row in rows where
             (row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true
              || row.notes?.hasPrefix("Automatically detected from strap motion + heart-rate data") == true) {
+            let isCadenceBout = row.notes?.hasPrefix("Automatically detected from WHOOP 5 live motion cadence") == true
             let route = RouteStore.load(startTs: row.startTs, sport: row.sport)
+            // Migrate old cadence-only rows too: without a trustworthy GPS route, "Running" was
+            // an unsupported guess. Keep HR-suggestion rows' existing sport because their classifier
+            // has a separate evidence path.
+            let resolvedSport: String
+            if isCadenceBout,
+               let locomotion = MotionCadenceBoutDetector.classifyLocomotion(
+                    gpsDistanceM: route?.distanceM, durationSeconds: row.endTs - row.startTs) {
+                resolvedSport = locomotion == .run ? "Running" : "Walking"
+            } else if isCadenceBout {
+                resolvedSport = "Workout"
+            } else {
+                resolvedSport = row.sport
+            }
             let counterSteps = await repo.autoLogMotionDetectedWorkout(
-                startTs: row.startTs, endTs: row.endTs, sport: row.sport,
+                startTs: row.startTs, endTs: row.endTs, sport: resolvedSport,
                 averageBpm: row.avgHr, medianCadenceHz: nil, distanceM: route?.distanceM,
                 stepTicksPerStep: profile.stepTicksPerStep,
-                strideLengthM: profile.strideLengthM(for: row.sport))
+                strideLengthM: profile.strideLengthM(for: resolvedSport))
+            if let route, resolvedSport != row.sport {
+                RouteStore.store(route, startTs: row.startTs, sport: resolvedSport)
+            }
             if let route, let counterSteps {
                 profile.recordStrideCalibration(gpsDistanceM: route.distanceM, steps: counterSteps,
-                                                 sport: row.sport, sessionKey: String(row.startTs))
+                                                 sport: resolvedSport, sessionKey: String(row.startTs))
             }
         }
     }
