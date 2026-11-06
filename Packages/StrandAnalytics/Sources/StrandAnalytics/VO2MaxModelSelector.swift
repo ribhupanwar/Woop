@@ -63,19 +63,11 @@ public enum VO2MaxModelSelector {
     public static func resolve(_ input: Input) -> Result? {
         guard validDay(input.today) != nil else { return nil }
 
-        // A recent qualifying GPS run is the active model. The GPS candidate itself must be finite/plausible.
-        if let gps = eligible(input.gps, on: input.today, maximumAgeDays: gpsLookbackDays),
-           plausible(gps.value) {
-            return Result(value: gps.value, mode: .gpsAugmented,
-                          confidence: "GPS + measured heart-rate evidence",
-                          offset: nil, evidenceDay: gps.day)
-        }
-
         guard let passive = eligible(input.passive, on: input.today, maximumAgeDays: nil),
               plausible(passive.value) else { return nil }
 
-        // A lab anchor is retained until replaced. It calibrates the passive model only when a paired
-        // passive output exists within the disclosed one-week comparison window.
+        // A paired clinical gas-exchange result is the strongest calibration anchor. Apply its
+        // measured-vs-passive offset to the current passive trend, even if a recent GPS candidate exists.
         if let lab = eligible(input.lab, on: input.today, maximumAgeDays: nil),
            plausible(lab.value),
            let baseline = nearestPair(input.passiveAtLab, to: lab.day),
@@ -86,6 +78,14 @@ public enum VO2MaxModelSelector {
             return Result(value: calibrated, mode: .labCalibrated,
                           confidence: "Passive model calibrated to lab measurement",
                           offset: correction, evidenceDay: lab.day)
+        }
+
+        // A recent qualifying GPS run is the active model when no paired clinical calibration exists.
+        if let gps = eligible(input.gps, on: input.today, maximumAgeDays: gpsLookbackDays),
+           plausible(gps.value) {
+            return Result(value: gps.value, mode: .gpsAugmented,
+                          confidence: "GPS + measured heart-rate evidence",
+                          offset: nil, evidenceDay: gps.day)
         }
 
         // When GPS evidence expires, retain the last GPS-vs-passive offset. This is a continuity
@@ -137,6 +137,8 @@ public enum VO2MaxModelSelector {
 
     private static func daysBetween(_ earlier: String, _ later: String) -> Int? {
         guard let a = validDay(earlier), let b = validDay(later), b >= a else { return nil }
-        return Calendar(identifier: .gregorian).dateComponents([.day], from: a, to: b).day
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar.dateComponents([.day], from: a, to: b).day
     }
 }
