@@ -41,6 +41,16 @@ final class VO2MaxModelSelectorTests: XCTestCase {
         XCTAssertEqual(result?.offset, 3)
     }
 
+    func testPairedLabCalibrationTakesPrecedenceOverGPS() {
+        let result = VO2MaxModelSelector.resolve(.init(
+            today: "2026-11-06", passive: value("2026-11-06", 47),
+            gps: value("2026-11-01", 54),
+            lab: value("2026-10-20", 52),
+            passiveAtLab: value("2026-10-18", 49)))
+        XCTAssertEqual(result?.value, 50)
+        XCTAssertEqual(result?.mode, .labCalibrated)
+    }
+
     func testLabCalibrationRequiresPassivePairWithinOneWeek() {
         let result = VO2MaxModelSelector.resolve(.init(
             today: "2026-11-06", passive: value("2026-11-06", 47),
