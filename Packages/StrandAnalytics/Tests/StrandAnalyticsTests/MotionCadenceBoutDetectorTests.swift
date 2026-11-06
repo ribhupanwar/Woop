@@ -39,4 +39,15 @@ final class MotionCadenceBoutDetectorTests: XCTestCase {
         let rows = (0..<12).map { minute($0, cadence: 2.8, bpm: nil) }
         XCTAssertEqual(MotionCadenceBoutDetector.detect(rows).first?.kind, .run)
     }
+
+    func testCadenceBoutNeedsGPSBeforeItIsNamedWalkOrRun() {
+        XCTAssertNil(MotionCadenceBoutDetector.classifyLocomotion(gpsDistanceM: nil, durationSeconds: 600))
+        XCTAssertNil(MotionCadenceBoutDetector.classifyLocomotion(gpsDistanceM: 80, durationSeconds: 600))
+        XCTAssertNil(MotionCadenceBoutDetector.classifyLocomotion(gpsDistanceM: 300, durationSeconds: 600))
+    }
+
+    func testGPSSpeedSeparatesWalkingFromRunning() {
+        XCTAssertEqual(MotionCadenceBoutDetector.classifyLocomotion(gpsDistanceM: 1_000, durationSeconds: 600), .walk)
+        XCTAssertEqual(MotionCadenceBoutDetector.classifyLocomotion(gpsDistanceM: 1_500, durationSeconds: 600), .run)
+    }
 }
