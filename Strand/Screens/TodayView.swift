@@ -4466,9 +4466,8 @@ struct TodayView: View {
                                                                                system: distanceUnitSystem)
                                     let strain = w.strain.map { String(format: "%.1f", $0 * 0.21) + " / 21" } ?? "— / 21"
                                     HStack(spacing: 12) {
-                                        Image(systemName: Self.activitySymbol(for: w.sport))
-                                            .font(.system(size: 21, weight: .semibold))
-                                            .foregroundStyle(StrandPalette.effortColor)
+                                        WorkoutTypeIcon(workoutType: w.sport, size: 21, weight: .semibold,
+                                                        color: StrandPalette.effortColor)
                                             .frame(width: 44, height: 48)
                                             .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
                                         VStack(alignment: .leading, spacing: 5) {
