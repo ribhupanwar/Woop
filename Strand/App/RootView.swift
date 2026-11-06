@@ -577,7 +577,17 @@ struct RootView: View {
             .tabRouteDestinations()
         }
         #else
-        TodayView()
+        // Keep the iPhone dashboard selector in sync with the macOS shell. Woop's
+        // premium Liquid dashboard is the default, while Classic/Trends/Overview
+        // remain available through the same persisted preference.
+        Group {
+            switch todayDashboardStyle {
+            case .classic:  TodayView()
+            case .liquid:   LiquidTodayView()
+            case .trends:   TrendsDashboardView()
+            case .overview: OverviewDashboardView()
+            }
+        }
         #endif
     }
 
