@@ -1061,10 +1061,10 @@ struct OverviewDashboardView: View {
     private var workoutsListSection: some View {
         let sleepStart = sleepStartTs
         let sleepEnd = sleepEndTs
-        let hasSleep = sleepMinutes != nil || sleepStart != nil
+        let sleepTimelineStart = sleepStart ?? (sleepMinutes != nil ? Int(selectedLogicalDay.timeIntervalSince1970) : nil)
         let entries: [(startTs: Int, workout: WorkoutRow?)] =
             recentWorkouts.map { (startTs: $0.startTs, workout: Optional($0)) }
-            + (sleepStart.map { [(startTs: $0, workout: Optional<WorkoutRow>.none)] } ?? [])
+            + (sleepTimelineStart.map { [(startTs: $0, workout: Optional<WorkoutRow>.none)] } ?? [])
         let ordered = entries.sorted { $0.startTs > $1.startTs }
 
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
@@ -1075,7 +1075,7 @@ struct OverviewDashboardView: View {
                     Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
                 }
             }
-            if ordered.isEmpty && !hasSleep {
+            if ordered.isEmpty {
                 NoopCard(padding: 14) {
                     HStack(spacing: 10) {
                         Image(systemName: "figure.walk")
