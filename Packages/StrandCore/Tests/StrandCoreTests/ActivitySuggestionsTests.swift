@@ -8,10 +8,11 @@ final class ActivitySuggestionsTests: XCTestCase {
     typealias S = ActivitySuggestions
 
     private func candidate(_ start: Int, minutes: Int = 30, track: String = "heartRate", load: Double = 100,
-                           avgBpm: Int? = 128, kinds: [String] = ["strength", "cycle", "other"]) -> ActivityCandidateRow {
+                           avgBpm: Int? = 128, locomotionShare: Double? = nil,
+                           kinds: [String] = ["strength", "cycle", "other"]) -> ActivityCandidateRow {
         ActivityCandidateRow(deviceId: "my-whoop", track: track, startTs: start, endTs: start + minutes * 60,
                              ruleVersion: ActivityCandidates.ruleVersion, avgBpm: avgBpm, peakBpm: avgBpm == nil ? nil : 150, load: load,
-                             cadence: nil, locomotionShare: nil, kinds: kinds)
+                             cadence: nil, locomotionShare: locomotionShare, kinds: kinds)
     }
     private func workout(_ start: Int, _ end: Int, source: String = "manual") -> WorkoutRow {
         WorkoutRow(startTs: start, endTs: end, sport: "Strength Training", source: source,
@@ -55,8 +56,13 @@ final class ActivitySuggestionsTests: XCTestCase {
         let hrRow = candidate(30_000, minutes: 12, avgBpm: nil, kinds: ["walk", "strength", "other"])
         let rows = S.resolve(candidates: [walkRow, hrRow], answers: [], workouts: [], settings: .init())
         let now = 50_000 + S.settleSeconds
-        XCTAssertTrue(S.qualifiesForAutomaticLogging(rows[0], settings: .init(), now: now),
-                      "A sustained step-confirmed walk must not be blocked by missing HR.")
+        XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[0], settings: .init(), now: now),
+                       "Steps without strap locomotion labels must not be auto-saved as a walk.")
+        let labelledWalk = candidate(60_000, minutes: 12, track: "walk", avgBpm: nil,
+                                     locomotionShare: 1.0, kinds: ["walk"])
+        let labelled = S.resolve(candidates: [labelledWalk], answers: [], workouts: [], settings: .init())[0]
+        XCTAssertTrue(S.qualifiesForAutomaticLogging(labelled, settings: .init(), now: now),
+                      "A strap-classified walk remains eligible even without HR.")
         XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[1], settings: .init(), now: now),
                        "An HR-only span still requires measured HR.")
         XCTAssertFalse(S.qualifiesForAutomaticLogging(rows[0], settings: .init(walks: false), now: now))
@@ -65,7 +71,8 @@ final class ActivitySuggestionsTests: XCTestCase {
 
     func testHighCadenceRunOnTheStepTrackQualifiesForAutomaticLogging() {
         // Run and walk candidates share the step track; the kind comes from sustained cadence.
-        let run = candidate(10_000, minutes: 40, track: "walk", load: 120, avgBpm: 150, kinds: ["run"])
+        let run = candidate(10_000, minutes: 40, track: "walk", load: 120, avgBpm: 150,
+                            locomotionShare: 1.0, kinds: ["run"])
         let suggestion = S.resolve(candidates: [run], answers: [], workouts: [], settings: .init())[0]
         XCTAssertEqual(suggestion.track, .walk)
         XCTAssertEqual(suggestion.likelyKind, .run)
