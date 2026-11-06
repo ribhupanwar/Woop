@@ -126,6 +126,18 @@ struct OverviewDashboardView: View {
         get { snapshot.recentWorkouts }
         nonmutating set { snapshot.recentWorkouts = newValue }
     }
+    private var sleepStartTs: Int? {
+        get { snapshot.sleepStartTs }
+        nonmutating set { snapshot.sleepStartTs = newValue }
+    }
+    private var sleepEndTs: Int? {
+        get { snapshot.sleepEndTs }
+        nonmutating set { snapshot.sleepEndTs = newValue }
+    }
+    private var sleepMinutes: Double? {
+        get { snapshot.sleepMinutes }
+        nonmutating set { snapshot.sleepMinutes = newValue }
+    }
     private var journalLoggedDays: Set<String>? {
         get { snapshot.journalLoggedDays }
         nonmutating set { snapshot.journalLoggedDays = newValue }
