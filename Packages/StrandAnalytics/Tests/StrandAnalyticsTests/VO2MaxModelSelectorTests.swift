@@ -75,11 +75,21 @@ final class VO2MaxModelSelectorTests: XCTestCase {
             today: "2026-11-06", passive: value("2026-11-05", .nan))))
     }
 
-    func testGPSModeExpiresAtDayNinetyOneAndUsesOffset() {
+    func testGPSModeRemainsActiveThroughDayNinety() {
+        // 8 Aug -> 6 Nov 2026 is exactly 90 calendar days; the patent's lookback is inclusive.
         let result = VO2MaxModelSelector.resolve(.init(
             today: "2026-11-06", passive: value("2026-11-06", 45),
             gps: value("2026-08-08", 50),
             passiveAtGPS: value("2026-08-08", 47)))
+        XCTAssertEqual(result?.mode, .gpsAugmented)
+        XCTAssertEqual(result?.value, 50)
+    }
+
+    func testGPSOffsetIsRetainedStartingOnDayNinetyOne() {
+        let result = VO2MaxModelSelector.resolve(.init(
+            today: "2026-11-06", passive: value("2026-11-06", 45),
+            gps: value("2026-08-07", 50),
+            passiveAtGPS: value("2026-08-07", 47)))
         XCTAssertEqual(result?.mode, .passivePlusGPS)
         XCTAssertEqual(result?.value, 48)
     }
