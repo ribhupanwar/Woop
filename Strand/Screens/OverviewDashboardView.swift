@@ -668,7 +668,7 @@ struct OverviewDashboardView: View {
         // carried Charge of 31 must not leave the card tinted "positive" beside a red ring.
         let charge = chargeDisplay.pct.map(ChargeBand.of(score:))
         let restOK = (restScore ?? 0) >= 70
-        let effortOK = (effortValue ?? 0) < 90   // 0-100 axis: only flag a genuinely maxed-out day
+        let effortOK = (effortValue ?? 0) < 18.9   // 0–21 axis: only flag a genuinely maxed-out day
         if charge == .depleted || !effortOK { return .critical }
         if charge == .low || !restOK { return .warning }
         return .positive
@@ -839,15 +839,15 @@ struct OverviewDashboardView: View {
 
     private func effortWord(_ strain: Double) -> String {
         switch strain {
-        case ..<30: return String(localized: "Light")
-        case ..<60: return String(localized: "Moderate")
+        case ..<6.3: return String(localized: "Light")
+        case ..<12.6: return String(localized: "Moderate")
         default:    return String(localized: "High")
         }
     }
 
     private func strainDetail() -> String {
         guard let s = effortValue else { return String(localized: "No load recorded yet") }
-        return s < 60 ? String(localized: "Optimal training possible today.")
+        return s < 12.6 ? String(localized: "Optimal training possible today.")
                       : String(localized: "Already a demanding day.")
     }
 
