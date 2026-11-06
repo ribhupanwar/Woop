@@ -326,6 +326,8 @@ public enum WorkoutTypeIconography {
         case .martialArts:
             return .system("figure.martial.arts")
         case .dancing:
+            return .system("figure.socialdance")
+        case .dance:
             return .system("figure.dance")
         case .golf:
             return .system("figure.golf")
