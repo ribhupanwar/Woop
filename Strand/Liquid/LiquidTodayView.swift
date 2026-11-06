@@ -2811,18 +2811,17 @@ struct LiquidTodayView: View {
                     .foregroundStyle(StrandPalette.accent)
                     .frame(width: 34)
                 VStack(alignment: .leading, spacing: 3) {
-                    if asleepSeconds > 0 {
-                        Text(timelineDuration(asleepSeconds))
-                            .font(StrandFont.number(rowNumberSize))
-                            .foregroundStyle(StrandPalette.textPrimary)
-                    }
                     Text("SLEEP").font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                         .foregroundStyle(StrandPalette.textSecondary)
+                    Text(asleepSeconds > 0 ? timelineDuration(asleepSeconds) + " asleep" : "Asleep duration unavailable")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
                 }
                 Spacer(minLength: NoopMetrics.space2)
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("[\(day)] \(timelineClock(start))")
-                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                    Text(day).font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                    Text(timelineClock(start)).font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textSecondary)
                     Text(timelineClock(end)).font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -2832,29 +2831,35 @@ struct LiquidTodayView: View {
         case .workout(let row):
             let tint = AppleInspiredColors.role(forSport: row.sport).color
             let isEstimatedDistance = row.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
-            let distance = row.distanceM.map { value in
-                let label = value >= 1000 ? String(format: "%.1f km", value / 1000)
-                    : String(format: "%.0f m", value)
-                return isEstimatedDistance ? "~" + label : label
-            }
+            let distance: String = {
+                guard let meters = row.distanceM, meters.isFinite, meters > 0 else { return "Distance unavailable" }
+                let value = UnitFormatter.distanceFromMeters(meters, system: distanceUnitSystem)
+                return isEstimatedDistance ? "~" + value : value
+            }()
+            let duration = timelineDuration(Int(row.durationS.rounded()))
+            let strain = row.strain.map { UnitFormatter.effortDisplay($0, scale: .whoop) } ?? "—"
             HStack(spacing: NoopMetrics.space3) {
                 WorkoutTypeIcon(workoutType: row.sport, size: 20, weight: .semibold, color: tint)
                     .frame(width: 34)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    if let strain = row.strain {
-                        Text(String(format: "%.1f", strain)).font(StrandFont.number(rowNumberSize))
-                            .foregroundStyle(StrandPalette.textPrimary)
-                    }
+                VStack(alignment: .leading, spacing: 4) {
                     Text(WorkoutSource.localizedDisplaySport(row.sport).uppercased()
                          + (isEstimatedDistance ? " · ESTIMATED" : ""))
                         .font(StrandFont.overline).tracking(StrandFont.overlineTracking)
                         .foregroundStyle(StrandPalette.textSecondary).lineLimit(1)
+                    Text("\(duration)  ·  \(distance)")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text("Strain  \(strain) / 21")
+                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
+                        .lineLimit(1)
                 }
                 Spacer(minLength: NoopMetrics.space2)
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(distance.map { "[\($0)] " } ?? "")\(timelineClock(row.startTs))")
-                        .font(StrandFont.caption).foregroundStyle(StrandPalette.textPrimary)
+                    Text(timelineWeekday(row.startTs)).font(StrandFont.caption.weight(.semibold))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                    Text(timelineClock(row.startTs)).font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textSecondary)
                     Text(timelineClock(row.endTs)).font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -2891,9 +2896,9 @@ struct LiquidTodayView: View {
                             .foregroundStyle(StrandPalette.textTertiary)
                             .frame(width: 34)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("No activity yet").font(StrandFont.number(rowTextSize))
+                            Text("No activities yet today").font(StrandFont.number(rowTextSize))
                                 .foregroundStyle(StrandPalette.textSecondary)
-                            Text("Your sleep and detected workouts will appear here.")
+                            Text("Walks, runs, workouts and sleep will appear here.")
                                 .font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                         }
                     }
