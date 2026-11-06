@@ -4458,13 +4458,13 @@ struct TodayView: View {
                     VStack(spacing: 0) {
                         ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { index, entry in
                             if let w = entry.workout {
+                                let startDate = Date(timeIntervalSince1970: TimeInterval(w.startTs))
+                                let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
+                                let estimatedDistance = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
+                                let distance = Self.activityDistanceLabel(w.distanceM, estimated: estimatedDistance,
+                                                                           system: distanceUnitSystem)
+                                let strain = w.strain.map { String(format: "%.1f", $0 * 0.21) + " / 21" } ?? "— / 21"
                                 Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                    let startDate = Date(timeIntervalSince1970: TimeInterval(w.startTs))
-                                    let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
-                                    let estimatedDistance = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
-                                    let distance = Self.activityDistanceLabel(w.distanceM, estimated: estimatedDistance,
-                                                                               system: distanceUnitSystem)
-                                    let strain = w.strain.map { String(format: "%.1f", $0 * 0.21) + " / 21" } ?? "— / 21"
                                     HStack(spacing: 12) {
                                         WorkoutTypeIcon(workoutType: w.sport, size: 21, weight: .semibold,
                                                         color: StrandPalette.effortColor)
