@@ -2836,7 +2836,7 @@ struct LiquidTodayView: View {
                 let value = UnitFormatter.distanceFromMeters(meters, system: distanceUnitSystem)
                 return isEstimatedDistance ? "~" + value : value
             }()
-            let duration = timelineDuration(Int(row.durationS.rounded()))
+            let duration = timelineDuration(Int((row.durationS ?? 0).rounded()))
             let strain = row.strain.map { UnitFormatter.effortDisplay($0, scale: .whoop) } ?? "—"
             HStack(spacing: NoopMetrics.space3) {
                 WorkoutTypeIcon(workoutType: row.sport, size: 20, weight: .semibold, color: tint)
