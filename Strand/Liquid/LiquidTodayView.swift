@@ -389,7 +389,10 @@ struct LiquidTodayView: View {
     @AppStorage(TodayLayoutPrefs.orderKey) private var sectionOrderRaw: String?
     @AppStorage(TodayLayoutPrefs.hiddenKey) private var hiddenSectionsRaw: String?
     private var sectionOrder: [TodaySection] {
-        LiquidTodayDefaults.visibleSections(orderRaw: sectionOrderRaw, hiddenRaw: hiddenSectionsRaw)
+        let visible = LiquidTodayDefaults.visibleSections(orderRaw: sectionOrderRaw, hiddenRaw: hiddenSectionsRaw)
+        // Today's Activities is a core Home surface, not an optional card. Preserve the user's
+        // ordering when present, but restore it at the end if an older/custom layout hid it.
+        return visible.contains(.workouts) ? visible : visible + [.workouts]
     }
     /// The editor sees the layout Liquid actually shows; only a changed section group is written back.
     private var editorSectionOrderRaw: Binding<String> {
