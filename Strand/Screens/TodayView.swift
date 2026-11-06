@@ -5734,7 +5734,7 @@ struct TodayView: View {
 struct TodayHistoryWideCache {
     var sparks: [String: [Double]]
     let stepsEstByDay: [String: Int]
-    let workouts: [WorkoutRow]
+    var workouts: [WorkoutRow]
     let appleDays: [AppleDaily]
     let xiaomiDays: Int
     let xiaomiSleeps: Int
