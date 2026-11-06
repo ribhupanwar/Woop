@@ -420,7 +420,7 @@ struct LiquidVessel: View {
     var body: some View { rendered.dashboardAnimationVisibility($isVisible) }
 
     @ViewBuilder private var rendered: some View {
-        if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) { gauge } else { staticGauge }
+        if animated && isVisible && dashboardIsActive && scenePhase == .active && !motion.poseStill(reduceMotion) && !atRest { gauge } else { staticGauge }
     }
 
     private var gauge: some View {
@@ -433,7 +433,7 @@ struct LiquidVessel: View {
         // stepping and redrawing on the main thread. Standing the clock down on settle costs nothing
         // visually (a settled vessel is a still picture and CoreAnimation holds the last frame), and every
         // way the picture can start moving again re-arms it: a new value, a tap, a tilt (`LiquidWake`).
-        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: atRest)) { tl in
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { tl in
             let now = liquidSeconds(tl.date)
             Canvas { context, size in
                 sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: value ?? 0)
@@ -507,7 +507,7 @@ struct LiquidTube: View {
     private var liveTube: some View {
         // Stands its clock down on settle, as `LiquidVessel` does. A tube has no tap affordance, so the only
         // things that can restart it are a new `frac` and a tilt.
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: atRest)) { tl in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
             let now = liquidSeconds(tl.date)
             Canvas { context, size in
                 sim.step(now: now, tilt: LiquidMotion.shared.tilt, target: frac)
