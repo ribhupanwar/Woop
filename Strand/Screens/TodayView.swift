@@ -4369,15 +4369,10 @@ struct TodayView: View {
 
     /// SF Symbols used by the Today Activity feed; keep sport naming independent from display localization.
     static func activitySymbol(for sport: String) -> String {
-        let kind = sport.lowercased()
-        if kind.contains("sleep") { return "moon.zzz.fill" }
-        if kind.contains("dance") || kind.contains("zumba") { return "figure.dance" }
-        if kind.contains("run") { return "figure.run" }
-        if kind.contains("walk") || kind.contains("hike") || kind.contains("ruck") { return "figure.walk" }
-        if kind.contains("cycle") || kind.contains("bike") { return "bicycle" }
-        if kind.contains("swim") { return "figure.pool.swim" }
-        if kind.contains("strength") || kind.contains("weight") || kind.contains("gym") { return "dumbbell.fill" }
-        return "figure.mixed.cardio"
+        if sport.localizedCaseInsensitiveContains("sleep") { return "moon.zzz.fill" }
+        // Use the shared exhaustive workout catalogue mapping so the Today feed and Workouts screen
+        // show the same sport-specific glyph for dance, court sports, water sports and the long tail.
+        return sportSymbol(sport)
     }
 
     static func activityDurationLabel(_ seconds: Double) -> String {
