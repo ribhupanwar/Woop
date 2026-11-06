@@ -4460,6 +4460,7 @@ struct TodayView: View {
                             if let w = entry.workout {
                                 let startDate = Date(timeIntervalSince1970: TimeInterval(w.startTs))
                                 let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
+                                let duration = w.durationS ?? Double(max(0, w.endTs - w.startTs))
                                 let estimatedDistance = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
                                 let distance = Self.activityDistanceLabel(w.distanceM, estimated: estimatedDistance,
                                                                            system: distanceUnitSystem)
@@ -4476,7 +4477,7 @@ struct TodayView: View {
                                                 .tracking(StrandFont.overlineTracking)
                                                 .foregroundStyle(StrandPalette.textPrimary)
                                                 .lineLimit(1)
-                                            Text("\(Self.activityDurationLabel(w.durationS))  ·  \(distance)")
+                                            Text("\(Self.activityDurationLabel(duration))  ·  \(distance)")
                                                 .font(StrandFont.subhead)
                                                 .foregroundStyle(StrandPalette.textSecondary)
                                                 .lineLimit(1)
@@ -4504,7 +4505,7 @@ struct TodayView: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel("\(WorkoutSource.localizedDisplaySport(w.sport)), \(Self.activityDurationLabel(w.durationS)), \(distance), strain \(strain), started \(Self.hrTimeFmt.string(from: startDate)), ended \(Self.hrTimeFmt.string(from: endDate))")
+                                .accessibilityLabel("\(WorkoutSource.localizedDisplaySport(w.sport)), \(Self.activityDurationLabel(duration)), \(distance), strain \(strain), started \(Self.hrTimeFmt.string(from: startDate)), ended \(Self.hrTimeFmt.string(from: endDate))")
                             } else if let sleep = sleepToday {
                                 let decodedMinutes = SleepView.decodedAsleepMinutes(
                                     sleep.stagesJSON, effectiveStartTs: sleep.effectiveStartTs
