@@ -127,14 +127,13 @@ struct WorkoutDetailView: View {
                            durationS: row.durationS ?? Double(row.endTs - row.startTs))
         }
         .toolbar {
-            // Detected/manual sessions are editable. Imported provider history remains read-only.
+            // Detected/manual sessions are edited in place. Imported provider history is preserved:
+            // its Edit action creates a corrected manual copy instead of rewriting source data.
             ToolbarItem(placement: .primaryAction) {
-                if [.detected, .manual, .confirmed].contains(WorkoutSource.classify(row.source)) {
-                    Button {
-                        showEditActivity = true
-                    } label: {
-                        Label("Edit activity", systemImage: "pencil")
-                    }
+                Button {
+                    showEditActivity = true
+                } label: {
+                    Label("Edit activity", systemImage: "pencil")
                 }
             }
             ToolbarItem(placement: .cancellationAction) {
@@ -142,7 +141,12 @@ struct WorkoutDetailView: View {
             }
         }
         .sheet(isPresented: $showEditActivity) {
-            ManualWorkoutSheet(editing: row, hrSource: repo) { updated, replacing in
+            let isEditable = [.detected, .manual, .confirmed].contains(WorkoutSource.classify(row.source))
+            ManualWorkoutSheet(
+                editing: isEditable ? row : nil,
+                prefill: isEditable ? nil : manualCopy(of: row),
+                hrSource: repo
+            ) { updated, replacing in
                 Task {
                     await repo.saveManualWorkout(updated, replacing: replacing)
                     await repo.refresh()
@@ -248,6 +252,15 @@ struct WorkoutDetailView: View {
     /// else the phone pedometer (any strap, incl. WHOOP 4.0 / CSV-import). Never shown for non-foot
     /// sports (cycling/rowing/… have no footfalls). Both sources return nil for "no data", so an empty
     /// window stays "–" rather than a fabricated 0.
+    /// Imported WHOOP/Apple/provider sessions stay immutable. The edit sheet starts from this
+    /// manual copy so the wearer can correct the sport or time span without altering imported history.
+    private func manualCopy(of row: WorkoutRow) -> WorkoutRow {
+        WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: WorkoutSource.displaySport(row.sport),
+                   source: "manual", durationS: row.durationS, energyKcal: row.energyKcal,
+                   avgHr: row.avgHr, maxHr: row.maxHr, strain: row.strain, distanceM: row.distanceM,
+                   zonesJSON: row.zonesJSON, notes: row.notes, steps: row.steps)
+    }
+
     private func loadSteps() async {
         var stepReadout: StepReadout? = nil
         if WorkoutCatalog.isOnFoot(row.sport) {
