@@ -4432,7 +4432,7 @@ struct TodayView: View {
                                     let displayedEffort = (w.strain ?? 0) * 0.21
                                     HStack(spacing: 14) {
                                         VStack(alignment: .leading, spacing: 4) {
-                                            Text(w.strain.map { String(format: "%.1f", displayedEffort) } ?? "—")
+                                            Text(w.strain.map { _ in String(format: "%.1f", displayedEffort) } ?? "—")
                                                 .font(StrandFont.number(24))
                                                 .monospacedDigit()
                                             Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
