@@ -427,7 +427,11 @@ struct OverviewDashboardView: View {
                 total + SleepView.decodedAsleepMinutes(session.stagesJSON,
                                                         effectiveStartTs: session.effectiveStartTs)
             }
-            next.sleepMinutes = next.displayDay?.totalSleepMin ?? (stagedMinutes > 0 ? stagedMinutes : nil)
+            let spanMinutes = next.sleepStartTs.flatMap { start in
+                next.sleepEndTs.map { end in max(0, Double(end - start) / 60.0) }
+            }
+            next.sleepMinutes = next.displayDay?.totalSleepMin
+                ?? (stagedMinutes > 0 ? stagedMinutes : spanMinutes)
         } else {
             next.recentWorkouts = []
             next.sleepStartTs = nil
@@ -1099,33 +1103,28 @@ struct OverviewDashboardView: View {
                         ForEach(Array(ordered.enumerated()), id: \.offset) { index, entry in
                             if let w = entry.workout {
                                 NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
-                                    HStack(spacing: 12) {
-                                        VStack(spacing: 3) {
-                                            Image(systemName: activitySymbol(w.sport))
-                                                .font(.system(size: 19, weight: .semibold))
-                                            Text(workoutDurationLabel(w))
-                                                .font(StrandFont.number(15))
+                                    HStack(spacing: 14) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(w.strain.map { String(format: "%.1f", min(21, max(0, $0 * 0.21))) } ?? "—")
+                                                .font(StrandFont.number(24))
                                                 .monospacedDigit()
-                                            Text(w.strain.map { String(format: "EFFORT %.1f / 21", min(21, max(0, $0 * 0.21))) }
-                                                 ?? "EFFORT — / 21")
+                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.75)
                                         }
                                         .foregroundStyle(StrandPalette.textPrimary)
-                                        .frame(width: 100, minHeight: 72)
-                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 11))
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Text(WorkoutSource.localizedDisplaySport(w.sport))
-                                                .font(StrandFont.subhead.weight(.semibold))
+                                        .frame(minWidth: 100, alignment: .leading)
+                                        VStack(alignment: .trailing, spacing: 5) {
+                                            Text(activityDateLabel(w.startTs) + " · " + activityTimeOnly(w.startTs))
+                                                .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textPrimary)
-                                            Text("\(activityDateLabel(w.startTs)) · \(activityTimeRange(w.startTs, w.endTs))")
+                                                .monospacedDigit()
+                                            Text(activityTimeOnly(w.endTs))
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textSecondary)
                                                 .monospacedDigit()
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
                                         }
                                         Spacer(minLength: 0)
                                         Image(systemName: "chevron.right")
@@ -1221,6 +1220,14 @@ struct OverviewDashboardView: View {
         formatter.timeStyle = .short
         formatter.dateStyle = .none
         return "\(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(start)))) – \(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(end))))"
+    }
+
+    private func activityTimeOnly(_ timestamp: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = AppLanguage.activeLocale
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
     }
 
     // MARK: - Energy detail (opt-in, DashboardExtraSection.energyDetail)
