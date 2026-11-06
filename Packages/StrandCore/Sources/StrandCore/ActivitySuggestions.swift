@@ -88,9 +88,10 @@ public enum ActivitySuggestions {
     public static func qualifiesForAutomaticLogging(_ s: Suggestion, settings: Settings, now: Int) -> Bool {
         guard s.state == .open, s.end + settleSeconds <= now else { return false }
         if s.track == .walk {
-            // Step cadence creates a candidate, but does not identify the sport: chores and dancing
-            // can also accumulate steps. Auto-save only when WHOOP's locomotion labels corroborate gait.
-            return settings.walks && (s.locomotionShare ?? 0) >= 0.8
+            // A persisted .walk kind means the candidate passed the dedicated sustained-step walk
+            // classifier. Optional per-second locomotion labels corroborate it when WHOOP supplies them,
+            // but are not mandatory for a cadence-confirmed walk with no HR stream.
+            return settings.walks && ((s.locomotionShare ?? 0) >= 0.8 || s.likelyKind == .walk)
         }
         guard s.avgBpm != nil else { return false }
         return (s.likelyKind == .run || s.likelyKind == .walk)
