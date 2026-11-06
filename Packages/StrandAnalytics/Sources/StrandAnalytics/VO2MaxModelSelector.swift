@@ -108,7 +108,7 @@ public enum VO2MaxModelSelector {
     }
 
     private static func nearestPair(_ value: DatedValue?, to day: String) -> DatedValue? {
-        guard let value, let age = daysBetween(value.day, day), age <= calibrationPairingDays,
+        guard let value, let age = absoluteDaysBetween(value.day, day), age <= calibrationPairingDays,
               plausible(value.value) else { return nil }
         return value
     }
@@ -137,8 +137,17 @@ public enum VO2MaxModelSelector {
 
     private static func daysBetween(_ earlier: String, _ later: String) -> Int? {
         guard let a = validDay(earlier), let b = validDay(later), b >= a else { return nil }
+        return calendarDays(from: a, to: b)
+    }
+
+    private static func absoluteDaysBetween(_ first: String, _ second: String) -> Int? {
+        guard let a = validDay(first), let b = validDay(second) else { return nil }
+        return calendarDays(from: min(a, b), to: max(a, b))
+    }
+
+    private static func calendarDays(from start: Date, to end: Date) -> Int? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        return calendar.dateComponents([.day], from: a, to: b).day
+        return calendar.dateComponents([.day], from: start, to: end).day
     }
 }
