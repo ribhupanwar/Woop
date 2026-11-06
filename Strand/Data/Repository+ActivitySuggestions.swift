@@ -234,6 +234,7 @@ extension Repository {
 
         do { _ = try await store.upsertWorkouts([row], deviceId: deviceId) }
         catch { return counterSteps }
+        noteWorkoutFeedChanged()
         if let existing, existing.sport != sport {
             _ = try? await store.deleteWorkouts(deviceId: deviceId, sport: existing.sport,
                                                 from: existing.startTs, to: existing.startTs)
