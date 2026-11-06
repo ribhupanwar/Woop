@@ -39,8 +39,9 @@ jobs:
       - name: Generate original Woop app icon
         run: |
           set -euo pipefail
-          python3 -m pip install --user numpy pillow
-          python3 Tools/make_icon.py
+          python3 -m venv "$RUNNER_TEMP/icon-venv"
+          "$RUNNER_TEMP/icon-venv/bin/python" -m pip install --upgrade pip numpy pillow
+          "$RUNNER_TEMP/icon-venv/bin/python" Tools/make_icon.py
           cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024.png
           cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_dark.png
           cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_tinted.png
