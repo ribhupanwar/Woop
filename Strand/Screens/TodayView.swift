@@ -4431,34 +4431,30 @@ struct TodayView: View {
                                     let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
                                     let displayedEffort = (w.strain ?? 0) * 0.21
                                     HStack(spacing: 14) {
-                                        // Compact WHOOP-style card: icon only, then active minutes and effort / 21.
-                                        VStack(spacing: 4) {
-                                            Image(systemName: Self.activitySymbol(for: w.sport))
-                                                .font(.system(size: 21, weight: .semibold))
-                                            Text(workoutDuration(w))
-                                                .font(StrandFont.number(15))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(w.strain.map { String(format: "%.1f", displayedEffort) } ?? "—")
+                                                .font(StrandFont.number(24))
                                                 .monospacedDigit()
-                                            Text(w.strain == nil ? "EFFORT — / 21" : "EFFORT " + String(format: "%.1f / 21", displayedEffort))
+                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
                                                 .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
+                                                .minimumScaleFactor(0.75)
                                         }
                                         .foregroundStyle(StrandPalette.textPrimary)
-                                        .frame(width: 94, minHeight: 76)
-                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
+                                        .frame(minWidth: 100, alignment: .leading)
                                         Spacer(minLength: 2)
                                         VStack(alignment: .trailing, spacing: 6) {
-                                            Text(Self.activityDayFmt.string(from: startDate).uppercased())
-                                                .font(StrandFont.overline)
-                                                .tracking(StrandFont.overlineTracking)
+                                            Text(Self.activityDayFmt.string(from: startDate).uppercased() + " · " + Self.hrTimeFmt.string(from: startDate))
+                                                .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textPrimary)
-                                            Text("\(Self.hrTimeFmt.string(from: startDate)) – \(Self.hrTimeFmt.string(from: endDate))")
+                                                .monospacedDigit()
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
+                                            Text(Self.hrTimeFmt.string(from: endDate))
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textSecondary)
                                                 .monospacedDigit()
-                                                .lineLimit(1)
-                                                .minimumScaleFactor(0.8)
                                         }
                                     }
                                     .padding(.vertical, 9)
