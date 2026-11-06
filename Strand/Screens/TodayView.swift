@@ -1657,6 +1657,20 @@ struct TodayView: View {
         // Reload when the data refreshes OR the selected day changes, the HR trend and Rest score are
         // day-scoped, so navigating must re-fetch them for the newly selected window.
         .task(id: dashboardLoadKey) { await loadAll() }
+        // Workout rows are stored separately from daily metrics, so a new/extended auto-detected
+        // workout must refresh this feed without waiting for an unrelated WHOOP sync or full dashboard load.
+        .onChangeCompat(of: repo.workoutFeedRevision) { _ in
+            let requestedRevision = repo.workoutFeedRevision
+            Task { @MainActor in
+                let rows = await repo.workoutRows(days: 120, reconcileHrCap: 8)
+                guard requestedRevision == repo.workoutFeedRevision else { return }
+                workouts = rows
+                if var cached = repo.todayHistoryWideCache {
+                    cached.workouts = rows
+                    repo.todayHistoryWideCache = cached
+                }
+            }
+        }
         // Momentum is resolved here, not in the body — see `MomentumKey`.
         .task(id: momentumKey) { rebuildMomentum() }
         // #989: hydration writes don't bump refreshSeq, so the card needs its own triggers, a logged /
