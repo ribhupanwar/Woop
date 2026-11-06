@@ -38,7 +38,7 @@ final class LiquidTodayDefaultsTests: XCTestCase {
         XCTAssertEqual(visible.first, .coach, "a customised layout reads the shared order, not Liquid's")
     }
 
-    func testEditorSeedKeepsHiddenSectionsInPlace() {
+    func testEditorSeedKeepsRecoveryVitalsVisibleInPlace() {
         let fresh = LiquidTodayDefaults.layout(orderRaw: nil, hiddenRaw: nil)
         XCTAssertEqual(fresh.hidden, [])
         XCTAssertTrue(fresh.order.contains(.recoveryVitals))
