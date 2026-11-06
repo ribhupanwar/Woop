@@ -2620,7 +2620,7 @@ final class HealthKitBridge: ObservableObject {
             return .volleyball
         case .martialArts, .jiuJitsu, .judo:
             return .martialArts
-        case .dancing, .ballet, .breakdancing:
+        case .dance, .dancing, .ballet, .breakdancing:
             return .dance
         case .golf, .discGolf:
             return .golf
