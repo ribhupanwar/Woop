@@ -30,6 +30,17 @@ public enum MotionCadenceBoutDetector {
 
     public enum Kind: String, Sendable { case walk, run }
 
+    /// Cadence alone is not enough to name a sport: gym/strength movements can create a fast,
+    /// rhythmic wrist signal too. Only label a cadence bout as walking/running when GPS confirms
+    /// meaningful locomotion. Without that evidence, the caller should use a neutral "Workout" label.
+    public static func classifyLocomotion(gpsDistanceM: Double?, durationSeconds: Int) -> Kind? {
+        guard durationSeconds > 0, let distance = gpsDistanceM,
+              distance.isFinite, distance >= 200 else { return nil }
+        let speedMps = distance / Double(durationSeconds)
+        guard speedMps >= 0.8 else { return nil }
+        return speedMps >= 2.2 ? .run : .walk
+    }
+
     /// HR is supporting context only. Missing or low HR never vetoes a cadence-confirmed bout.
     public struct Candidate: Equatable, Sendable {
         public let startTs: Int
