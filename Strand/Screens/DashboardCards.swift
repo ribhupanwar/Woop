@@ -155,7 +155,7 @@ enum DashboardCard: String, CaseIterable, Identifiable {
     /// Vitality trio plus HRV + Resting HR (per the task's "sensible default"). Cards with no value yet
     /// simply render "—", so the default set is safe on a fresh install.
     static let defaultSelection: [DashboardCard] = [
-        .stress, .fitnessAge, .vitality, .hrv, .restingHr,
+        .stress, .fitnessAge, .vo2max, .vitality, .hrv, .restingHr, .steps,
     ]
 
     /// Canonical order used to list the disabled remainder in the editor.
