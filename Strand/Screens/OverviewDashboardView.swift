@@ -1061,7 +1061,7 @@ struct OverviewDashboardView: View {
     private var workoutsListSection: some View {
         let sleepStart = sleepStartTs
         let sleepEnd = sleepEndTs
-        let sleepTimelineStart = sleepStart ?? (sleepMinutes != nil ? Int(selectedLogicalDay.timeIntervalSince1970) : nil)
+        let sleepTimelineStart = sleepStart ?? Int(selectedLogicalDay.timeIntervalSince1970)
         let entries: [(startTs: Int, workout: WorkoutRow?)] =
             recentWorkouts.map { (startTs: $0.startTs, workout: Optional($0)) }
             + (sleepTimelineStart.map { [(startTs: $0, workout: Optional<WorkoutRow>.none)] } ?? [])
@@ -1161,7 +1161,7 @@ struct OverviewDashboardView: View {
                                                     .foregroundStyle(StrandPalette.textSecondary)
                                                     .monospacedDigit()
                                             } else {
-                                                Text("Last night")
+                                                Text(sleepMinutes == nil ? "No sleep data yet" : "Last night")
                                                     .font(StrandFont.caption)
                                                     .foregroundStyle(StrandPalette.textSecondary)
                                             }
