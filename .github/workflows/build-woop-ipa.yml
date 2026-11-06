@@ -36,17 +36,6 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Generate original Woop app icon
-        run: |
-          set -euo pipefail
-          python3 -m venv "$RUNNER_TEMP/icon-venv"
-          "$RUNNER_TEMP/icon-venv/bin/python" -m pip install --upgrade pip numpy pillow
-          "$RUNNER_TEMP/icon-venv/bin/python" Tools/make_icon.py
-          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024.png
-          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_dark.png
-          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_tinted.png
-          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon-Navy.appiconset/icon_1024.png
-
       - name: Select Xcode 26 SDK and install XcodeGen
         run: |
           set -euo pipefail
@@ -64,13 +53,24 @@ jobs:
           chmod +x Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh
 
-      # Re-run validation after the LiquidViewBuilder modifier fix.
+      # Validate a clean checkout before generating the local app-icon assets.
       - name: Run package, macOS, and iOS simulator validation
         run: |
           set -euo pipefail
           echo "Validating latest feature/whoop-575-ui-parity source before IPA packaging."
           echo "Includes RecoveryDetailView iOS-only navigation modifier guard."
           Tools/local-tests.sh origin/main
+
+      - name: Generate original Woop app icon
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/icon-venv"
+          "$RUNNER_TEMP/icon-venv/bin/python" -m pip install --upgrade pip numpy pillow
+          "$RUNNER_TEMP/icon-venv/bin/python" Tools/make_icon.py
+          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024.png
+          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_dark.png
+          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon.appiconset/icon_1024_tinted.png
+          cp Tools/woop_icon_1024.png StrandiOS/Resources/Assets.xcassets/AppIcon-Navy.appiconset/icon_1024.png
 
       - name: Generate Xcode project and verify scheme
         run: |
