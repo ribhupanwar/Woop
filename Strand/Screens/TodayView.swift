@@ -4427,50 +4427,38 @@ struct TodayView: View {
                         ForEach(Array(ordered.prefix(7).enumerated()), id: \.offset) { index, entry in
                             if let w = entry.workout {
                                 Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                    let isEstimated = w.notes?.localizedCaseInsensitiveContains("Estimated stride distance") == true
-                                    let distance = w.distanceM.map { metres in
-                                        let value = metres >= 1000 ? String(format: "%.1f km", metres / 1000)
-                                            : String(format: "%.0f m", metres)
-                                        return (isEstimated ? "~" : "") + value
-                                    }
-                                    let displayedEffort = (w.strain ?? 0) * (effortScale == .whoop ? 0.21 : 1.0)
+                                    let startDate = Date(timeIntervalSince1970: TimeInterval(w.startTs))
+                                    let endDate = Date(timeIntervalSince1970: TimeInterval(w.endTs))
+                                    let displayedEffort = (w.strain ?? 0) * 0.21
                                     HStack(spacing: 14) {
-                                        // WHOOP-style coloured metric block: activity icon + effort score.
-                                        HStack(spacing: 7) {
+                                        // Compact WHOOP-style card: icon only, then active minutes and effort / 21.
+                                        VStack(spacing: 4) {
                                             Image(systemName: Self.activitySymbol(for: w.sport))
                                                 .font(.system(size: 21, weight: .semibold))
-                                            if w.strain != nil {
-                                                Text(String(format: "%.1f", displayedEffort))
-                                                    .font(StrandFont.number(18))
-                                                    .monospacedDigit()
-                                            }
+                                            Text(workoutDuration(w))
+                                                .font(StrandFont.number(15))
+                                                .monospacedDigit()
+                                            Text(w.strain == nil ? "EFFORT —" : "EFFORT " + String(format: "%.1f", displayedEffort))
+                                                .font(StrandFont.overline)
+                                                .tracking(StrandFont.overlineTracking)
+                                                .lineLimit(1)
+                                                .minimumScaleFactor(0.8)
                                         }
-                                        .foregroundStyle(.white)
-                                        .frame(width: 112, height: 58)
-                                        .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 12))
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
+                                        .foregroundStyle(StrandPalette.textPrimary)
+                                        .frame(width: 94, minHeight: 76)
+                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
+                                        Spacer(minLength: 2)
+                                        VStack(alignment: .trailing, spacing: 6) {
+                                            Text(Self.activityDayFmt.string(from: startDate).uppercased())
                                                 .font(StrandFont.overline)
                                                 .tracking(StrandFont.overlineTracking)
                                                 .foregroundStyle(StrandPalette.textPrimary)
+                                            Text("\(Self.hrTimeFmt.string(from: startDate)) – \(Self.hrTimeFmt.string(from: endDate))")
+                                                .font(StrandFont.caption)
+                                                .foregroundStyle(StrandPalette.textSecondary)
+                                                .monospacedDigit()
                                                 .lineLimit(1)
-                                            if let distance {
-                                                Text(distance + (isEstimated ? " EST." : ""))
-                                                    .font(StrandFont.caption)
-                                                    .foregroundStyle(StrandPalette.textTertiary)
-                                                    .lineLimit(1)
-                                            }
-                                        }
-                                        Spacer(minLength: 2)
-                                        VStack(alignment: .trailing, spacing: 5) {
-                                            Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.startTs))))
-                                                .font(StrandFont.caption)
-                                                .foregroundStyle(StrandPalette.textPrimary)
-                                                .monospacedDigit()
-                                            Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: TimeInterval(w.endTs))))
-                                                .font(StrandFont.caption)
-                                                .foregroundStyle(StrandPalette.textTertiary)
-                                                .monospacedDigit()
+                                                .minimumScaleFactor(0.8)
                                         }
                                     }
                                     .padding(.vertical, 9)
@@ -5683,6 +5671,12 @@ struct TodayView: View {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "d MMM"
+        return f
+    }()
+    private static let activityDayFmt: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "EEE, d MMM"
         return f
     }()
     static func workoutCaption(_ w: WorkoutRow) -> String {
