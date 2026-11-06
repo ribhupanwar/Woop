@@ -147,18 +147,33 @@ final class ActivitySuggestionCenter: ObservableObject {
     /// A session logged by hand (the sheet from the menu, a live session) over an open suggestion answers
     /// it, so learning sees the answer and the inbox shows it as logged. A confirmation records its own.
     func noteLogged(_ row: WorkoutRow) async {
-        guard let repo, Self.isEnabled, row.source != WorkoutSource.confirmedSuggestionSource else { return }
+        guard let repo, Self.isEnabled,
+              row.source != WorkoutSource.confirmedSuggestionSource,
+              row.endTs > row.startTs else { return }
+
+        // A manual workout may already have been written before this callback runs. In that case
+        // Repository.resolve marks the overlapping suggestion as .logged, not .open. It is still
+        // an answer from the wearer and must be linked to the detector candidate.
         let span = ActivityDetectionScore.Span(start: row.startTs, end: row.endTs)
-        guard let s = all.first(where: {
-            $0.state == .open
-                && ActivityDetectionScore.iou(span, .init(start: $0.start, end: $0.end)) >= ActivityDetectionScore.minimumIoU
-        }) else { return }
+        let match = all
+            .filter { $0.state == .open || $0.state == .logged }
+            .map { suggestion in
+                (suggestion, ActivityDetectionScore.iou(span, .init(start: suggestion.start, end: suggestion.end)))
+            }
+            .filter { $0.1 >= ActivityDetectionScore.minimumIoU }
+            .max { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 < rhs.1 }
+                return lhs.0.start > rhs.0.start
+            }
+        guard let s = match?.0 else { return }
+
         let kind = ActivityDetectionScore.Kind.of(sport: row.sport)
         await repo.recordActivityAnswer(ActivitySuggestions.answer(
             s, kind == .walk ? .walk : .sport, sport: kind == .walk ? nil : row.sport, origin: .sheet,
             shownAt: shownAt[s.id], now: now,
             workout: .init(deviceId: repo.deviceId, startTs: row.startTs, sport: row.sport)))
         ActivitySuggestionNotifier.answered(s.id)
+        await reload()
     }
 
     /// Undo from the inbox: the suggestion is open again, and a session it saved is removed.
