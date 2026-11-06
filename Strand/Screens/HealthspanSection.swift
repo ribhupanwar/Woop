@@ -46,10 +46,10 @@ struct HealthspanSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("AgeLess", overline: "Weekly",
+            SectionHeader("Healthspan", overline: "Weekly",
                           trailing: snapshot?.latest.isProvisional == true ? String(localized: "Provisional") : String(localized: "Beta"))
             if sex == nil {
-                ComingSoon(what: "Set your sex in your profile to see your AgeLess age.", symbol: "person")
+                ComingSoon(what: "Set your sex in your profile to see your healthspan age.", symbol: "person")
             } else if let snapshot {
                 Button { showsDetail = true } label: { card(snapshot.latest) }
                     .buttonStyle(.plain)
@@ -57,7 +57,7 @@ struct HealthspanSection: View {
             } else if loaded {
                 emptyState
             } else {
-                ComingSoon.loading("Reading your AgeLess age…", title: "AgeLess", symbol: "hourglass")
+                ComingSoon.loading("Reading your healthspan age…", title: "Healthspan", symbol: "hourglass")
             }
         }
         .task(id: repo.refreshSeq) { await load() }
@@ -81,7 +81,7 @@ struct HealthspanSection: View {
             let names = missing.map(HealthspanSection.componentName).formatted(.list(type: .and))
             ComingSoon(what: "AgeLess still needs: \(names)", symbol: "hourglass")
         case .nights(let nights):
-            ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data. \(nights) so far.",
+            ComingSoon(what: "Your healthspan age appears after 30 nights of sleep data. \(nights) so far.",
                        symbol: "hourglass")
         case .unknown:
             ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data.", symbol: "hourglass")
