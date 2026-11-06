@@ -80,12 +80,12 @@ struct RootTabView: View {
     /// Whitespace alone is not a search — it would blank the index for a stray space.
     private var isSearchingMore: Bool { !SearchMatch.tokens(moreQuery).isEmpty }
 
-    /// V8 liquid redesign is the default Today; the Settings picker lets a user choose Classic, or
-    /// either of the two reference-matched dashboards, instead (keyed identically to the SettingsView
-    /// picker). Default Liquid.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.liquid.rawValue
+    /// Overview is the fresh-install Home. A previously saved Liquid choice remains untouched because
+    /// AppStorage reads the existing value before using this fallback; Liquid is available only when
+    /// explicitly selected in the dashboard-style setting (or carried forward from a prior explicit choice).
+    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
     private var todayDashboardStyle: TodayDashboardStyle {
-        TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .liquid
+        TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview
     }
 
     /// The Today tab root, honouring the chosen dashboard style.
