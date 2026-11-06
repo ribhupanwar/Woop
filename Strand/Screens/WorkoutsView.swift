@@ -1281,7 +1281,7 @@ struct WorkoutsView: View {
                 // Identical 4-up stat strip for every card.
                 HStack(spacing: 0) {
                     miniStat(String(localized: "SESSIONS"), "\(g.count)")
-                    miniStat(String(localized: "TIME"), String(localized: "\(oneDecimal(g.totalTimeH))h"))
+                    miniStat(String(localized: "TIME"), breakdownDuration(g.totalTimeH))
                     miniStat(String(localized: "KCAL"), grouped(g.totalKcal), tint: StrandPalette.metricAmber)
                     miniStat(String(localized: "AVG/SESS"), String(localized: "\(Int(g.avgTimePerSessionMin.rounded()))m"))
                 }
@@ -2038,6 +2038,16 @@ struct WorkoutsView: View {
     }
 
     private func oneDecimal(_ v: Double) -> String { String(format: "%.1f", v) }
+
+    /// Activity Breakdown uses human-readable elapsed time, not fractional hours.
+    private func breakdownDuration(_ hours: Double) -> String {
+        let totalMinutes = max(0, Int((hours * 60).rounded()))
+        let wholeHours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if wholeHours == 0 { return String(localized: "\(totalMinutes)m") }
+        if minutes == 0 { return String(localized: "\(wholeHours)h") }
+        return String(localized: "\(wholeHours)h \(minutes)m")
+    }
 
     /// This row's energy: what it recorded, else what its average heart rate implies, else what the
     /// activity usually costs. Shared with the detail screen so one session cannot read two figures.
