@@ -20,7 +20,7 @@ import Foundation
 public enum ActivityCandidates {
 
     /// Bumped whenever a threshold or rule below changes, so stored suggestions and answers can be told apart.
-    public static let ruleVersion = "activity-v3-cadence-run-override"
+    public static let ruleVersion = "activity-v4-locomotion-evidence"
 
     public static let minimumMinutes = 10
     public static let boutShare = 0.8
@@ -136,8 +136,15 @@ public enum ActivityCandidates {
             // locomotion labels can lag or classify a fast run as walking; do not let that label
             // downgrade a 150+ spm bout. Explicit run labels remain sufficient at lower cadence.
             let medianCadence = cadence.count >= minimumMinutes ? cadence[cadence.count / 2] : 0
-            let likelyRun = run > walk || medianCadence >= 150
-            return candidate(.walk, span, hrMax: hrMax, kinds: [likelyRun ? .run : .walk])
+            let classed = span.reduce(0) { $0 + ($1.classSeconds ?? 0) }
+            let locomotionShare = classed > 0 ? Double(walk + run) / Double(classed) : nil
+            // Step count alone proves movement, not walking: dancing, chores and other wrist motion
+            // can all accumulate steps. Require the strap's own per-second locomotion labels before
+            // naming a gait sport. Cadence can then distinguish a fast run when WHOOP labels lag.
+            let hasLocomotionEvidence = (locomotionShare ?? 0) >= 0.8
+            let likelyRun = hasLocomotionEvidence && (run > walk || medianCadence >= 150)
+            let kind: ActivityDetectionScore.Kind = hasLocomotionEvidence ? (likelyRun ? .run : .walk) : .other
+            return candidate(.walk, span, hrMax: hrMax, kinds: [kind])
         }
     }
 
