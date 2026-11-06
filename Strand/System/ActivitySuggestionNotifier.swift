@@ -106,7 +106,7 @@ enum ActivitySuggestionNotifier {
             content.body = String(localized: "\(minutes)-minute workout added to Today Activity.")
             content.threadIdentifier = "noop.auto-workout"
             let request = UNNotificationRequest(
-                identifier: "noop.auto-workout.\\(startTs)", content: content, trigger: nil)
+                identifier: "noop.auto-workout.\(startTs)", content: content, trigger: nil)
             center.add(request)
         }
     }
