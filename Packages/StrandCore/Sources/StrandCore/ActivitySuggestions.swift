@@ -28,6 +28,8 @@ public enum ActivitySuggestions {
         public let end: Int
         public let avgBpm: Int?
         public let load: Double
+        /// Share of classed seconds the strap labeled walking/running; nil when no class ticks exist.
+        public let locomotionShare: Double?
         public let kinds: [ActivityDetectionScore.Kind]
         public let ruleVersion: String
         public let state: State
@@ -74,17 +76,18 @@ public enum ActivitySuggestions {
                 track: track, start: row.startTs, end: row.endTs, avgBpm: row.avgBpm, peakBpm: row.peakBpm,
                 load: row.load, cadence: row.cadence, locomotionShare: row.locomotionShare, kinds: [])
             return Suggestion(track: track, start: row.startTs, end: row.endTs, avgBpm: row.avgBpm, load: row.load,
+                              locomotionShare: row.locomotionShare,
                               kinds: row.kinds.compactMap(ActivityDetectionScore.Kind.init(rawValue:)),
                               ruleVersion: row.ruleVersion, state: state, asks: candidate.asks(at: settings.level))
         }
     }
 
-    /// Whether a settled candidate is safe to log automatically. A step-confirmed walk does not need
-    /// an HR sample: the walk track is intentionally independent of HR so easy walks and HR dropouts survive.
-    /// HR-only spans still need measured HR, a locomotion classification, and the selected load threshold.
+    /// Step count alone is not sport evidence: dancing/chores can accumulate steps. Automatic gait
+    /// logging therefore requires the strap's own locomotion-class ticks to corroborate a step bout.
+    /// HR-only spans still need measured HR, a locomotion classification and the selected load threshold.
     public static func qualifiesForAutomaticLogging(_ s: Suggestion, settings: Settings, now: Int) -> Bool {
         guard s.state == .open, s.end + settleSeconds <= now else { return false }
-        if s.track == .walk { return settings.walks }
+        if s.track == .walk { return settings.walks && (s.locomotionShare ?? 0) >= 0.8 }
         guard s.avgBpm != nil else { return false }
         return (s.likelyKind == .run || s.likelyKind == .walk)
             && s.load >= settings.level.minimumLoad
