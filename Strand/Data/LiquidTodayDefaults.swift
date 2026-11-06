@@ -20,17 +20,18 @@ struct LiquidKeyMetricSelection: Equatable {
 }
 
 enum LiquidTodayDefaults {
-    /// Hero, then the day's story (Momentum, Goals), the numbers, energy, workouts, live heart rate while
-    /// a strap streams, and the user's own cards. The self-gating extras follow; every section a later
-    /// version adds still back-fills through `TodayLayoutPrefs.decodeOrder` once a layout is saved.
+    /// Home leads with the three primary scores, then puts the underlying recovery vitals immediately
+    /// below them so HRV / resting HR / respiration are easy to find. The day's story, supporting metrics,
+    /// training load, energy and workouts follow. Self-gating extras remain lower in the feed.
+    /// Every section a later version adds still back-fills through TodayLayoutPrefs.decodeOrder.
     static let sectionOrder: [TodaySection] = [
-        .hero, .synthesis, .goals, .keyMetrics, .trainingLoad, .energy, .workouts, .heartRate, .yourCards,
-        .coach, .liveSession, .menstrualCycle, .journal, .addedCards, .recoveryVitals, .dataSources,
+        .hero, .recoveryVitals, .synthesis, .goals, .keyMetrics, .trainingLoad, .workouts, .energy,
+        .heartRate, .yourCards, .coach, .liveSession, .menstrualCycle, .journal, .addedCards, .dataSources,
     ]
 
-    /// Recovery Vitals stays available and editable, but starts hidden: HRV, resting heart rate and
-    /// respiration are already Key Metrics.
-    static let hiddenSections: [TodaySection] = [.recoveryVitals]
+    /// Recovery Vitals is now visible by default directly under the score hero. Existing saved layouts
+    /// remain untouched; users can still hide or reorder the section from Arrange.
+    static let hiddenSections: [TodaySection] = []
 
     /// Never rendered by Liquid Today, whatever a saved layout says. Data Sources keeps its route in
     /// Settings; the Arrange sheet opened from Liquid does not offer it.
