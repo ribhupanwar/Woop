@@ -1164,7 +1164,8 @@ struct OverviewDashboardView: View {
                                                 .tracking(StrandFont.overlineTracking)
                                         }
                                         .foregroundStyle(.white)
-                                        .frame(width: 100, minHeight: 72)
+                                        .frame(width: 100)
+                                        .frame(minHeight: 72)
                                         .background(StrandPalette.metricCyan, in: RoundedRectangle(cornerRadius: 11))
                                         VStack(alignment: .leading, spacing: 5) {
                                             Text("Sleep")
