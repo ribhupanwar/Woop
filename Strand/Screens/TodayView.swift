@@ -4466,42 +4466,45 @@ struct TodayView: View {
                                                                            system: distanceUnitSystem)
                                 let strain = w.strain.map { String(format: "%.1f", $0 * 0.21) + " / 21" } ?? "— / 21"
                                 Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                                    HStack(spacing: 12) {
-                                        WorkoutTypeIcon(workoutType: w.sport, size: 21, weight: .semibold,
+                                    HStack(spacing: 13) {
+                                        WorkoutTypeIcon(workoutType: w.sport, size: 23, weight: .semibold,
                                                         color: StrandPalette.effortColor)
-                                            .frame(width: 44, height: 48)
-                                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
-                                        VStack(alignment: .leading, spacing: 5) {
-                                            Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
-                                                .font(StrandFont.overline)
-                                                .tracking(StrandFont.overlineTracking)
-                                                .foregroundStyle(StrandPalette.textPrimary)
-                                                .lineLimit(1)
+                                            .frame(width: 48, height: 48)
+                                            .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 14))
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                                                Text(strain.replacingOccurrences(of: " / 21", with: ""))
+                                                    .font(StrandFont.headline.weight(.bold))
+                                                    .monospacedDigit()
+                                                    .foregroundStyle(StrandPalette.textPrimary)
+                                                Text(WorkoutSource.localizedDisplaySport(w.sport).uppercased())
+                                                    .font(StrandFont.overline.weight(.semibold))
+                                                    .tracking(StrandFont.overlineTracking)
+                                                    .foregroundStyle(StrandPalette.textPrimary)
+                                                    .lineLimit(1)
+                                            }
                                             Text("\(Self.activityDurationLabel(duration))  ·  \(distance)")
-                                                .font(StrandFont.subhead)
+                                                .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textSecondary)
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.8)
-                                            Text("Strain  \(strain)")
+                                            Text("\(Self.hrTimeFmt.string(from: startDate)) – \(Self.hrTimeFmt.string(from: endDate))")
                                                 .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textTertiary)
+                                                .monospacedDigit()
+                                                .lineLimit(1)
                                         }
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        VStack(alignment: .trailing, spacing: 5) {
+                                        VStack(alignment: .trailing, spacing: 4) {
                                             Text(Self.activityDayFmt.string(from: startDate).uppercased())
                                                 .font(StrandFont.caption.weight(.semibold))
-                                                .foregroundStyle(StrandPalette.textPrimary)
-                                            Text(Self.hrTimeFmt.string(from: startDate))
-                                                .font(StrandFont.caption)
                                                 .foregroundStyle(StrandPalette.textSecondary)
-                                                .monospacedDigit()
-                                            Text(Self.hrTimeFmt.string(from: endDate))
-                                                .font(StrandFont.caption)
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 11, weight: .semibold))
                                                 .foregroundStyle(StrandPalette.textTertiary)
-                                                .monospacedDigit()
                                         }
                                     }
-                                    .padding(.vertical, 10)
+                                    .padding(.vertical, 13)
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
@@ -4513,37 +4516,37 @@ struct TodayView: View {
                                 let asleepMinutes = max(0, Int((decodedMinutes > 0
                                     ? decodedMinutes
                                     : Double(max(0, sleep.endTs - sleep.effectiveStartTs)) / 60.0).rounded()))
-                                HStack(spacing: 12) {
+                                HStack(spacing: 13) {
                                     Image(systemName: "moon.zzz.fill")
-                                        .font(.system(size: 21, weight: .semibold))
+                                        .font(.system(size: 23, weight: .semibold))
                                         .foregroundStyle(StrandPalette.metricCyan)
-                                        .frame(width: 44, height: 48)
-                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 12))
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text("SLEEP")
-                                            .font(StrandFont.overline)
-                                            .tracking(StrandFont.overlineTracking)
-                                            .foregroundStyle(StrandPalette.textPrimary)
-                                        Text(String(format: "%d h %02d m asleep", asleepMinutes / 60, asleepMinutes % 60))
-                                            .font(StrandFont.subhead)
-                                            .foregroundStyle(StrandPalette.textSecondary)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    VStack(alignment: .trailing, spacing: 5) {
-                                        Text(Self.activityDayFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))).uppercased())
-                                            .font(StrandFont.caption.weight(.semibold))
-                                            .foregroundStyle(StrandPalette.textPrimary)
-                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs))))
+                                        .frame(width: 48, height: 48)
+                                        .background(StrandPalette.surfaceRaised, in: RoundedRectangle(cornerRadius: 14))
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(alignment: .firstTextBaseline, spacing: 7) {
+                                            Text(String(format: "%d:%02d", asleepMinutes / 60, asleepMinutes % 60))
+                                                .font(StrandFont.headline.weight(.bold))
+                                                .monospacedDigit()
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                            Text("SLEEP")
+                                                .font(StrandFont.overline.weight(.semibold))
+                                                .tracking(StrandFont.overlineTracking)
+                                                .foregroundStyle(StrandPalette.textPrimary)
+                                        }
+                                        Text("Last night · Asleep")
                                             .font(StrandFont.caption)
                                             .foregroundStyle(StrandPalette.textSecondary)
-                                            .monospacedDigit()
-                                        Text(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.endTs))))
+                                        Text("\(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.effectiveStartTs)))) – \(Self.hrTimeFmt.string(from: Date(timeIntervalSince1970: Double(sleep.endTs))))")
                                             .font(StrandFont.caption)
                                             .foregroundStyle(StrandPalette.textTertiary)
                                             .monospacedDigit()
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(StrandPalette.textTertiary)
                                 }
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 13)
                                 .accessibilityElement(children: .combine)
                             }
                             if index < min(ordered.count, 7) - 1 {
