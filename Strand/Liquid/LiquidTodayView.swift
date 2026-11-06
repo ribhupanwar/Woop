@@ -2826,7 +2826,7 @@ struct LiquidTodayView: View {
     /// matching the reference feed rather than a workouts-only list.
     private var lastWorkoutsSection: some View {
         let items = todayActivityItems
-        VStack(spacing: NoopMetrics.space2) {
+        return VStack(spacing: NoopMetrics.space2) {
             HStack(alignment: .firstTextBaseline) {
                 sectionHead("TODAY'S ACTIVITIES")
                 Button { router.openTodayDetail(.workouts) } label: {
