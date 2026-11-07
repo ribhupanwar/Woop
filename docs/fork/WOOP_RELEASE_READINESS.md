@@ -134,3 +134,35 @@ Remaining detection acceptance: distinguish genuine exercise from stress/heat, t
 signals and overlapping manual/imported workouts, validate run/walk/cycle boundaries, and collect
 labeled dance/strength recordings before extending classification. Preserve corrections across a
 reanalysis and sync. Auto GPS routes cannot be claimed for time periods without recorded locations.
+
+## Running readout discrepancy investigation
+
+A native session's stored mean can come from sparse live samples while a later sync supplies a denser
+historical stream. The full workout list already reconciles native Avg/Max HR against that trace, but
+Home deliberately reads with `reconcileHrCap: 0` and previously passed the stored row into detail without
+an on-open reconcile. The detail now resolves the single session through the same repository resolver
+and refreshes when repository data changes. It retains the existing source and minimum-sample rules,
+preserves imported values, and does not rewrite stored samples or energy. Regression cases cover a
+stale native average, insufficient historical samples and preservation of imported measurements.
+
+This corrects a reproducible code-path inconsistency; it does not establish the cause of any particular
+WHOOP/Woop comparison without matching timestamps and recorded inputs. Separate investigation remains:
+
+- Stored manual-workout rescoring is gated by negligible energy or missing strain; a plausible but
+  incomplete saved calorie figure can remain outside that repair path. Read-time HR reconciliation is
+  separate, so this gate alone does not prove that the displayed average is stale.
+- Live means average captured samples, while a peak can retain a higher within-second reading that
+  was deduplicated out of the mean. Inspect sample coverage, recording window and filtering before
+  attributing a peak/mean difference to a bug.
+- Workout steps prefer a calibrated strap counter, then eligible Health workout steps, then phone
+  pedometer. Record the chosen source and coverage before comparing totals or changing calibration.
+- Estimated session calories are gross in the local model, while imported Apple active energy is
+  retained as supplied. A stored figure currently takes precedence. Compare provenance, active/total
+  definition, body inputs and HR coverage rather than adjusting figures to imitate another app.
+- The Lite IPA removes the Watch app and PlugIns. Apple Health import and a live Watch companion are
+  different capabilities; the former still requires signed-app permissions, and the latter is absent
+  from this IPA variant.
+
+CI now observes all package changes and isolates concurrency by branch, so an older branch archive
+does not block validation of the current release candidate. iPhone/strap hardware validation remains
+required before claiming subscription-independent daily reliability.

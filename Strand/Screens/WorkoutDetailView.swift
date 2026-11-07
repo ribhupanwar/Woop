@@ -36,6 +36,9 @@ struct WorkoutDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dashboardAppModel) private var appModel
     @State private var showsActivityEditor = false
+    @State private var heartRateReadout: WorkoutRow?
+    private var displayedAverageHR: Int? { heartRateReadout?.avgHr ?? row.avgHr }
+    private var displayedMaximumHR: Int? { heartRateReadout?.maxHr ?? row.maxHr }
 
     @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
     @AppStorage(UnitPrefs.distanceSystemKey) private var distanceSystemRaw = ""
@@ -139,7 +142,7 @@ struct WorkoutDetailView: View {
                 Button("Done") { dismiss() }
             }
         }
-        .task { await load() }
+        .task(id: repo.refreshSeq) { await load() }
         .sheet(isPresented: $showsActivityEditor) {
             ManualWorkoutSheet(editing: row, hrSource: repo) { edited, replacing in
                 Task {
@@ -173,6 +176,7 @@ struct WorkoutDetailView: View {
             return pts.count >= 2 ? pts : []
         }()
         let analytics = Repository.analyticsProfile(profile)
+        let heartRateReadout = await repo.workoutWithReconciledHeartRate(row)
         let recorded = (row.energyKcal ?? 0) > 0
         let fill = await repo.workoutHeartRateFill(for: row)
         let elevation = await repo.workoutElevation(for: row)
@@ -182,6 +186,8 @@ struct WorkoutDetailView: View {
             : measured
         let series = WorkoutElevationSeries.make(points: heightPoints)
         await MainActor.run {
+            guard !Task.isCancelled else { return }
+            self.heartRateReadout = heartRateReadout
             self.elevation = elevation
             self.elevationSeries = series
             self.route = routePoints
@@ -204,6 +210,7 @@ struct WorkoutDetailView: View {
         async let stepsDone: Void = loadSteps()
         async let energyDone: Void = recorded ? () : loadEstimatedEnergy(profile: analytics)
         _ = await (stepsDone, energyDone)
+        guard !Task.isCancelled else { return }
 
         // HR curve over the exact session window — a finer bucket than the 24h chart so a short run
         // still reads as a curve, not a handful of points.
@@ -236,6 +243,7 @@ struct WorkoutDetailView: View {
             from: row.startTs, to: row.endTs, maxHR: Double(profile.hrMax), source: row.source)
 
         await MainActor.run {
+            guard !Task.isCancelled else { return }
             self.hrPoints = points
             self.zoneMinutes = minutes
             self.zonesFromImport = fromImport
@@ -268,6 +276,7 @@ struct WorkoutDetailView: View {
             }
         }
         await MainActor.run {
+            guard !Task.isCancelled else { return }
             self.steps = stepReadout
             self.stepsPending = false
         }
@@ -286,6 +295,7 @@ struct WorkoutDetailView: View {
             row, profile: analytics, hrMax: Double(profile.hrMax),
             restingHrByDay: restingByDay, strapKcalByKey: strapByKey, peakMETByDay: peakByDay)
         await MainActor.run {
+            guard !Task.isCancelled else { return }
             self.energy = resolvedEnergy
             self.energyPending = false
         }
@@ -378,13 +388,13 @@ struct WorkoutDetailView: View {
                      caption: String(localized: "active"),
                      accent: StrandPalette.effortColor)
             StatTile(label: "Avg HR",
-                     value: row.avgHr.map { "\($0)" } ?? "–",
-                     caption: row.avgHr != nil ? (heartRateOrigin ?? "bpm") : nil,
-                     accent: row.avgHr != nil ? StrandPalette.metricRose : StrandPalette.textTertiary)
+                     value: displayedAverageHR.map { "\($0)" } ?? "–",
+                     caption: displayedAverageHR != nil ? (heartRateOrigin ?? "bpm") : nil,
+                     accent: displayedAverageHR != nil ? StrandPalette.metricRose : StrandPalette.textTertiary)
             StatTile(label: "Max HR",
-                     value: row.maxHr.map { "\($0)" } ?? "–",
-                     caption: row.maxHr != nil ? "bpm" : nil,
-                     accent: row.maxHr != nil ? StrandPalette.metricRose : StrandPalette.textTertiary)
+                     value: displayedMaximumHR.map { "\($0)" } ?? "–",
+                     caption: displayedMaximumHR != nil ? "bpm" : nil,
+                     accent: displayedMaximumHR != nil ? StrandPalette.metricRose : StrandPalette.textTertiary)
             // An empty tile beside a full heart-rate curve was the complaint: a native, Hevy or
             // hand-entered session never records kcal, and the screen said nothing rather than
             // saying what it could work out. The tilde and the caption keep it an estimate.
@@ -572,7 +582,7 @@ struct WorkoutDetailView: View {
                 ChartCard(
                     title: "HEART RATE",
                     subtitle: String(localized: "Beats per minute across the session"),
-                    trailing: row.avgHr.map { String(localized: "avg \($0)") },
+                    trailing: displayedAverageHR.map { String(localized: "avg \($0)") },
                     tint: StrandPalette.effortColor
                 ) {
                     TrendChart(
@@ -587,8 +597,8 @@ struct WorkoutDetailView: View {
                     )
                 } footer: {
                     ChartFooter([
-                        ("Avg", row.avgHr.map { String(localized: "\($0) bpm") } ?? "–"),
-                        ("Peak", row.maxHr.map { String(localized: "\($0) bpm") } ?? String(localized: "\(Int((values.max() ?? 0).rounded())) bpm")),
+                        ("Avg", displayedAverageHR.map { String(localized: "\($0) bpm") } ?? "–"),
+                        ("Peak", displayedMaximumHR.map { String(localized: "\($0) bpm") } ?? String(localized: "\(Int((values.max() ?? 0).rounded())) bpm")),
                         ("Low", String(localized: "\(Int((values.min() ?? 0).rounded())) bpm")),
                     ])
                 }
