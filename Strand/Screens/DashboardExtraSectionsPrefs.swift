@@ -143,9 +143,17 @@ enum DashboardLayoutPrefs {
         return result
     }
     static func hidden(_ raw: String, dashboard: String) -> Set<DashboardLayoutSection> {
-        if raw == noneHiddenSentinel { return [] }
-        if raw.isEmpty { return Set(DashboardLayoutSection.defaultOrder(for: dashboard).filter(\.isExtra)) }
-        return Set(raw.split(separator: ",").compactMap { DashboardLayoutSection(rawValue: String($0)) })
+        let stored: Set<DashboardLayoutSection>
+        if raw == noneHiddenSentinel {
+            stored = []
+        } else if raw.isEmpty {
+            stored = Set(DashboardLayoutSection.defaultOrder(for: dashboard).filter(\.isExtra))
+        } else {
+            stored = Set(raw.split(separator: ",").compactMap { DashboardLayoutSection(rawValue: String($0)) })
+        }
+        // Today's Activities is a required reference block on Overview. Older builds could persist it
+        // in the hidden list while the section was being introduced; heal that stale preference.
+        return dashboard == "overview" ? stored.subtracting([.activity]) : stored
     }
     static func encode(_ items: [DashboardLayoutSection]) -> String { items.map(\.rawValue).joined(separator: ",") }
     static func encodeHidden(_ items: [DashboardLayoutSection]) -> String {
