@@ -62,7 +62,7 @@ enum LiquidHeroChrome {
 /// Page rhythm for Liquid Today; Classic keeps the app-wide card gap.
 enum LiquidTodayLayout {
     /// Vertical gap between the Today sections (hero, Momentum, Goals, Key Metrics, Energy, …).
-    static let sectionSpacing: CGFloat = NoopMetrics.space6
+    static let sectionSpacing: CGFloat = NoopMetrics.space4
 }
 
 /// Pure sizing for the hero's three organic rings. Each ring owns a third of the hero row; the drawn ring
@@ -74,13 +74,13 @@ enum LiquidHeroRingLayout {
     static let slotSpacing: CGFloat = 0
     static let horizontalPadding: CGFloat = NoopMetrics.space2
     /// Above and below the rings, so their glow and echoes do not crowd the card's top and bottom edge.
-    static let verticalPadding: CGFloat = NoopMetrics.space6
+    static let verticalPadding: CGFloat = NoopMetrics.space4
     /// How much larger the drawn ring is than its slot.
     static let overdraw: CGFloat = 1.08
     /// The size before the row is first measured, and the floor/ceiling for any width.
-    static let fallbackDiameter: CGFloat = 108
-    static let minDiameter: CGFloat = 100
-    static let maxDiameter: CGFloat = 150
+    static let fallbackDiameter: CGFloat = 96
+    static let minDiameter: CGFloat = 90
+    static let maxDiameter: CGFloat = 132
 
     /// One slot's width for a measured row width (the row inside the card's padding).
     static func slotWidth(rowWidth: CGFloat) -> CGFloat {
