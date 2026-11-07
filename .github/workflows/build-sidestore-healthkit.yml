@@ -1,0 +1,114 @@
+name: Personal SideStore HealthKit test build
+
+on:
+  push:
+    branches: [codex/sidestore-healthkit-build]
+    paths:
+      - .github/workflows/build-sidestore-healthkit.yml
+      - Tools/SideStoreHealthKit/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sidestore-healthkit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - name: Check out the build harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      - name: Check out the user's exact official SideStore base
+        uses: actions/checkout@v4
+        with:
+          repository: SideStore/SideStore
+          ref: 12ff39c6b6c0ccd8180f0834a893a4bbaf7bcd31
+          submodules: recursive
+          path: sidestore
+          persist-credentials: false
+
+      - name: Select the upstream build toolchain
+        uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '26.4'
+
+      - name: Verify the baseline fails the HealthKit regression check
+        working-directory: sidestore
+        run: |
+          set -euo pipefail
+          test "$(git -C Dependencies/SideSign rev-parse HEAD)" = 752d1ef602aa792a432ffa1e71646dc1ecf7363c
+          swiftc Dependencies/SideSign/Sources/Models/Entitlement.swift \
+            Dependencies/SideSign/Sources/Models/Feature.swift \
+            ../harness/Tools/SideStoreHealthKit/main.swift -o "$RUNNER_TEMP/healthkit-baseline"
+          if "$RUNNER_TEMP/healthkit-baseline"; then
+            echo '::error::Baseline unexpectedly supports HealthKit; re-review the proposed patch.'
+            exit 1
+          fi
+
+      - name: Apply only the reviewed upstream HealthKit patch
+        working-directory: sidestore
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/SideStore/SideSign/commit/74950d37f2333d29cbf3bfc9ca4a60820498c2d3.patch \
+            --output "$RUNNER_TEMP/healthkit.patch"
+          echo "e5fcb6e7d04e388e61635f4d825450209407226072a998a3a9fd37f20d5927eb  $RUNNER_TEMP/healthkit.patch" | shasum -a 256 -c -
+          git -C Dependencies/SideSign apply --check "$RUNNER_TEMP/healthkit.patch"
+          git -C Dependencies/SideSign apply "$RUNNER_TEMP/healthkit.patch"
+          swiftc Dependencies/SideSign/Sources/Models/Entitlement.swift \
+            Dependencies/SideSign/Sources/Models/Feature.swift \
+            ../harness/Tools/SideStoreHealthKit/main.swift -o "$RUNNER_TEMP/healthkit-patched"
+          "$RUNNER_TEMP/healthkit-patched"
+          git -C Dependencies/SideSign diff --check
+          git -C Dependencies/SideSign diff > "$RUNNER_TEMP/applied-healthkit.diff"
+
+      - name: Install upstream IPA packaging tool
+        run: brew install ldid
+
+      - name: Archive and package the personal test IPA
+        working-directory: sidestore
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          make build MARKETING_VERSION=0.7.0 2>&1 | tee "$RUNNER_TEMP/sidestore-build.log"
+          make fakesign ipa
+          mv SideStore.ipa SideStore-HealthKit-test.ipa
+          unzip -tq SideStore-HealthKit-test.ipa
+          shasum -a 256 SideStore-HealthKit-test.ipa > SideStore-HealthKit-test.ipa.sha256
+          cp "$RUNNER_TEMP/applied-healthkit.diff" applied-healthkit.diff
+          cat > BUILD-PROVENANCE.txt <<'INFO'
+          Personal test build; not an official SideStore release.
+          SideStore base: 12ff39c6b6c0ccd8180f0834a893a4bbaf7bcd31 (official nightly 1503)
+          SideSign base: 752d1ef602aa792a432ffa1e71646dc1ecf7363c
+          Applied existing upstream patch: SideStore/SideSign PR 3, commit 74950d37f2333d29cbf3bfc9ca4a60820498c2d3
+          Only the entitlement allowlist and App-ID capability mapping change.
+          No Apple ID, password, device pairing file or signing credential is included.
+          A successful archive is not proof of installation, sign-in or HealthKit provisioning on a phone.
+          The IPA requires user-side installation/signing; no automatic deployment is performed.
+          INFO
+
+      - name: Preserve build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidestore-healthkit-build-log
+          path: ${{ runner.temp }}/sidestore-build.log
+          if-no-files-found: ignore
+
+      - name: Upload the personal test IPA and provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidestore-healthkit-personal-test
+          path: |
+            sidestore/SideStore-HealthKit-test.ipa
+            sidestore/SideStore-HealthKit-test.ipa.sha256
+            sidestore/applied-healthkit.diff
+            sidestore/BUILD-PROVENANCE.txt
