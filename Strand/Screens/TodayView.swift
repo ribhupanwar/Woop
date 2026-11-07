@@ -4431,8 +4431,8 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("TODAY'S ACTIVITIES")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
-                    .tracking(1.4)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .tracking(1.0)
                     .foregroundStyle(.white)
                 Spacer()
                 Button { router.openTodayDetail(.workouts) } label: {
@@ -4446,7 +4446,7 @@ struct TodayView: View {
                 .accessibilityLabel("See all activities")
             }
 
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 if items.isEmpty {
                     HStack(spacing: 12) {
                         Image(systemName: "figure.walk")
@@ -4469,13 +4469,13 @@ struct TodayView: View {
                                     .font(.system(size: 25, weight: .semibold))
                                     .foregroundStyle(.white)
                                 Text(item.metricValue)
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .font(.system(size: 19, weight: .bold, design: .rounded))
                                     .monospacedDigit()
                                     .foregroundStyle(.white)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.75)
                             }
-                            .frame(width: 142, height: 68)
+                            .frame(width: 126, height: 62)
                             .background(
                                 item.isSleep
                                     ? Color(red: 0.48, green: 0.64, blue: 0.75)
@@ -4484,7 +4484,7 @@ struct TodayView: View {
                             )
 
                             Text(item.title.uppercased())
-                                .font(.system(size: 17, weight: .bold, design: .rounded))
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .tracking(0.8)
                                 .foregroundStyle(.white)
                                 .lineLimit(2)
@@ -4496,13 +4496,13 @@ struct TodayView: View {
                                 Text(item.startTime)
                                 Text(item.endTime)
                             }
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Color.white.opacity(0.68))
                             .fixedSize(horizontal: true, vertical: false)
                         }
-                        .padding(12)
-                        .frame(maxWidth: .infinity, minHeight: 92)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, minHeight: 78)
                         .background(Color(red: 0.25, green: 0.27, blue: 0.28),
                                     in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -4517,14 +4517,14 @@ struct TodayView: View {
                 }
             }
 
-            HStack(spacing: 14) {
+            HStack(spacing: 10) {
                 Button {
                     router.openTodayDetail(.workouts)
                 } label: {
                     Label("ADD ACTIVITY", systemImage: "plus")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .tracking(0.8)
-                        .frame(maxWidth: .infinity, minHeight: 68)
+                        .frame(maxWidth: .infinity, minHeight: 54)
                         .foregroundStyle(.white)
                         .background(Color(red: 0.25, green: 0.27, blue: 0.28),
                                     in: RoundedRectangle(cornerRadius: 18, style: .continuous))
