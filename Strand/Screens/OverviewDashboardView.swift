@@ -279,7 +279,8 @@ struct OverviewDashboardView: View {
         case .energyDetail: energyDetailSection
         case .journal: if selectedDayOffset == 0 { journalSection }
         case .menstrualCycle: if selectedDayOffset == 0 { menstrualCycleSection }
-        case .hero, .trendsChart, .metricStrip, .activity: EmptyView()
+        case .hero, .trendsChart, .metricStrip: EmptyView()
+        case .activity: todayActivitiesSection
         default:
             DashboardSupplementSections(dashboard: "overview", compact: true, day: displayDay,
                                         appleDay: appleDays.last(where: { $0.day == selectedDayKey }),
@@ -400,12 +401,12 @@ struct OverviewDashboardView: View {
         // for a 45-day window in a field log), and every user who never enables the section paid it on
         // every refresh and every day swipe. The toggle still works instantly: the visible-section set is
         // part of this view's `.task` id, so showing a section re-runs the load that fills it.
-        if sections.contains(.workoutsList) {
+        if sections.contains(.workoutsList) || sections.contains(.activity) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
             next.recentWorkouts = (selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }).prefix(3).map { $0 }
+            }).prefix(sections.contains(.activity) ? 8 : 3).map { $0 }
         } else {
             next.recentWorkouts = []
         }
@@ -1044,6 +1045,123 @@ struct OverviewDashboardView: View {
     @ViewBuilder
     private var goalsSection: some View {
         GoalsTodaySection()
+    }
+
+    // MARK: - Today's Activities (reference block shared with Liquid / Classic)
+
+    private struct OverviewActivityItem: Identifiable {
+        let id: String
+        let startTs: Int
+        let title: String
+        let metric: String
+        let startTime: String
+        let endTime: String
+        let symbol: String
+        let isSleep: Bool
+        let workout: WorkoutRow?
+    }
+
+    private var overviewActivityItems: [OverviewActivityItem] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -13,
+                                           to: Calendar.current.startOfDay(for: Date()))
+            .map { Int($0.timeIntervalSince1970) } ?? 0
+        let sleeps = repo.sleeps.filter { $0.endTs >= cutoff }.map { session in
+            let start = session.effectiveStartTs
+            let end = session.endTs
+            let minutes = max(0, (end - start) / 60)
+            return OverviewActivityItem(
+                id: "sleep-\\(session.startTs)", startTs: start, title: String(localized: "Sleep"),
+                metric: String(format: "%d:%02d", minutes / 60, minutes % 60),
+                startTime: Night.clockString(start), endTime: Night.clockString(end),
+                symbol: "moon.fill", isSleep: true, workout: nil
+            )
+        }
+        let sessions = recentWorkouts.map { workout in
+            let sport = workout.sport.lowercased()
+            let symbol: String
+            if sport.contains("dance") { symbol = "figure.dance" }
+            else if sport.contains("walk") || sport.contains("hike") { symbol = "figure.walk" }
+            else if sport.contains("cycl") || sport.contains("bike") { symbol = "bicycle" }
+            else if sport.contains("strength") || sport.contains("weight") || sport.contains("lift") {
+                symbol = "figure.strengthtraining.traditional"
+            } else if sport.contains("run") { symbol = "figure.run" }
+            else { symbol = "figure.mixed.cardio" }
+            let seconds = workout.durationS ?? Double(max(workout.endTs - workout.startTs, 0))
+            let minutes = max(0, Int(seconds / 60))
+            return OverviewActivityItem(
+                id: "workout-\\(workout.startTs)-\\(workout.sport)", startTs: workout.startTs,
+                title: WorkoutSource.localizedDisplaySport(workout.sport),
+                metric: workout.strain.map { String(format: "%.1f", $0) }
+                    ?? String(format: "%d:%02d", minutes / 60, minutes % 60),
+                startTime: Night.clockString(workout.startTs), endTime: Night.clockString(workout.endTs),
+                symbol: symbol, isSleep: false, workout: workout
+            )
+        }
+        return Array((sleeps + sessions).sorted { $0.startTs > $1.startTs }.prefix(12))
+            .sorted { $0.startTs < $1.startTs }
+    }
+
+    private var todayActivitiesSection: some View {
+        let items = overviewActivityItems
+        return VStack(alignment: .leading, spacing: 7) {
+            Text("TODAY'S ACTIVITIES").whoopReferenceOverline()
+            NoopCard(padding: 9) {
+                if items.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "figure.walk").foregroundStyle(StrandPalette.textTertiary)
+                        Text("Your sleep and workouts will appear here when synced.")
+                            .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 5)
+                } else {
+                    VStack(spacing: 6) {
+                        ForEach(items) { item in
+                            let row = HStack(spacing: 9) {
+                                Image(systemName: item.symbol)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor)
+                                    .frame(width: 30, height: 30)
+                                    .background((item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor).opacity(0.12),
+                                                in: Circle())
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title.uppercased())
+                                        .font(StrandFont.footnote.weight(.semibold))
+                                        .foregroundStyle(StrandPalette.textPrimary).lineLimit(1)
+                                    Text("\\(item.startTime) – \\(item.endTime)")
+                                        .font(StrandFont.caption).monospacedDigit()
+                                        .foregroundStyle(StrandPalette.textSecondary)
+                                }
+                                Spacer(minLength: 4)
+                                Text(item.metric)
+                                    .font(WhoopReferenceFont.metric(14)).monospacedDigit()
+                                    .foregroundStyle(StrandPalette.textPrimary)
+                            }
+                            .padding(.vertical, 5)
+                            if let workout = item.workout {
+                                NavigationLink(value: TabRoute.workoutDetail(startTs: workout.startTs, sport: workout.sport)) {
+                                    row
+                                }.buttonStyle(.plain)
+                            } else { row }
+                        }
+                    }
+                }
+            }
+            HStack(spacing: 8) {
+                Button { router.openTodayDetail(.workouts) } label: {
+                    Label("Add Activity", systemImage: "plus")
+                        .font(StrandFont.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.bordered)
+                Button { showLiveSession = true } label: {
+                    Label("Start Activity", systemImage: "stopwatch")
+                        .font(StrandFont.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
     }
 
     // MARK: - Workouts (opt-in, DashboardExtraSection.workoutsList)
