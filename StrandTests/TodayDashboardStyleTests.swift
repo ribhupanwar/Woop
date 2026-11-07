@@ -7,13 +7,13 @@ final class TodayDashboardStyleTests: XCTestCase {
         return (UserDefaults(suiteName: suite)!, suite)
     }
 
-    func testFreshInstallDefaultsToOverview() {
+    func testFreshInstallDefaultsToLiquid() {
         let (defaults, suite) = makeDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }
 
         TodayDashboardStyle.migrateLegacyBoolIfNeeded(in: defaults)
 
-        XCTAssertEqual(defaults.string(forKey: TodayDashboardStyle.storageKey), TodayDashboardStyle.overview.rawValue)
+        XCTAssertEqual(defaults.string(forKey: TodayDashboardStyle.storageKey), TodayDashboardStyle.liquid.rawValue)
     }
 
     func testExplicitLegacyLiquidChoiceIsPreserved() {
