@@ -1,0 +1,61 @@
+name: Woop HealthKit compatibility test IPA
+
+on:
+  push:
+    branches: [codex/sidestore-healthkit-build]
+    paths:
+      - .github/workflows/repack-woop-healthkit-test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  repack:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download the last verified successful Woop build
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ribhupanwar/Woop
+          run-id: 42363808094
+          name: woop-unsigned-ipa
+          path: input
+
+      - name: Verify the original IPA checksum
+        working-directory: input
+        run: shasum -a 256 -c Woop-unsigned.ipa.sha256
+
+      - name: Embed the HealthKit request without recompiling app code
+        run: |
+          set -euo pipefail
+          unzip -q input/Woop-unsigned.ipa -d stage
+          bash Tools/prepare-woop-lite-healthkit.sh stage/Payload/Woop.app
+          mkdir output
+          (cd stage && zip -qry "$GITHUB_WORKSPACE/output/Woop-HealthKit-compatibility-test.ipa" Payload)
+          unzip -tq output/Woop-HealthKit-compatibility-test.ipa
+          (cd output && shasum -a 256 Woop-HealthKit-compatibility-test.ipa > Woop-HealthKit-compatibility-test.ipa.sha256)
+          cp input/Woop-unsigned.ipa.sha256 output/ORIGINAL-IPA.sha256
+          cat > output/BUILD-PROVENANCE.txt <<'INFO'
+          HealthKit compatibility test only; not the completed Woop redesign.
+          App binary source: ea260337e740086e87d6af7ee91a0d530e985af4
+          Original successful workflow: https://github.com/ribhupanwar/Woop/actions/runs/42363808094 (Build 257)
+          No app code was recompiled or raw metric data changed.
+          Only an ad-hoc basic HealthKit capability request was embedded for the installer to provision.
+          Requires user-side signing and Health permissions. It grants no HealthKit access by itself.
+          No Watch companion or extensions are included.
+          Later UI, activity-edit and HR-detail changes are NOT included in this compatibility build.
+          INFO
+
+      - name: Upload the compatibility test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: woop-healthkit-compatibility-test
+          path: output/*
