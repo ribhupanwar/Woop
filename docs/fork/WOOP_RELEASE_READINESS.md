@@ -199,6 +199,15 @@ inference from an unmerged PR or the account type. Woop's template alone cannot 
 A trusted installer build containing the capability mapping/allowlist fix, followed by actual profile
 and device authorization verification, is necessary for this signing route. No installer has been
 replaced on the user's device and no free-account device installation has been verified here.
+
+The isolated [personal SideStore build](https://github.com/ribhupanwar/Woop/actions/runs/42368174925)
+has now passed its baseline-failure/patched-success model checks and completed the upstream IPA
+archive/packaging commands. The [test artifact](https://github.com/ribhupanwar/Woop/actions/runs/42368174925/artifacts/13573190553)
+contains the IPA, checksum, applied diff and source provenance. The downloaded IPA ZIP integrity and
+SHA-256 were independently verified: `2a7dd87a1d424b193e82d3e2154cd4d664c32adc6c618815e8143e7c868eddcb`.
+Its bundle remains `com.SideStore.SideStore`, version `0.7.0`; it is not an official release. This is
+build evidence only: phone installation, sign-in, Apple provisioning and actual Health import remain
+untested. The personal build uses official nightly 1503's authentication and pairing code unchanged.
 The new preparation step's codesign verification runs on macOS CI; local Linux can check shell syntax
 but cannot validate iOS code signing or the user's installation.
 
