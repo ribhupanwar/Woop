@@ -25,3 +25,18 @@ adding that offset to an arbitrary baseline would not reproduce WHOOP's method.
 Preserve source labels and missing-data states. A future GPS-free estimator needs an independently
 specified model, reliable sleep HR and training/profile inputs, validation against measured VO2 max over
 a range of athletes, and a dated calibration policy. A patent overview alone does not satisfy those gates.
+
+## Additional primary-source comparison
+
+[Apple's Cardio Fitness technical paper](https://www.apple.com/healthcare/docs/site/Using_Apple_Watch_to_Estimate_Cardio_Fitness_with_VO2_max.pdf)
+was retrieved and inspected. It describes a submaximal estimate from HR response during outdoor
+walking/running/hiking with adequate GPS/HR quality. Its May 2021 validation results are not a guarantee
+for an individual Ultra 1 user or the current watchOS algorithm. The paper itself reports residual error;
+Apple Watch VO2 max must be labelled a vendor estimate, not a laboratory oxygen measurement. A good
+route/HR trace and correct Health profile inputs matter more than forcing a WHOOP-matching value.
+
+The existing Healthspan engine explicitly models an effective age from published risk relationships,
+with assumptions for overlapping inputs. It is not a measured biological age or life expectancy. Neither
+that model nor the article justifies a promise of 100% accuracy or identical WHOOP results. For this owner,
+retain dated lab results/Watch estimates with provenance, preserve trends and show insufficient data
+rather than promote the unvalidated exercise estimator.

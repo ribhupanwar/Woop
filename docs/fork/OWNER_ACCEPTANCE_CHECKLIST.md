@@ -45,3 +45,12 @@ Analysis migration required: no for the currently committed changes.
 Acceptance evidence must identify source commit, build, device/OS, recorded data source and screenshot
 state. An empty simulator screenshot does not certify populated-screen pixel equality, Bluetooth sync
 speed, HealthKit provisioning, background delivery or GPS accuracy.
+
+## Latest owner priority
+
+Complete the reference UI/layout review first, then return to additional integrations. Running and daily
+gym use, trustworthy HRV/RHR and independent data capture remain priorities. Direct Strava upload is
+requested as a later optional connection: official upload/auth documentation was reviewed; existing FIT
+export is available, but direct OAuth/upload is not shipped. An initial request-builder draft is preserved
+outside the app checkout at `/workspace/work/strava-draft/StravaRequests.swift` and is not compiled or
+advertised as working. No user credentials were requested or external workout uploads performed.
