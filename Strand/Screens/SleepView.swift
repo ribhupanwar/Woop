@@ -650,9 +650,8 @@ struct SleepView: View {
         }
     }
 
-    /// Immersive Rest-world hero: compact Bevel-like hierarchy — centered "Sleep", muted circular
-    /// performance ring, state word, source badge. Night scene lives on ScreenScaffold.topBackground
-    /// (fixed under the status bar); this column only owns the readable content. Presentation-only.
+    /// The reference layout leads with recorded time asleep beside a compact sleep-performance ring.
+    /// The optional Liquid layout retains its organic gauge. Both use the same prepared night.
     @ViewBuilder
     /// The night artwork needs its own on-image title treatment in light mode.
     /// Analysis migration required: no.
@@ -669,13 +668,15 @@ struct SleepView: View {
                     .font(WhoopReferenceFont.label(11))
                     .tracking(1.1)
                     .foregroundStyle(StrandPalette.onDarkSecondary)
-                Text("SLEEP\nPERFORMANCE")
+                Text("SLEEP")
                     .font(WhoopReferenceFont.heading(22))
                     .foregroundStyle(StrandPalette.onDarkPrimary)
             }
             .padding(.horizontal, NoopMetrics.screenHPadding)
             let content = VStack(spacing: NoopMetrics.space4) {
-                if let score {
+                if !heroUsesLiquidStyle {
+                    referenceSleepSummary(night, score: score)
+                } else if let score {
                     VStack(spacing: NoopMetrics.space3) {
                         if heroUsesLiquidStyle {
                             // The same organic Rest ring as Liquid Today's hero, drawn large and sized to
@@ -727,6 +728,45 @@ struct SleepView: View {
                 }
             }
         }
+    }
+
+    private func referenceSleepSummary(_ night: Night, score: Double?) -> some View {
+        HStack(alignment: .center, spacing: NoopMetrics.space4) {
+            VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                Text("TIME ASLEEP")
+                    .font(WhoopReferenceFont.label(10))
+                    .tracking(1.2)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text(durationText(night.stages.asleep))
+                    .font(WhoopReferenceFont.score(40))
+                    .monospacedDigit()
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: NoopMetrics.space2) {
+                if let score {
+                    GlowRing(fraction: score / 100, value: score,
+                             format: { "\(Int($0.rounded()))" }, color: StrandPalette.restColor,
+                             diameter: 92, lineWidth: 10)
+                        .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
+                } else {
+                    ZStack {
+                        Circle().stroke(StrandPalette.surfaceInset, lineWidth: 10)
+                        Image(systemName: "moon.zzz")
+                            .font(.system(size: 22))
+                            .foregroundStyle(StrandPalette.restColor)
+                    }
+                    .frame(width: 92, height: 92)
+                    .accessibilityLabel("Sleep performance unavailable")
+                }
+                Text("Sleep performance")
+                    .font(WhoopReferenceFont.label(10))
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
+        }
+        .padding(.vertical, NoopMetrics.space2)
     }
 
     /// Fixed night-scene band behind Sleep scroll content — same ScreenScaffold.topBackground pattern

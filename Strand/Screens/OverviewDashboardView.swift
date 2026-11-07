@@ -159,11 +159,9 @@ struct OverviewDashboardView: View {
         }
     }
 
-    /// The reference packs everything — three rings, three focus cards, a six-row list — onto one
-    /// screen with no scrolling. `NoopMetrics.sectionSpacing`/`.cardPadding` (26pt / 16pt) are tuned for
-    /// Classic/Liquid's roomier cards; this screen uses its own tighter scale to match.
-    private static let sectionSpacing: CGFloat = 7
-    private static let cardPadding: CGFloat = 8
+    /// DSTA's independent reference Home uses 17pt section spacing and inset metric surfaces.
+    private static let sectionSpacing: CGFloat = 17
+    private static let cardPadding: CGFloat = 16
 
     var body: some View {
         GeometryReader { proxy in
@@ -177,6 +175,7 @@ struct OverviewDashboardView: View {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
                     Color.clear.frame(height: 0).id(Self.topAnchorID)
                     header
+                    referenceScoreStrip
                     // Pinned ABOVE the reorderable block, exactly where Classic and Liquid Today pin
                     // them: a raised health alert or a running workout must not be reorderable below the
                     // fold. Every card here renders NOTHING when it has nothing to report, so the
@@ -429,9 +428,11 @@ struct OverviewDashboardView: View {
                 .sorted { $0.startTs > $1.startTs }
             // The activity feed is strictly scoped to the selected logical day. Do not mix
             // yesterday's sessions into today's list just because the user is on Overview.
-            next.recentWorkouts = allWorkouts.filter {
+            let selectedWorkouts = allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }.prefix(sections.contains(.activity) ? 8 : 3).map { $0 }
+            }
+            next.recentWorkouts = sections.contains(.activity)
+                ? selectedWorkouts : Array(selectedWorkouts.prefix(3))
         } else {
             next.recentWorkouts = []
         }
@@ -584,9 +585,9 @@ struct OverviewDashboardView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 3) {
         HStack {
-            Text("N O O P")
-                .font(StrandFont.rounded(16, weight: .bold))
-                .tracking(5)
+            Text("WOOP")
+                .font(WhoopReferenceFont.label(11))
+                .tracking(2)
                 .foregroundStyle(StrandPalette.textPrimary)
                 // Keep customization off the visible control row; this mirrors Trends and preserves
                 // the reference header's + as a real quick-action entry point.
@@ -609,17 +610,60 @@ struct OverviewDashboardView: View {
         }
         Button { showDayPicker = true } label: {
             HStack(spacing: 4) {
-                Text(selectedDayOffset == 0 ? String(localized: "Today")
-                     : Self.headerDateFormatter.string(from: selectedLogicalDay))
-                Text("·")
-                Text("Swipe to change day")
-                Image(systemName: "calendar").font(.system(size: 9, weight: .semibold))
+                Text(Self.headerDateFormatter.string(
+                    from: TodayView.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay))
+                    .font(WhoopReferenceFont.heading(21))
+                Image(systemName: "calendar").font(.system(size: 13, weight: .medium))
             }
-                .font(StrandFont.caption)
-                .foregroundStyle(StrandPalette.textTertiary)
+                .foregroundStyle(StrandPalette.textPrimary)
         }
         .buttonStyle(.plain)
+        .accessibilityHint("Choose a dashboard day, or swipe to change day")
         }
+    }
+
+    /// Reuse the DSTA reference strip's hierarchy, with Woop's existing score resolvers and routes.
+    private var referenceScoreStrip: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 0) {
+                referenceScore("RECOVERY", value: chargeDisplay.pct.map { "\(Int($0.rounded()))%" } ?? "—",
+                               tint: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
+                               route: .metricSourced(key: "recovery", source: Repository.whoopSource))
+                Divider().frame(height: 32).overlay(StrandPalette.hairline)
+                referenceScore("SLEEP", value: restScore.map { "\(Int($0.rounded()))%" } ?? "—",
+                               tint: StrandPalette.restColor, route: .sleep)
+                Divider().frame(height: 32).overlay(StrandPalette.hairline)
+                referenceScore("STRAIN", value: effortValue.map { UnitFormatter.effortDisplay($0, scale: effortScale) } ?? "—",
+                               tint: StrandPalette.effortColor,
+                               route: .metricSourced(key: "strain", source: Repository.whoopSource))
+            }
+            if let caption = chargeDisplay.carriedCaption {
+                Text(caption)
+                    .font(WhoopReferenceFont.body(11))
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
+        }
+        .padding(.vertical, 13)
+        .background(NoopPanelSurface(cornerRadius: 17))
+    }
+
+    private func referenceScore(_ title: LocalizedStringKey, value: String, tint: Color,
+                                route: TabRoute) -> some View {
+        NavigationLink(value: route) {
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(WhoopReferenceFont.label(9))
+                    .tracking(0.7)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text(value)
+                    .font(WhoopReferenceFont.metric(16))
+                    .monospacedDigit()
+                    .foregroundStyle(tint)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private static let headerDateFormatter: DateFormatter = {
@@ -1146,7 +1190,7 @@ struct OverviewDashboardView: View {
                 symbol: symbol, isSleep: false, workout: workout
             )
         }
-        return Array((sleeps + sessions).sorted { $0.startTs > $1.startTs }.prefix(12))
+        return (sleeps + sessions)
             .sorted { $0.startTs == $1.startTs ? $0.id < $1.id : $0.startTs < $1.startTs }
     }
 
@@ -1263,7 +1307,7 @@ struct OverviewDashboardView: View {
     private var todayActivitiesSection: some View {
         let items = overviewActivityItems
         return VStack(alignment: .leading, spacing: 5) {
-            Text("TODAY'S ACTIVITIES").whoopReferenceOverline()
+            Text(selectedDayOffset == 0 ? "TODAY'S ACTIVITIES" : "ACTIVITIES").whoopReferenceOverline()
             NoopCard(padding: 7) {
                 if items.isEmpty {
                     HStack(spacing: 8) {
@@ -1280,13 +1324,17 @@ struct OverviewDashboardView: View {
                 }
             }
             HStack(spacing: 8) {
-                Button { router.openTodayDetail(.workouts) } label: {
+                Button {
+                    activityEditingWorkout = nil
+                    activityEditIsCopy = false
+                    showActivityEditor = true
+                } label: {
                     Label("Add Activity", systemImage: "plus")
                         .font(StrandFont.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.bordered)
-                Button { showLiveSession = true } label: {
+                DashboardStartActivityButton {
                     Label("Start Activity", systemImage: "stopwatch")
                         .font(StrandFont.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)

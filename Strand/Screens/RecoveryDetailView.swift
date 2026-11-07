@@ -3,6 +3,26 @@ import StrandDesign
 import StrandAnalytics
 import WhoopStore
 
+/// Presentation windows use civil day keys, independent of the phone's current UTC offset.
+enum RecoveryHistoryRange: Int, CaseIterable {
+    case week = 7
+    case month = 30
+
+    func dayKeys(endingOn day: String) -> [String] {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.timeZone = TimeZone(secondsFromGMT: 0)
+        parser.dateFormat = "yyyy-MM-dd"
+        parser.isLenient = false
+        guard let end = parser.date(from: day), parser.string(from: end) == day else { return [] }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = parser.timeZone
+        return (0..<rawValue).reversed().compactMap { offset in
+            calendar.date(byAdding: .day, value: -offset, to: end).map { parser.string(from: $0) }
+        }
+    }
+}
+
 /// Dedicated Recovery detail. The score and its empty/carry states come from the same
 /// presentation resolver as Today; supporting vitals are read only from that exact scored night.
 struct RecoveryDetailView: View {
@@ -11,6 +31,8 @@ struct RecoveryDetailView: View {
     @State private var scoredNight: DailyMetric?
     @State private var history: [DailyMetric] = []
     @State private var loaded = false
+    @State private var historyRange: RecoveryHistoryRange = .week
+    @State private var historyEndDay = ""
 
     private var score: Double? { display.pct }
 
@@ -27,7 +49,7 @@ struct RecoveryDetailView: View {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("RECOVERY").whoopReferenceOverline()
-                    Text("How ready is your body?")
+                    Text(scoredNight.map { dateLabel($0.day) } ?? String(localized: "How ready is your body?"))
                         .font(WhoopReferenceFont.heading(22))
                         .foregroundStyle(StrandPalette.textPrimary)
                     Text("Based on your recorded overnight recovery data.")
@@ -64,6 +86,7 @@ struct RecoveryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .task(id: repo.refreshSeq) { await load() }
+        .refreshable { await repo.refresh() }
     }
 
     @ViewBuilder
@@ -71,7 +94,7 @@ struct RecoveryDetailView: View {
         NoopCard {
             VStack(spacing: 14) {
                 if let score {
-                    RecoveryRing(score: score, diameter: 236, lineWidth: 13,
+                    RecoveryRing(score: score, diameter: 214, lineWidth: 13,
                                  showsWordmark: false, showsHover: false,
                                  valueFormat: { "Recovery \(Int($0.rounded()))" })
                     // RecoveryRing already renders the score's state word inside its gauge.
@@ -156,15 +179,30 @@ struct RecoveryDetailView: View {
 
     @ViewBuilder
     private var historySection: some View {
+        let dayKeys = historyRange.dayKeys(endingOn: historyEndDay)
+        let scores = Dictionary(history.compactMap { row -> (String, Double)? in
+            guard let score = row.recovery, score.isFinite, (0...100).contains(score) else { return nil }
+            return (row.day, score)
+        }, uniquingKeysWith: { _, last in last })
+        let hasScores = dayKeys.contains { scores[$0] != nil }
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent recovery")
-                .font(WhoopReferenceFont.heading(17))
-                .foregroundStyle(StrandPalette.textPrimary)
+            HStack {
+                Text("Recovery trend")
+                    .font(WhoopReferenceFont.heading(17))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                Spacer(minLength: 8)
+                Picker("Recovery history range", selection: $historyRange) {
+                    Text("Week").tag(RecoveryHistoryRange.week)
+                    Text("Month").tag(RecoveryHistoryRange.month)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 164)
+            }
             if !loaded {
                 ProgressView().tint(StrandPalette.accent)
-            } else if history.isEmpty {
+            } else if !hasScores {
                 NoopCard {
-                    Text("No recovery history recorded yet.")
+                    Text("No recovery scores recorded in this period.")
                         .font(WhoopReferenceFont.body())
                         .foregroundStyle(StrandPalette.textSecondary)
                 }
@@ -172,22 +210,33 @@ struct RecoveryDetailView: View {
                 NoopCard {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .bottom, spacing: 4) {
-                            ForEach(history, id: \.day) { day in
+                            ForEach(dayKeys, id: \.self) { day in
                                 VStack(spacing: 5) {
-                                    Capsule()
-                                        .fill(StrandPalette.recoveryColor(day.recovery ?? 0))
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: max(4, CGFloat(day.recovery ?? 0) * 0.92))
-                                    Text(day.day.suffix(2))
-                                        .font(WhoopReferenceFont.body(11))
-                                        .foregroundStyle(StrandPalette.textTertiary)
+                                    if let score = scores[day] {
+                                        Capsule()
+                                            .fill(StrandPalette.recoveryColor(score))
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: max(4, CGFloat(score) * 0.92))
+                                    } else {
+                                        // Missing days retain their place; they are never zero scores.
+                                        Color.clear.frame(height: 4)
+                                    }
+                                    if historyRange == .week {
+                                        Text(day.suffix(2))
+                                            .font(WhoopReferenceFont.body(11))
+                                            .foregroundStyle(StrandPalette.textTertiary)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .bottom)
-                                .accessibilityLabel("\(dateLabel(day.day)): \(Int((day.recovery ?? 0).rounded()))")
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(dateLabel(day))
+                                .accessibilityValue(scores[day].map { String(Int($0.rounded())) }
+                                                    ?? String(localized: "No data"))
                             }
                         }
                         .frame(height: 112, alignment: .bottom)
-                        Text("Daily scores · latest 30 recorded nights")
+                        Text(historyRange == .week ? "Daily scores · last 7 days · gaps mean no data"
+                             : "Daily scores · last 30 days · gaps mean no data")
                             .font(WhoopReferenceFont.body(11))
                             .foregroundStyle(StrandPalette.textTertiary)
                     }
@@ -216,7 +265,9 @@ struct RecoveryDetailView: View {
         }
         display = resolved
         scoredNight = night
-        history = Array(days.filter { $0.recovery != nil }.suffix(30))
+        historyEndDay = todayKey
+        let historyDays = Set(RecoveryHistoryRange.month.dayKeys(endingOn: todayKey))
+        history = days.filter { historyDays.contains($0.day) }
         loaded = true
     }
 

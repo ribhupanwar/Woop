@@ -63,6 +63,28 @@ These are code findings, not completed hardware or end-to-end verification.
 - Home and Today own their day-swipe gestures. The ancestor tab-switch gesture is disabled on both.
 - The unsigned IPA workflow observes this isolated release branch so macOS/iOS validation can run.
 
+## DSTA reference adaptation
+
+The next UI pass adapts the independent reference screens at DSTA commit `8d946e38`:
+
+- Home uses Woop branding, a full selected-day date, the Recovery/Sleep/Strain metric strip and the
+  reference's 17pt section spacing. Existing contributor, health, goal, workout and customization
+  surfaces remain available. The strip reads the same resolved values and scale as the hero rings;
+  carried Recovery keeps its caption.
+- Recovery uses the reference's 214pt hero and a scored-night date. The Week/Month selector is
+  functional over seven/thirty civil days, with missing days left blank instead of substituted with
+  zero or visually joined to another night. Invalid/non-finite history values are not charted.
+- Non-Liquid Sleep leads with the prepared night's recorded time asleep and a 92pt performance ring.
+  The original performance resolver, source badge, sleep need/debt, stages, history and optional Liquid
+  presentation remain in use. Missing sleep performance draws an empty track without a numeric score.
+- Home and Today Start Activity now open the shared workout picker used by Live/Training, including
+  route and strength options. An existing session is re-presented. They no longer open the separate
+  Silent Guardian coaching session. Add Activity opens manual entry; Today sleep rows open Sleep.
+- Home's selected-day feed no longer silently truncates workouts to eight or combined records to twelve.
+
+These are source changes awaiting macOS/iOS compilation and device screenshots, not completed visual
+certification. Regression tests cover week/month civil-day boundaries, leap days and malformed keys.
+
 ## Release gates still open
 
 1. Identify approved screenshots and capture all five tabs on the same device/appearance. Compare

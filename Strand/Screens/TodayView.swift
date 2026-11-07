@@ -243,6 +243,7 @@ struct TodayView: View {
     // passes clean tests), so it is left as a follow-up rather than rushed in alongside the load-path fix.
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var router: NavRouter
+    @Environment(\.dashboardAppModel) private var appModel
     /// The "update ringer", the bell in the top bar opens this inbox; dismissed Today cards post into it.
     @EnvironmentObject var updateStore: UpdateStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -566,6 +567,7 @@ struct TodayView: View {
     /// on the overview instead of Today). The full `WorkoutRow` is already in hand at the tap site, so
     /// there's no need for that screen's async by-key lookup at all.
     @State private var workoutDetailTarget: WorkoutDetailTarget?
+    @State private var showActivityEditor = false
 
     // S4: the Synthesis card collapses to a single one-liner that expands on tap. Default collapsed so the
     // home screen stays tight; the live content (#506) is unchanged, only the chrome folds. @State (not
@@ -1790,6 +1792,14 @@ struct TodayView: View {
                 #else
                 .frame(width: 620, height: 720)
                 #endif
+        }
+        .sheet(isPresented: $showActivityEditor) {
+            ManualWorkoutSheet(hrSource: repo) { row, replacing in
+                Task {
+                    await repo.saveManualWorkout(row, replacing: replacing)
+                    await appModel?.intelligence.analyzeRecent(allowDayReuse: false)
+                }
+            }
         }
         // Every Today layout/card affordance presents the same draft-based editor. Section-level buttons
         // deep-link to their child page; Cancel/Save semantics and Shown/Hidden rows stay identical.
@@ -4518,7 +4528,9 @@ struct TodayView: View {
                             Button { workoutDetailTarget = WorkoutDetailTarget(row: workout) } label: { row }
                                 .buttonStyle(.plain)
                         } else {
-                            row
+                            Button { router.openSleep() } label: { row }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Open sleep details")
                         }
                     }
                 }
@@ -4526,7 +4538,7 @@ struct TodayView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    router.openTodayDetail(.workouts)
+                    showActivityEditor = true
                 } label: {
                     Label("ADD ACTIVITY", systemImage: "plus")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -4538,7 +4550,7 @@ struct TodayView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button { showLiveSession = true } label: {
+                DashboardStartActivityButton {
                     Label("START ACTIVITY", systemImage: "stopwatch")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .tracking(0.8)
