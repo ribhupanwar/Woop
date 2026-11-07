@@ -15,6 +15,7 @@ on:
       - "project.yml"
       - "Tools/local-tests.sh"
       - "Tools/make_icon.py"
+      - "Tools/prepare-woop-lite-healthkit.sh"
   workflow_dispatch:
 
 permissions:
@@ -148,6 +149,9 @@ jobs:
           rm -f "$IPA_MODEL"
           test -z "$(find "$RUNNER_TEMP/ipa/Payload/Woop.app" -name "$MODEL_NAME" -type f -print -quit)"
           echo "Lite IPA excludes optional Nomic GGUF; full archive retains it."
+          # Preserve a discoverable HealthKit request for capable free/paid signing tools.
+          # Ad-hoc signing is a capability template, not an Apple provisioning profile.
+          bash Tools/prepare-woop-lite-healthkit.sh "$RUNNER_TEMP/ipa/Payload/Woop.app"
           (cd "$RUNNER_TEMP/ipa" && /usr/bin/zip -qry "$GITHUB_WORKSPACE/Woop-unsigned.ipa" Payload)
           test -s Woop-unsigned.ipa
           unzip -t Woop-unsigned.ipa
@@ -159,6 +163,7 @@ jobs:
             echo "- IPA size: $(stat -f%z Woop-unsigned.ipa) bytes"
             echo "- SHA-256: $(cut -d ' ' -f 1 Woop-unsigned.ipa.sha256)"
             echo "- Signing: unsigned; install using SideStore/AltStore signing."
+            echo "- HealthKit request: embedded; final access depends on installer provisioning and user consent."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload IPA artifact

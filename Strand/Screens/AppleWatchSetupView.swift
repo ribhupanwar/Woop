@@ -280,7 +280,7 @@ struct AppleWatchSetupView: View {
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("You can still bring your data in by importing a Health export from Data Sources. A build from the App Store, or one signed with a paid Apple Developer account, connects directly.")
+                    Text("You can still import a Health export from Data Sources. Direct access needs a provisioning profile that includes HealthKit; a compatible signing tool may support a free developer account too. A live Watch companion additionally needs the Watch app installed.")
                         .font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

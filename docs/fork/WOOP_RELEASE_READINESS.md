@@ -166,3 +166,29 @@ WHOOP/Woop comparison without matching timestamps and recorded inputs. Separate 
 CI now observes all package changes and isolates concurrency by branch, so an older branch archive
 does not block validation of the current release candidate. iPhone/strap hardware validation remains
 required before claiming subscription-independent daily reliability.
+
+## HealthKit on free sideloads
+
+Apple's current [iOS capability table](https://developer.apple.com/help/account/reference/supported-capabilities-ios)
+lists basic HealthKit for the no-cost Apple Developer account category as well as paid programs.
+Free membership alone therefore does not establish that HealthKit is impossible. The final signed
+app, App ID capability, provisioning profile, installing tool and Health permissions all matter.
+
+The custom Woop workflow previously zipped an unsigned app without invoking the repository's existing
+capability-template preparation. It now runs `Tools/prepare-woop-lite-healthkit.sh` after all Lite
+trimming and before ZIP creation. The script embeds and verifies an ad-hoc request for basic HealthKit
+and its access array. It requests neither App Groups nor HealthKit background delivery and includes no
+Watch app or extension. It cannot grant capabilities; the sideloader replaces this signature and must
+provision and preserve HealthKit. Foreground import and background delivery are different capabilities.
+
+[SideSign PR 3](https://github.com/SideStore/SideSign/pull/3) reports a missing HealthKit App-ID feature
+mapping that causes SideStore to strip the entitlement, and its author reports a patched free-account
+test. The PR was open/unmerged when inspected; this is not proof that the user's released installer
+supports it. Installer name/version and the actual signed profile must be checked before claiming a fix.
+The new preparation step's codesign verification runs on macOS CI; local Linux can check shell syntax
+but cannot validate iOS code signing or the user's installation.
+
+Without direct HealthKit access, core WHOOP Bluetooth collection and on-device analysis remain separate
+from Apple Health. Existing Health export ZIP import and `ShortcutHealthImport` provide alternative
+input paths; `ShortcutHealthExport` sends strap data in the other direction. Shortcuts require setup,
+permissions and execution and must not be presented as a continuous live Watch sensor connection.
