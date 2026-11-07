@@ -127,7 +127,7 @@ enum DashboardLayoutSection: String, CaseIterable, Identifiable {
         // All of these are reorderable and hideable like any other non-extra block.
         return dashboard == "trends"
             ? [.coach, .hero, .trendsChart, .metricStrip, .activity, .goals, .momentum] + extras
-            : [.coach, .overview, .focus, .goals, .health, .momentum] + extras
+            : [.coach, .overview, .focus, .goals, .health, .activity, .momentum] + extras
     }
 }
 
