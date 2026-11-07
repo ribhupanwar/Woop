@@ -2912,6 +2912,36 @@ struct LiquidTodayView: View {
                     }
                 }
             }
+
+            // Match the classic feed's two clear next actions without moving the
+            // live-session entry elsewhere in the Liquid Home layout.
+            HStack(spacing: NoopMetrics.space3) {
+                Button {
+                    router.openTodayDetail(.workouts)
+                } label: {
+                    Label("Add Activity", systemImage: "plus")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(0.35)
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .background(TodayCardSurface(tint: nil, surfaceOpacity: cardOpacity))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(LiquidPressStyle())
+
+                Button {
+                    showLiveSession = true
+                } label: {
+                    Label("Start Activity", systemImage: "stopwatch")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(0.35)
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .foregroundStyle(StrandPalette.textPrimary)
+                        .background(TodayCardSurface(tint: nil, surfaceOpacity: cardOpacity))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(LiquidPressStyle())
+            }
         }
     }
 
