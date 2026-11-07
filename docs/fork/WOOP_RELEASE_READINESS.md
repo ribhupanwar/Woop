@@ -208,6 +208,19 @@ SHA-256 were independently verified: `2a7dd87a1d424b193e82d3e2154cd4d664c32adc6c
 Its bundle remains `com.SideStore.SideStore`, version `0.7.0`; it is not an official release. This is
 build evidence only: phone installation, sign-in, Apple provisioning and actual Health import remain
 untested. The personal build uses official nightly 1503's authentication and pairing code unchanged.
+
+The owner subsequently reported that the patched installer installs, opens and refreshes successfully.
+That verifies the reported installer/refresh path, not HealthKit provisioning. To isolate that next
+step without waiting for the full app archive, a
+[compatibility repack](https://github.com/ribhupanwar/Woop/actions/runs/42369273196) of successful Woop
+Build 257 completed checksum, ad-hoc entitlement embedding, signature and package verification.
+Its [artifact](https://github.com/ribhupanwar/Woop/actions/runs/42369273196/artifacts/13572619488)
+contains `Woop-HealthKit-compatibility-test.ipa` plus provenance and checksums. The downloaded IPA's
+verified SHA-256 is `0483d63ec5f79e875c0f1eb382a911655f27814ab955ed6f0f705793ee33849a`.
+Bundle `com.noopapp.noopai`, version `13.0.0`, app source `ea260337`. This changes signing metadata only
+and does not include later dashboard, activity-editor or HR-detail fixes. The full candidate build
+remains separate. A successful Health permission request AND actual data import on the phone are the
+next acceptance checks; do not describe this compatibility repack as the completed Woop release.
 The new preparation step's codesign verification runs on macOS CI; local Linux can check shell syntax
 but cannot validate iOS code signing or the user's installation.
 
