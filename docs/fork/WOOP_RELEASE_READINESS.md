@@ -245,3 +245,11 @@ strain hero using the existing recorded value. New/unconfigured iPhone installs 
 quick-action entry, and captures seven empty-store screens without generating health data. Simulator
 captures are review evidence, not a claim of pixel equality with the supplied populated screenshot.
 The current environment lacks Xcode/Swift; Apple compilation and UI execution require the macOS jobs.
+
+The public [WHOOP App Store gallery](https://apps.apple.com/us/app/whoop/id933944389) was also inspected
+(version 5.77.0 in the public lookup response). Its Healthspan presentation uses a circular particle
+orb and pace scale. The reference UI now draws an independent static orb around the existing resolved
+Healthspan age and uses the existing pace slider. Particles are decorative, never data, and render only
+with an actual Healthspan result. Missing-input gates, basis disclosures, weekly history and calculations
+are retained. No App Store artwork or third-party font is included in the app. The supplied Home screenshot
+remains the Home layout reference; newer marketing images do not replace it. Analysis migration required: no.

@@ -6,10 +6,13 @@ on:
     paths:
       - .github/workflows/woop-ui-review.yml
       - WoopUIReviewTests/**
-      - StrandiOS/App/RootTabView.swift
-      - StrandiOS/App/StrandiOSApp.swift
-      - Strand/Screens/**
-      - Packages/StrandDesign/**
+      - StrandiOS/**
+      - StrandiOSShared/**
+      - StrandiOSWidgets/**
+      - NOOPWatch*/**
+      - Strand/**
+      - Packages/**
+      - Tools/bootstrap-nomic.sh
       - project.yml
   workflow_dispatch:
 
