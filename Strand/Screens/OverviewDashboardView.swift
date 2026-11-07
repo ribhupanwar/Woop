@@ -13,7 +13,6 @@ import StrandCore
 /// same note; it applies here too.
 struct OverviewDashboardView: View {
     @EnvironmentObject private var repo: Repository
-    @EnvironmentObject private var intelligence: IntelligenceEngine
     @EnvironmentObject private var profile: ProfileStore
     @EnvironmentObject private var updateStore: UpdateStore
     @EnvironmentObject private var router: NavRouter
@@ -134,11 +133,6 @@ struct OverviewDashboardView: View {
     @State private var selectedDayOffset = 0
     @State private var showDayPicker = false
     @State private var showStepGoalSetting = false
-    @State private var selectedWorkoutForEdit: WorkoutRow?
-    @State private var showWorkoutEditor = false
-    @State private var editingWorkoutIsCopy = false
-    @State private var pendingWorkoutDeletion: WorkoutRow?
-    @State private var showWorkoutDeleteConfirmation = false
     @State private var showPlan = false
     @State private var showLiveSession = false
     @AppStorage(DashboardArrangeHint.seenKey("overview")) private var arrangeHintSeen = false
@@ -162,8 +156,8 @@ struct OverviewDashboardView: View {
     /// The reference packs everything — three rings, three focus cards, a six-row list — onto one
     /// screen with no scrolling. `NoopMetrics.sectionSpacing`/`.cardPadding` (26pt / 16pt) are tuned for
     /// Classic/Liquid's roomier cards; this screen uses its own tighter scale to match.
-    private static let sectionSpacing: CGFloat = 8
-    private static let cardPadding: CGFloat = 10
+    private static let sectionSpacing: CGFloat = 11
+    private static let cardPadding: CGFloat = 12
 
     var body: some View {
         GeometryReader { proxy in
@@ -255,23 +249,6 @@ struct OverviewDashboardView: View {
         }
         .sheet(isPresented: $showDayPicker) { dashboardDayPicker }
         .sheet(isPresented: $showStepGoalSetting) { DashboardStepGoalSheet() }
-        .sheet(isPresented: $showWorkoutEditor) {
-            ManualWorkoutSheet(editing: selectedWorkoutForEdit, hrSource: repo) { row, replacing in
-                Task {
-                    await repo.saveManualWorkout(row, replacing: editingWorkoutIsCopy ? nil : replacing)
-                    await intelligence.analyzeRecent(allowDayReuse: false)
-                    lastLoadedKey = nil
-                    await load()
-                }
-            }
-        }
-        .confirmationDialog("Delete this activity?", isPresented: $showWorkoutDeleteConfirmation,
-                            titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                if let row = pendingWorkoutDeletion { deleteActivity(row) }
-            }
-            Button("Cancel", role: .cancel) { pendingWorkoutDeletion = nil }
-        }
     }
 
     private var layoutSections: [DashboardLayoutSection] {
@@ -302,8 +279,7 @@ struct OverviewDashboardView: View {
         case .energyDetail: energyDetailSection
         case .journal: if selectedDayOffset == 0 { journalSection }
         case .menstrualCycle: if selectedDayOffset == 0 { menstrualCycleSection }
-        case .hero, .trendsChart, .metricStrip: EmptyView()
-        case .activity: activitySection
+        case .hero, .trendsChart, .metricStrip, .activity: EmptyView()
         default:
             DashboardSupplementSections(dashboard: "overview", compact: true, day: displayDay,
                                         appleDay: appleDays.last(where: { $0.day == selectedDayKey }),
@@ -418,19 +394,28 @@ struct OverviewDashboardView: View {
         next.resolvedWeightKg = WeightSeries.currentWeight(summary: await weightSummaryA,
                                                           profileWeightKg: profile.weightKg).kg
 
-        // Today's Activities is a default Overview block. Repository.workoutRows already collapses
-        // cross-source twins (WHOOP + Apple Health); retain that canonical identity/deduplication here.
-        // Keep enough rows for the five-row feed plus the optional More Workouts section.
-        if sections.contains(.activity) || sections.contains(.workoutsList) {
+        // These two feed OPTIONAL sections that are hidden by default, so they are read only when their
+        // section is actually shown. They used to run on every load "so flipping a toggle doesn't need
+        // its own reload path" — but `workoutRows` is not cheap on a large library (748 ms of pure read
+        // for a 45-day window in a field log), and every user who never enables the section paid it on
+        // every refresh and every day swipe. The toggle still works instantly: the visible-section set is
+        // part of this view's `.task` id, so showing a section re-runs the load that fills it.
+        if sections.contains(.workoutsList) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
-            let workouts = selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
+            next.recentWorkouts = (selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }
-            next.recentWorkouts = Array(workouts.prefix(10))
+            }).prefix(3).map { $0 }
         } else {
             next.recentWorkouts = []
         }
+        if sections.contains(.journal) {
+            let journalKeys = Self.journalDayKeys(anchor: selectedLogicalDay)
+            next.journalLoggedDays = await repo.nativeJournalDays(from: journalKeys.first ?? "", to: journalKeys.last ?? "")
+        } else {
+            next.journalLoggedDays = nil
+        }
+
         // Publish the Momentum feed. Until now nothing on this screen did, so a wearer whose Today is a
         // dashboard had an empty MomentumStore forever — the section rendered its "open Momentum"
         // fallback and never a message. Done at the end of load(), after the values it reads are set.
@@ -1061,166 +1046,64 @@ struct OverviewDashboardView: View {
         GoalsTodaySection()
     }
 
-    // MARK: - Today's Activities
-
-    /// The Overview's default WHOOP-style activity feed. Repository resolves cross-source twins first;
-    /// this view only orders the retained sessions oldest-to-newest.
-    private var activitySection: some View {
-        let rows = Array(recentWorkouts.prefix(5)).sorted { $0.startTs < $1.startTs }
-        return Group {
-            if !rows.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("TODAY'S ACTIVITIES").whoopReferenceOverline()
-                        Spacer()
-                        NavigationLink(value: TabRoute.workouts) {
-                            Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
-                        }
-                    }
-                    ForEach(Array(rows.enumerated()), id: \.offset) { _, w in
-                        activityRow(w)
-                    }
-                }
-            }
-        }
-    }
-
-    private func activityRow(_ w: WorkoutRow) -> some View {
-        NoopCard(padding: 8) {
-            HStack(spacing: 8) {
-                NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle().fill(StrandPalette.chargeColor.opacity(0.16))
-                            Image(systemName: sportSymbol(w.sport))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(StrandPalette.chargeColor)
-                        }
-                        .frame(width: 24, height: 24)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(WorkoutSource.localizedDisplaySport(w.sport))
-                                .font(StrandFont.footnote.weight(.semibold))
-                                .foregroundStyle(StrandPalette.textPrimary)
-                            Text("\(activityTimeRangeText(w)) · \(activityDurationText(w))")
-                                .font(StrandFont.caption)
-                                .foregroundStyle(StrandPalette.textSecondary)
-                            if let strain = w.strain, !w.sport.localizedCaseInsensitiveContains("sleep") {
-                                Text("\(UnitFormatter.effortDisplay(strain, scale: .whoop)) effort")
-                                    .font(StrandFont.caption.weight(.medium))
-                                    .foregroundStyle(StrandPalette.effortColor)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                Spacer(minLength: 2)
-                if let kcal = w.energyKcal {
-                    Text("\(Int(kcal.rounded())) kcal")
-                        .font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                }
-                Menu { activityRowMenu(w) } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .frame(width: 26, height: 30)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-            }
-        }
-    }
-
-    private func activityTimeRangeText(_ row: WorkoutRow) -> String {
-        let start = DateFormatter.localizedString(
-            from: Date(timeIntervalSince1970: TimeInterval(row.startTs)),
-            dateStyle: .none, timeStyle: .short)
-        let end = DateFormatter.localizedString(
-            from: Date(timeIntervalSince1970: TimeInterval(row.endTs)),
-            dateStyle: .none, timeStyle: .short)
-        return "\(start)–\(end)"
-    }
-
-    private func activityDurationText(_ row: WorkoutRow) -> String {
-        let seconds = max(0, Int((row.durationS ?? Double(max(0, row.endTs - row.startTs))).rounded()))
-        if row.sport.localizedCaseInsensitiveContains("sleep") {
-            let hours = seconds / 3_600
-            let minutes = (seconds % 3_600) / 60
-            return hours > 0
-                ? String(format: String(localized: "%lldh %lldm"), locale: AppLanguage.activeLocale,
-                         Int64(hours), Int64(minutes))
-                : String(format: String(localized: "%lldm"), locale: AppLanguage.activeLocale, Int64(minutes))
-        }
-        let minutes = Int((Double(seconds) / 60).rounded())
-        return String(format: String(localized: "%lld min"), locale: AppLanguage.activeLocale, Int64(minutes))
-    }
-
-    @ViewBuilder
-    private func activityRowMenu(_ row: WorkoutRow) -> some View {
-        switch WorkoutSource.classify(row.source) {
-        case .detected:
-            Button("Edit details…") { presentWorkoutEditor(row) }
-            Divider()
-            Button("Dismiss (not a workout)", role: .destructive) {
-                Task {
-                    await repo.dismissDetected(row)
-                    await intelligence.analyzeRecent(allowDayReuse: false)
-                    lastLoadedKey = nil
-                    await load()
-                }
-            }
-        case .manual, .confirmed:
-            Button("Edit…") { presentWorkoutEditor(row) }
-            Divider()
-            Button("Delete", role: .destructive) {
-                pendingWorkoutDeletion = row
-                showWorkoutDeleteConfirmation = true
-            }
-        case .whoop, .apple, .lifting, .activityFile, .hevy, .oura:
-            Button("Duplicate as manual…") { presentWorkoutEditor(asManualCopy(row), isCopy: true) }
-        }
-    }
-
-    private func presentWorkoutEditor(_ row: WorkoutRow, isCopy: Bool = false) {
-        selectedWorkoutForEdit = row
-        editingWorkoutIsCopy = isCopy
-        showWorkoutEditor = true
-    }
-
-    private func asManualCopy(_ row: WorkoutRow) -> WorkoutRow {
-        WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: WorkoutSource.displaySport(row.sport),
-                   source: "manual", durationS: row.durationS, energyKcal: row.energyKcal,
-                   avgHr: row.avgHr, maxHr: row.maxHr, strain: row.strain, distanceM: row.distanceM,
-                   zonesJSON: row.zonesJSON, notes: row.notes, steps: row.steps)
-    }
-
-    private func deleteActivity(_ row: WorkoutRow) {
-        RouteStore.remove(startTs: row.startTs, sport: row.sport)
-        Task {
-            await repo.deleteWorkout(row)
-            await intelligence.analyzeRecent(allowDayReuse: false)
-            lastLoadedKey = nil
-            await load()
-        }
-        pendingWorkoutDeletion = nil
-    }
-
-    // MARK: - More workouts (optional)
+    // MARK: - Workouts (opt-in, DashboardExtraSection.workoutsList)
 
     @ViewBuilder
     private var workoutsListSection: some View {
-        let rows = layoutSections.contains(.activity) ? Array(recentWorkouts.dropFirst(5)) : recentWorkouts
-        if !rows.isEmpty {
+        if !recentWorkouts.isEmpty {
             VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                Text("More workouts").whoopReferenceOverline()
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, w in
-                    activityRow(w)
+                HStack {
+                    Text("Recent activity").whoopReferenceOverline()
+                    Spacer()
+                    NavigationLink(value: TabRoute.workouts) {
+                        Text("View all").font(StrandFont.footnote).foregroundStyle(StrandPalette.accent)
+                    }
+                }
+                VStack(spacing: 6) {
+                    ForEach(Array(recentWorkouts.enumerated()), id: \.offset) { _, w in
+                        NavigationLink(value: TabRoute.workoutDetail(startTs: w.startTs, sport: w.sport)) {
+                        NoopCard(padding: 10) {
+                            HStack(spacing: 8) {
+                                ZStack {
+                                    Circle().fill(StrandPalette.chargeColor.opacity(0.16))
+                                    Image(systemName: sportSymbol(w.sport))
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(StrandPalette.chargeColor)
+                                }
+                                .frame(width: 28, height: 28)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(w.sport).font(StrandFont.footnote.weight(.semibold)).foregroundStyle(StrandPalette.textPrimary)
+                                    Text(workoutSubtitle(w)).font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                                }
+                                Spacer(minLength: 8)
+                                if let kcal = w.energyKcal {
+                                    Text("\(Int(kcal.rounded())) kcal").font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
+                                }
+                            }
+                        }
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
+    }
+
+    private func workoutSubtitle(_ w: WorkoutRow) -> String {
+        let minutes = Int(((w.durationS ?? Double(w.endTs - w.startTs)) / 60).rounded())
+        let date = Date(timeIntervalSince1970: TimeInterval(w.startTs))
+        let dayPrefix: String? = selectedDayOffset == 0 && !Calendar.current.isDateInToday(date)
+            ? (Calendar.current.isDateInYesterday(date)
+                ? String(localized: "Yesterday")
+                : DateFormatter.localizedString(from: date, dateStyle: .medium, timeStyle: .none))
+            : nil
+        if let strain = w.strain {
+            let format = String(localized: "%lld min · %.1f effort")
+            let base = String(format: format, locale: AppLanguage.activeLocale, Int64(minutes), strain)
+            return dayPrefix.map { "\($0) · \(base)" } ?? base
+        }
+        let base = String(format: String(localized: "%lld min"), locale: AppLanguage.activeLocale, Int64(minutes))
+        return dayPrefix.map { "\($0) · \(base)" } ?? base
     }
 
     // MARK: - Energy detail (opt-in, DashboardExtraSection.energyDetail)
