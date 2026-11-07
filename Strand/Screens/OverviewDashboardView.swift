@@ -427,9 +427,11 @@ struct OverviewDashboardView: View {
         if sections.contains(.workoutsList) || sections.contains(.activity) {
             let allWorkouts = (await repo.workoutRows(days: max(14, selectedDayOffset + 2), reconcileHrCap: 0))
                 .sorted { $0.startTs > $1.startTs }
-            next.recentWorkouts = (selectedDayOffset == 0 ? allWorkouts : allWorkouts.filter {
+            // The activity feed is strictly scoped to the selected logical day. Do not mix
+            // yesterday's sessions into today's list just because the user is on Overview.
+            next.recentWorkouts = allWorkouts.filter {
                 Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.startTs))) == selectedDayKey
-            }).prefix(sections.contains(.activity) ? 8 : 3).map { $0 }
+            }.prefix(sections.contains(.activity) ? 8 : 3).map { $0 }
         } else {
             next.recentWorkouts = []
         }
@@ -1094,12 +1096,13 @@ struct OverviewDashboardView: View {
     }
 
     private var overviewActivityItems: [OverviewActivityItem] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -13,
-                                           to: Calendar.current.startOfDay(for: Date()))
-            .map { Int($0.timeIntervalSince1970) } ?? 0
+        // One selected day only. Sleep is assigned to its wake/end day, matching the
+        // dashboard's sleep-day convention (so last night's sleep appears in today's feed).
         var seenSleepStarts = Set<Int>()
         let uniqueSleeps = repo.sleeps
-            .filter { $0.endTs >= cutoff }
+            .filter {
+                Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval($0.endTs))) == selectedDayKey
+            }
             .sorted { $0.endTs > $1.endTs }
             .filter { seenSleepStarts.insert($0.startTs).inserted }
         let sleeps = uniqueSleeps.map { session in
@@ -1146,18 +1149,24 @@ struct OverviewDashboardView: View {
                 .frame(width: 26, height: 26)
                 .background((item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor).opacity(0.12),
                             in: Circle())
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.title.uppercased())
-                    .font(StrandFont.footnote.weight(.semibold))
-                    .foregroundStyle(StrandPalette.textPrimary).lineLimit(1)
-                Text("\(item.startTime) – \(item.endTime)")
-                    .font(StrandFont.caption).monospacedDigit()
-                    .foregroundStyle(StrandPalette.textSecondary)
-            }
-            Spacer(minLength: 4)
+            // WHOOP-style metric placement: effort/duration sits immediately beside the
+            // activity icon; sleep duration sits immediately beside the moon icon.
             Text(item.metric)
                 .font(WhoopReferenceFont.metric(13)).monospacedDigit()
                 .foregroundStyle(StrandPalette.textPrimary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Text(item.title.uppercased())
+                .font(StrandFont.footnote.weight(.semibold))
+                .foregroundStyle(StrandPalette.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            // The session window is the rightmost element on every row.
+            Text("\(item.startTime) – \(item.endTime)")
+                .font(StrandFont.caption).monospacedDigit()
+                .foregroundStyle(StrandPalette.textSecondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.vertical, 3)
         return Group {
