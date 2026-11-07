@@ -282,3 +282,9 @@ transfer continues under the existing sync controller and completion callback af
 A coordinator regression test pins coalescing and cache/import ordering. This removes a stale-refresh
 behavior and bounds manual Health reads; it does not establish a measured increase in radio throughput.
 Analysis migration required: no.
+
+A subsequent UI audit found that the old day-cycle backdrop defaults to enabled. The reference scaffold
+now owns its canvas regardless of that legacy style setting, and reference Sleep suppresses the old
+Liquid gauge/night sheet. The same stored preferences still govern non-reference presentation. UI review
+concurrency now lets the current run finish rather than cancelling it when a later candidate is queued.
+Analysis migration required: no.

@@ -89,7 +89,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
         // on the opaque canvas and stay fully legible (2026-06-23: cards were "losing the data").
         .background(alignment: .top) {
             ZStack(alignment: .top) {
-                if referenceUI && !showDayCycleBackground {
+                if referenceUI {
                     WoopReferenceCanvas()
                 } else {
                     StrandPalette.surfaceBase

@@ -28,6 +28,7 @@ import UIKit
 // minutes for light/deep/rem/awake; typical = mean of repo.days).
 
 struct SleepView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -57,9 +58,9 @@ struct SleepView: View {
     @AppStorage(SkyBehindCardsPrefs.enabledKey) private var skyBehindCards = false
     /// "Sky behind cards": the Sleep tab's own night scene reaches behind the whole page, as the day-cycle
     /// sky does on Today, so Card transparency shows it under every card.
-    private var nightBehindCards: Bool { showDayCycleBackground && skyBehindCards }
+    private var nightBehindCards: Bool { !referenceUI && showDayCycleBackground && skyBehindCards }
     private var heroUsesLiquidStyle: Bool {
-        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
+        !referenceUI && (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
     }
     /// Which night the hero hypnogram shows: 0 = last night, N = N sleep-sessions back.
     /// Snaps back to 0 whenever the data key changes — a stale offset would silently point
@@ -778,7 +779,7 @@ struct SleepView: View {
     /// With the scene behind the cards there is no sheet at all.
     @ViewBuilder
     private func canvasSheet(roundedTop: Bool) -> some View {
-        if !nightBehindCards {
+        if !referenceUI && !nightBehindCards {
             #if os(iOS)
             let gutter = NoopMetrics.screenHPadding
             #else
