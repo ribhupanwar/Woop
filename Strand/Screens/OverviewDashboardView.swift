@@ -1095,6 +1095,15 @@ struct OverviewDashboardView: View {
         }
     }
 
+    /// Explicit 12-hour activity timestamps, independent of the device's time preference.
+    private func activityClockString(_ timestamp: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
+    }
+
     private var overviewActivityItems: [OverviewActivityItem] {
         // One selected day only. Sleep is assigned to its wake/end day, matching the
         // dashboard's sleep-day convention (so last night's sleep appears in today's feed).
@@ -1112,7 +1121,7 @@ struct OverviewDashboardView: View {
             return OverviewActivityItem(
                 id: "sleep-\(session.startTs)", startTs: start, title: String(localized: "Sleep"),
                 metric: String(format: "%d:%02d", minutes / 60, minutes % 60),
-                startTime: Night.clockString(start), endTime: Night.clockString(end),
+                startTime: activityClockString(start), endTime: activityClockString(end),
                 symbol: "moon.fill", isSleep: true, workout: nil
             )
         }
@@ -1133,7 +1142,7 @@ struct OverviewDashboardView: View {
                 title: WorkoutSource.localizedDisplaySport(workout.sport),
                 metric: workout.strain.map { UnitFormatter.effortDisplay($0, scale: .whoop) }
                     ?? String(format: "%d:%02d", minutes / 60, minutes % 60),
-                startTime: Night.clockString(workout.startTs), endTime: Night.clockString(workout.endTs),
+                startTime: activityClockString(workout.startTs), endTime: activityClockString(workout.endTs),
                 symbol: symbol, isSleep: false, workout: workout
             )
         }
