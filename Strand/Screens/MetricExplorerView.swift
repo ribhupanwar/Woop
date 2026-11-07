@@ -854,6 +854,7 @@ private struct MetricRow: View {
 /// a SegmentedPillControl range, a hero ChartCard (line + latest "as of"), a uniform
 /// StatTile row (Average / Min / Max / Latest / Δ), and a "What correlates" NoopCard.
 struct MetricDetailView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     let metric: MetricDescriptor
     /// The readout at the originating tap; the history below remains independently explorable.
     var effortReadout: DashboardEffortReadout? = nil
@@ -1215,16 +1216,20 @@ struct MetricDetailView: View {
         // plain canvas when off.
         .background(alignment: .top) {
             ZStack(alignment: .top) {
-                StrandPalette.surfaceBase
-                // Custom background image (#custom-background) OVERRIDES the sky, full-bleed.
-                if backgroundStore.isActive {
-                    BackgroundImageBackdrop()
-                } else if showDayCycleBackground {
-                    LiquidSkyStatic(hour: nil, settleStrength: skyBehindCards ? 0.78 : 1)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: skyBehindCards ? nil : 240, alignment: .top)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
+                if referenceUI {
+                    WoopReferenceCanvas()
+                } else {
+                    StrandPalette.surfaceBase
+                    // Custom background image (#custom-background) OVERRIDES the sky, full-bleed.
+                    if backgroundStore.isActive {
+                        BackgroundImageBackdrop()
+                    } else if showDayCycleBackground {
+                        LiquidSkyStatic(hour: nil, settleStrength: skyBehindCards ? 0.78 : 1)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: skyBehindCards ? nil : 240, alignment: .top)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -1448,120 +1453,132 @@ struct MetricDetailView: View {
         }()
         let fraction = value.flatMap { metricGaugeFraction(metric, value: $0) }
 
-        // Gap fix (2026-07-02): draw the starfield as the content's BACKGROUND, not as a
-        // stretching ZStack sibling — an unconstrained ScenicHeroBackground inside a ScrollView filled
-        // the whole viewport and left a huge blank band above the chart. As a .background it sizes to
-        // the hero content, so the number/ring sits directly under the range pill.
-        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                // Category + title on their OWN full-width row so a long title ("Heart Rate Variability")
-                // is never crushed into a letter-per-line column by the range pill (2026-07-02).
-                if !isStepsDetail { VStack(alignment: .leading, spacing: 2) {
-                    // Suppress the category overline when it would just repeat the title (e.g. the Charge
-                    // metric in the Charge category) — that's the "CHARGE / Charge" doubling (redesign bug §1).
-                    if !categoryEchoesTitle {
-                        Text(MetricCatalog.categoryDisplayName(metric.category).uppercased()).strandOverline()
-                    }
-                    Text(metric.title)
-                        .font(StrandFont.title2)
-                        .foregroundStyle(StrandPalette.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                } }
-                // Range control on its own row beneath the title.
+        if referenceUI && metric.key == "strain" {
+            VStack(spacing: 12) {
                 SegmentedPillControl(ExploreRange.displayCases, selection: selectionBinding,
-                                     adaptsToAvailableWidth: true,
-                                     isEnabled: isUnlocked) { $0.label }
-
-                // The headline read-out in the liquid language: for a 0–100 score, the signature
-                // LiquidVessel gauge filled to the score (the same hero idiom as Today's rings / Health's
-                // Fitness-Age + Vitality heroes), with the integer counting up over it and the unit + "as
-                // of" line beneath. For a non-score metric, a big count-up number. The vessel fills from 0
-                // to its fraction on appear (`heroAnimatedFraction`), so it settles once like TodayView's
-                // rings; the number ticks itself. A liquid accent on the ONE headline value, where it reads
-                // well — never over the chart below.
-                HStack {
-                    Spacer(minLength: 0)
-                    if fraction != nil, let v = value {
-                        VStack(spacing: 10) {
-                            ZStack {
-                                // The big hero vessel stays live (animated) — the one sloshing gauge on the
-                                // screen, exactly like the hero gauges on Today.
-                                LiquidVessel(value: heroAnimatedFraction, tint: domain.bright, animated: true)
-                                    .frame(width: 188, height: 188)
-                                    .accessibilityHidden(true)
-                                VStack(spacing: 2) {
-                                    CountUpNumber(value: v, font: StrandFont.rounded(48))
-                                        .foregroundStyle(.white)
-                                        .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
-                                    if !metric.unit.isEmpty {
-                                        Text(metric.unit)
-                                            .font(StrandFont.footnote)
-                                            .foregroundStyle(.white.opacity(0.85))
-                                            .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
-                                    }
-                                }
-                                .allowsHitTesting(false)
-                            }
-                            Text(asOf)
-                                .font(StrandFont.footnote)
-                                .foregroundStyle(StrandPalette.textTertiary)
-                        }
-                        // One VoiceOver stop for the hero read-out (the vessel is decorative above).
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel("\(heroValue), \(asOf)")
-                    } else if let v = value {
-                        VStack(spacing: 6) {
-                            CountUpText(value: v, format: { fmt($0) },
-                                        font: StrandFont.number(54),
-                                        color: StrandPalette.textPrimary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.5)
-                            Text(asOf)
-                                .font(StrandFont.footnote)
-                                .foregroundStyle(StrandPalette.textTertiary)
-                        }
-                        .padding(.vertical, 18)
-                    } else {
-                        VStack(spacing: 6) {
-                            Text(heroValue)
-                                .font(StrandFont.number(54))
-                                .foregroundStyle(StrandPalette.textPrimary)
-                            Text(asOf)
-                                .font(StrandFont.footnote)
-                                .foregroundStyle(StrandPalette.textTertiary)
-                        }
-                        .padding(.vertical, 18)
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                // The "N readings · range" caption (auto-widen flagged when it happens).
-                Text(rangeCaption(effectiveRange: effectiveRange,
-                                  windowed: windowed,
-                                  windowFellBack: windowFellBack))
-                    .font(StrandFont.footnote)
-                    .foregroundStyle(windowFellBack ? StrandPalette.statusWarningForeground : StrandPalette.textTertiary)
-                    .accessibilityLabel(rangeCaption(effectiveRange: effectiveRange,
-                                                     windowed: windowed,
-                                                     windowFellBack: windowFellBack))
-                // The subtle reason the dimmed chips exist (#943); shown only while some are locked.
-                // Byte-identical wording to the Android HealthScreen's unlock hint.
-                if hasLockedRanges {
-                    Text("Longer ranges unlock as more history builds.")
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                }
+                                     adaptsToAvailableWidth: true, isEnabled: isUnlocked) { $0.label }
+                WoopMetricHero(title: "DAY STRAIN", value: value.map { UnitFormatter.effortDisplay($0, scale: effortScale) } ?? "—",
+                               fraction: value.map { $0 / 100 }, tint: WoopHomePalette.strain)
+                Text(asOf).font(WhoopReferenceFont.body(12))
+                    .foregroundStyle(StrandPalette.textSecondary)
             }
-        .padding(NoopMetrics.cardPadding)
-        .background {
-            NoopPanelSurface(tint: domain.color,
-                             cornerRadius: NoopMetrics.cardRadius,
-                             elevated: true)
-        }
-        // The hero shows the LATEST available point (range-independent), so the vessel fills once on
-        // appear (0 → its fraction) and settles — like TodayView's rings.
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.9)) {
-                heroAnimatedFraction = fraction ?? 0
+        } else {
+
+            // Gap fix (2026-07-02): draw the starfield as the content's BACKGROUND, not as a
+            // stretching ZStack sibling — an unconstrained ScenicHeroBackground inside a ScrollView filled
+            // the whole viewport and left a huge blank band above the chart. As a .background it sizes to
+            // the hero content, so the number/ring sits directly under the range pill.
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                    // Category + title on their OWN full-width row so a long title ("Heart Rate Variability")
+                    // is never crushed into a letter-per-line column by the range pill (2026-07-02).
+                    if !isStepsDetail { VStack(alignment: .leading, spacing: 2) {
+                        // Suppress the category overline when it would just repeat the title (e.g. the Charge
+                        // metric in the Charge category) — that's the "CHARGE / Charge" doubling (redesign bug §1).
+                        if !categoryEchoesTitle {
+                            Text(MetricCatalog.categoryDisplayName(metric.category).uppercased()).strandOverline()
+                        }
+                        Text(metric.title)
+                            .font(StrandFont.title2)
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } }
+                    // Range control on its own row beneath the title.
+                    SegmentedPillControl(ExploreRange.displayCases, selection: selectionBinding,
+                                         adaptsToAvailableWidth: true,
+                                         isEnabled: isUnlocked) { $0.label }
+
+                    // The headline read-out in the liquid language: for a 0–100 score, the signature
+                    // LiquidVessel gauge filled to the score (the same hero idiom as Today's rings / Health's
+                    // Fitness-Age + Vitality heroes), with the integer counting up over it and the unit + "as
+                    // of" line beneath. For a non-score metric, a big count-up number. The vessel fills from 0
+                    // to its fraction on appear (`heroAnimatedFraction`), so it settles once like TodayView's
+                    // rings; the number ticks itself. A liquid accent on the ONE headline value, where it reads
+                    // well — never over the chart below.
+                    HStack {
+                        Spacer(minLength: 0)
+                        if fraction != nil, let v = value {
+                            VStack(spacing: 10) {
+                                ZStack {
+                                    // The big hero vessel stays live (animated) — the one sloshing gauge on the
+                                    // screen, exactly like the hero gauges on Today.
+                                    LiquidVessel(value: heroAnimatedFraction, tint: domain.bright, animated: true)
+                                        .frame(width: 188, height: 188)
+                                        .accessibilityHidden(true)
+                                    VStack(spacing: 2) {
+                                        CountUpNumber(value: v, font: StrandFont.rounded(48))
+                                            .foregroundStyle(.white)
+                                            .shadow(color: .black.opacity(0.5), radius: 6, y: 1)
+                                        if !metric.unit.isEmpty {
+                                            Text(metric.unit)
+                                                .font(StrandFont.footnote)
+                                                .foregroundStyle(.white.opacity(0.85))
+                                                .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+                                        }
+                                    }
+                                    .allowsHitTesting(false)
+                                }
+                                Text(asOf)
+                                    .font(StrandFont.footnote)
+                                    .foregroundStyle(StrandPalette.textTertiary)
+                            }
+                            // One VoiceOver stop for the hero read-out (the vessel is decorative above).
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(heroValue), \(asOf)")
+                        } else if let v = value {
+                            VStack(spacing: 6) {
+                                CountUpText(value: v, format: { fmt($0) },
+                                            font: StrandFont.number(54),
+                                            color: StrandPalette.textPrimary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.5)
+                                Text(asOf)
+                                    .font(StrandFont.footnote)
+                                    .foregroundStyle(StrandPalette.textTertiary)
+                            }
+                            .padding(.vertical, 18)
+                        } else {
+                            VStack(spacing: 6) {
+                                Text(heroValue)
+                                    .font(StrandFont.number(54))
+                                    .foregroundStyle(StrandPalette.textPrimary)
+                                Text(asOf)
+                                    .font(StrandFont.footnote)
+                                    .foregroundStyle(StrandPalette.textTertiary)
+                            }
+                            .padding(.vertical, 18)
+                        }
+                        Spacer(minLength: 0)
+                    }
+
+                    // The "N readings · range" caption (auto-widen flagged when it happens).
+                    Text(rangeCaption(effectiveRange: effectiveRange,
+                                      windowed: windowed,
+                                      windowFellBack: windowFellBack))
+                        .font(StrandFont.footnote)
+                        .foregroundStyle(windowFellBack ? StrandPalette.statusWarningForeground : StrandPalette.textTertiary)
+                        .accessibilityLabel(rangeCaption(effectiveRange: effectiveRange,
+                                                         windowed: windowed,
+                                                         windowFellBack: windowFellBack))
+                    // The subtle reason the dimmed chips exist (#943); shown only while some are locked.
+                    // Byte-identical wording to the Android HealthScreen's unlock hint.
+                    if hasLockedRanges {
+                        Text("Longer ranges unlock as more history builds.")
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                    }
+                }
+            .padding(NoopMetrics.cardPadding)
+            .background {
+                NoopPanelSurface(tint: domain.color,
+                                 cornerRadius: NoopMetrics.cardRadius,
+                                 elevated: true)
+            }
+            // The hero shows the LATEST available point (range-independent), so the vessel fills once on
+            // appear (0 → its fraction) and settles — like TodayView's rings.
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.9)) {
+                    heroAnimatedFraction = fraction ?? 0
+                }
             }
         }
     }

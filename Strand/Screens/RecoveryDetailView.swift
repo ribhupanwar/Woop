@@ -95,44 +95,55 @@ struct RecoveryDetailView: View {
 
     @ViewBuilder
     private var scoreCard: some View {
-        NoopCard {
-            VStack(spacing: 14) {
-                if let score {
-                    RecoveryRing(score: score, diameter: 214, lineWidth: 13,
-                                 showsWordmark: false, showsHover: false,
-                                 valueFormat: { "Recovery \(Int($0.rounded()))" })
-                    // RecoveryRing already renders the score's state word inside its gauge.
-                    if let caption = display.carriedCaption {
-                        Text(caption)
-                            .font(WhoopReferenceFont.body(12))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                            .multilineTextAlignment(.center)
-                    } else if let day = scoredNight?.day {
-                        Text(dateLabel(day))
-                            .font(WhoopReferenceFont.body(12))
-                            .foregroundStyle(StrandPalette.textTertiary)
-                    }
-                } else {
-                    Image(systemName: display == .noData ? "moon.zzz" : "waveform.path.ecg")
-                        .font(.system(size: 30, weight: .light))
-                        .foregroundStyle(StrandPalette.textTertiary)
-                    Text(display.stateLabel)
-                        .font(WhoopReferenceFont.heading(22))
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    if case .calibrating(let nights) = display {
-                        Text("\(nights) of \(Baselines.minNightsSeed) nights")
-                            .font(WhoopReferenceFont.body(12))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    } else {
-                        Text("A recovery score will appear when a valid scored night is available.")
-                            .font(WhoopReferenceFont.body(12))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
+        if referenceUI, let score {
+            VStack(spacing: 0) {
+                WoopMetricHero(title: "RECOVERY", value: "\(Int(score.rounded()))", suffix: "%",
+                               fraction: score / 100, tint: StrandPalette.recoveryColor(score))
+                if let caption = display.carriedCaption {
+                    Text(caption).font(WhoopReferenceFont.body(12))
+                        .foregroundStyle(StrandPalette.textSecondary)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+        } else {
+            NoopCard {
+                VStack(spacing: 14) {
+                    if let score {
+                        RecoveryRing(score: score, diameter: 214, lineWidth: 13,
+                                     showsWordmark: false, showsHover: false,
+                                     valueFormat: { "Recovery \(Int($0.rounded()))" })
+                        // RecoveryRing already renders the score's state word inside its gauge.
+                        if let caption = display.carriedCaption {
+                            Text(caption)
+                                .font(WhoopReferenceFont.body(12))
+                                .foregroundStyle(StrandPalette.textSecondary)
+                                .multilineTextAlignment(.center)
+                        } else if let day = scoredNight?.day {
+                            Text(dateLabel(day))
+                                .font(WhoopReferenceFont.body(12))
+                                .foregroundStyle(StrandPalette.textTertiary)
+                        }
+                    } else {
+                        Image(systemName: display == .noData ? "moon.zzz" : "waveform.path.ecg")
+                            .font(.system(size: 30, weight: .light))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                        Text(display.stateLabel)
+                            .font(WhoopReferenceFont.heading(22))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                        if case .calibrating(let nights) = display {
+                            Text("\(nights) of \(Baselines.minNightsSeed) nights")
+                                .font(WhoopReferenceFont.body(12))
+                                .foregroundStyle(StrandPalette.textSecondary)
+                        } else {
+                            Text("A recovery score will appear when a valid scored night is available.")
+                                .font(WhoopReferenceFont.body(12))
+                                .foregroundStyle(StrandPalette.textSecondary)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
         }
     }
 
@@ -142,19 +153,33 @@ struct RecoveryDetailView: View {
             Text("Recovery contributors")
                 .font(WhoopReferenceFont.heading(17))
                 .foregroundStyle(StrandPalette.textPrimary)
-            HStack(spacing: 10) {
-                vitalCard(title: "HRV", value: night.avgHrv.map { "\(Int($0.rounded()))" } ?? "—",
-                          unit: "ms", symbol: "waveform.path.ecg")
-                vitalCard(title: "Resting HR", value: night.restingHr.map(String.init) ?? "—",
-                          unit: "bpm", symbol: "heart")
-            }
-            HStack(spacing: 10) {
-                vitalCard(title: "Respiratory rate",
-                          value: night.respRateBpm.map { String(format: "%.1f", $0) } ?? "—",
-                          unit: "breaths/min", symbol: "wind")
-                vitalCard(title: "Sleep performance",
-                          value: sleepPerformance.map { "\(Int($0.rounded()))" } ?? "—",
-                          unit: "%", symbol: "moon.zzz")
+            if referenceUI {
+                NoopCard {
+                    VStack(spacing: 0) {
+                        WoopMetricRow("Heart rate variability", value: night.avgHrv.map { "\(Int($0.rounded())) ms" } ?? "—", symbol: "waveform.path.ecg")
+                        Divider().overlay(Color.white.opacity(0.08))
+                        WoopMetricRow("Resting heart rate", value: night.restingHr.map { "\($0) bpm" } ?? "—", symbol: "heart")
+                        Divider().overlay(Color.white.opacity(0.08))
+                        WoopMetricRow("Respiratory rate", value: night.respRateBpm.map { String(format: "%.1f", $0) } ?? "—", symbol: "wind")
+                        Divider().overlay(Color.white.opacity(0.08))
+                        WoopMetricRow("Sleep performance", value: sleepPerformance.map { "\(Int($0.rounded()))%" } ?? "—", symbol: "moon.zzz")
+                    }
+                }
+            } else {
+                HStack(spacing: 10) {
+                    vitalCard(title: "HRV", value: night.avgHrv.map { "\(Int($0.rounded()))" } ?? "—",
+                              unit: "ms", symbol: "waveform.path.ecg")
+                    vitalCard(title: "Resting HR", value: night.restingHr.map(String.init) ?? "—",
+                              unit: "bpm", symbol: "heart")
+                }
+                HStack(spacing: 10) {
+                    vitalCard(title: "Respiratory rate",
+                              value: night.respRateBpm.map { String(format: "%.1f", $0) } ?? "—",
+                              unit: "breaths/min", symbol: "wind")
+                    vitalCard(title: "Sleep performance",
+                              value: sleepPerformance.map { "\(Int($0.rounded()))" } ?? "—",
+                              unit: "%", symbol: "moon.zzz")
+                }
             }
             Text("All values shown are from \(dateLabel(night.day)) and belong to the same scored night.")
                 .font(WhoopReferenceFont.body(11))

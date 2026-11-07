@@ -381,32 +381,13 @@ struct WorkoutDetailView: View {
     }
 
     private func referenceStrainHero(_ strain: Double) -> some View {
-        let value = UnitFormatter.effortValue(strain, scale: effortScale)
-        return VStack(spacing: 14) {
-            Text("ACTIVITY STRAIN").whoopReferenceOverline()
-            ZStack {
-                Circle().stroke(Color.white.opacity(0.12), lineWidth: 12)
-                Circle().trim(from: 0, to: min(1, max(0, strain / 100)))
-                    .stroke(WoopHomePalette.strain, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                VStack(spacing: 4) {
-                    Text(UnitFormatter.effortDisplay(strain, scale: effortScale))
-                        .font(WhoopReferenceFont.score(48))
-                        .foregroundStyle(StrandPalette.textPrimary)
-                    Text(effortScale == .whoop ? "of 21" : "of 100")
-                        .font(WhoopReferenceFont.label(11))
-                        .foregroundStyle(StrandPalette.textSecondary)
-                }
-            }
-            .frame(width: 200, height: 200)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Activity strain \(value.formatted())")
-            Text("Recorded session load")
+        VStack(spacing: 2) {
+            WoopMetricHero(title: "ACTIVITY STRAIN", value: UnitFormatter.effortDisplay(strain, scale: effortScale),
+                           fraction: strain / 100, tint: WoopHomePalette.strain)
+            Text(effortScale == .whoop ? "Recorded session load · 0–21" : "Recorded session load · 0–100")
                 .font(WhoopReferenceFont.body(12))
                 .foregroundStyle(StrandPalette.textSecondary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
     }
 
     // MARK: - Stat strip

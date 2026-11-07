@@ -41,7 +41,7 @@ final class ReferenceNavigationTests: XCTestCase {
             launch(tab: tab)
             capture("empty-\(tab)")
         }
-        for screen in ["recovery", "sleep"] {
+        for screen in ["recovery", "sleep", "strain"] {
             app.terminate()
             app.launchArguments = ["--ui-preview", "--demo-screen", screen]
             app.launch()

@@ -76,10 +76,10 @@ The next UI pass adapts the independent reference screens at DSTA commit `8d946e
   The screenshot supersedes the earlier metric-strip experiment. Existing contributor, health,
   goal, workout and customization surfaces remain below the pinned rings and daily activity feed.
   Ring values use the existing score resolvers and effort scale; carried Recovery keeps its caption.
-- Recovery uses the reference's 214pt hero and a scored-night date. The Week/Month selector is
+- Recovery uses a large reference score hero and a scored-night date. The Week/Month selector is
   functional over seven/thirty civil days, with missing days left blank instead of substituted with
   zero or visually joined to another night. Invalid/non-finite history values are not charted.
-- Non-Liquid Sleep leads with the prepared night's recorded time asleep and a 92pt performance ring.
+- Reference Sleep leads with the prepared night's large performance ring and compact contributor rows.
   The original performance resolver, source badge, sleep need/debt, stages, history and optional Liquid
   presentation remain in use. Missing sleep performance draws an empty track without a numeric score.
 - Home and Today Start Activity now open the shared workout picker used by Live/Training, including
@@ -245,7 +245,7 @@ strain hero using the existing recorded value. New/unconfigured iPhone installs 
 0–21 axis; explicit saved preferences and canonical stored values are retained.
 
 `WoopUIReview` is a separate simulator UI-test scheme. Its workflow checks tab selection and the Home
-quick-action entry, and captures seven empty-store screens without generating health data. Simulator
+quick-action entry, and captures eight empty-store screens without generating health data. Simulator
 captures are review evidence, not a claim of pixel equality with the supplied populated screenshot.
 The current environment lacks Xcode/Swift; Apple compilation and UI execution require the macOS jobs.
 
@@ -288,3 +288,13 @@ now owns its canvas regardless of that legacy style setting, and reference Sleep
 Liquid gauge/night sheet. The same stored preferences still govern non-reference presentation. UI review
 concurrency now lets the current run finish rather than cancelling it when a later candidate is queued.
 Analysis migration required: no.
+
+The public detail-screen reference comparison replaces the earlier compact Sleep hero with a shared
+260pt ring composition (Woop wordmark, score, metric title). Recovery contributors now use compact rows;
+Sleep shows available hours/need, consistency, efficiency and recorded time asleep. Estimated need and
+consistency are labelled, and navigated nights cannot borrow the latest night's supporting values.
+Unavailable sleep stress or baseline comparisons are not invented to fill reference artwork. The same
+blue ring composition is used for Day Strain and Activity Strain while preserving their distinct inputs.
+Generic metric details also use the reference canvas; charts/history/source resolution remain intact.
+The screenshot harness adds the Strain destination. Local grammar inspection found no new syntax errors;
+Apple type checking and visual verification still depend on the macOS jobs. Analysis migration required: no.

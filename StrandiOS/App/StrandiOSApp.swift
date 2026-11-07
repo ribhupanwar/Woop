@@ -777,6 +777,9 @@ enum DemoScreens {
         case "trends":   return AnyView(TrendsView())
         case "sleep":    return AnyView(SleepView())
         case "recovery": return AnyView(RecoveryDetailView())
+        case "strain":
+            guard let metric = MetricCatalog.all.first(where: { $0.key == "strain" }) else { return nil }
+            return AnyView(MetricDetailView(metric: metric))
         case "live":     return AnyView(LiveView())
         case "stress":   return AnyView(StressView())
         case "workouts": return AnyView(WorkoutsView())

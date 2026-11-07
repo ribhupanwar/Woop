@@ -1,5 +1,87 @@
 import SwiftUI
 
+/// Shared detail-screen composition, drawn independently with system typography and Woop identity.
+public struct WoopMetricHero: View {
+    let title: LocalizedStringKey
+    let value: String
+    let suffix: String
+    let fraction: Double?
+    let tint: Color
+
+    public init(title: LocalizedStringKey, value: String, suffix: String = "",
+                fraction: Double?, tint: Color) {
+        self.title = title
+        self.value = value
+        self.suffix = suffix
+        self.fraction = fraction
+        self.tint = tint
+    }
+
+    public var body: some View {
+        ZStack {
+            Circle().stroke(Color.white.opacity(0.12), lineWidth: 16).accessibilityHidden(true)
+            if let fraction, fraction.isFinite {
+                Circle().trim(from: 0, to: min(1, max(0, fraction)))
+                    .stroke(tint, style: StrokeStyle(lineWidth: 16, lineCap: .butt))
+                    .rotationEffect(.degrees(-90))
+                    .accessibilityHidden(true)
+            }
+            VStack(spacing: 12) {
+                Text("WOOP").font(.system(size: 17, weight: .light)).tracking(3)
+                    .foregroundStyle(StrandPalette.textSecondary).accessibilityHidden(true)
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(verbatim: value).font(WhoopReferenceFont.score(60))
+                    if !suffix.isEmpty { Text(verbatim: suffix).font(WhoopReferenceFont.score(36)) }
+                }
+                .foregroundStyle(StrandPalette.textPrimary)
+                .lineLimit(1).minimumScaleFactor(0.65)
+                Text(title).font(WhoopReferenceFont.label(12)).tracking(1.4)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(StrandPalette.textPrimary)
+            }
+            .padding(28)
+        }
+        .frame(width: 260, height: 260)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+public struct WoopMetricRow: View {
+    let title: LocalizedStringKey
+    let value: String
+    let symbol: String
+    let estimated: Bool
+
+    public init(_ title: LocalizedStringKey, value: String, symbol: String, estimated: Bool = false) {
+        self.title = title
+        self.value = value
+        self.symbol = symbol
+        self.estimated = estimated
+    }
+
+    public var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol).font(.system(size: 19, weight: .light))
+                .foregroundStyle(StrandPalette.textSecondary).frame(width: 24).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(WhoopReferenceFont.label(11)).tracking(0.8).textCase(.uppercase)
+                    .foregroundStyle(StrandPalette.textPrimary).lineLimit(2)
+                if estimated {
+                    Text("Woop estimate").font(WhoopReferenceFont.body(10))
+                        .foregroundStyle(StrandPalette.textSecondary)
+                }
+            }
+            Spacer(minLength: 8)
+            Text(verbatim: value).font(WhoopReferenceFont.score(19)).monospacedDigit()
+                .foregroundStyle(StrandPalette.textPrimary).lineLimit(1)
+        }
+        .frame(minHeight: 48)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct WoopReferenceUIKey: EnvironmentKey {
     static let defaultValue = false
 }
