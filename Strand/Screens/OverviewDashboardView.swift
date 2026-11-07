@@ -13,6 +13,7 @@ import StrandCore
 /// same note; it applies here too.
 struct OverviewDashboardView: View {
     @EnvironmentObject private var repo: Repository
+    @EnvironmentObject private var intelligence: IntelligenceEngine
     @EnvironmentObject private var profile: ProfileStore
     @EnvironmentObject private var updateStore: UpdateStore
     @EnvironmentObject private var router: NavRouter
@@ -133,6 +134,11 @@ struct OverviewDashboardView: View {
     @State private var selectedDayOffset = 0
     @State private var showDayPicker = false
     @State private var showStepGoalSetting = false
+    @State private var activityEditingWorkout: WorkoutRow?
+    @State private var showActivityEditor = false
+    @State private var activityEditIsCopy = false
+    @State private var pendingActivityDelete: WorkoutRow?
+    @State private var showActivityDeleteConfirmation = false
     @State private var showPlan = false
     @State private var showLiveSession = false
     @AppStorage(DashboardArrangeHint.seenKey("overview")) private var arrangeHintSeen = false
@@ -156,8 +162,8 @@ struct OverviewDashboardView: View {
     /// The reference packs everything — three rings, three focus cards, a six-row list — onto one
     /// screen with no scrolling. `NoopMetrics.sectionSpacing`/`.cardPadding` (26pt / 16pt) are tuned for
     /// Classic/Liquid's roomier cards; this screen uses its own tighter scale to match.
-    private static let sectionSpacing: CGFloat = 9
-    private static let cardPadding: CGFloat = 10
+    private static let sectionSpacing: CGFloat = 7
+    private static let cardPadding: CGFloat = 8
 
     var body: some View {
         GeometryReader { proxy in
@@ -249,6 +255,23 @@ struct OverviewDashboardView: View {
         }
         .sheet(isPresented: $showDayPicker) { dashboardDayPicker }
         .sheet(isPresented: $showStepGoalSetting) { DashboardStepGoalSheet() }
+        .sheet(isPresented: $showActivityEditor) {
+            ManualWorkoutSheet(editing: activityEditingWorkout, hrSource: repo) { row, replacing in
+                Task {
+                    await repo.saveManualWorkout(row, replacing: activityEditIsCopy ? nil : replacing)
+                    await intelligence.analyzeRecent(allowDayReuse: false)
+                    lastLoadedKey = nil
+                    await load()
+                }
+            }
+        }
+        .confirmationDialog("Delete this activity?", isPresented: $showActivityDeleteConfirmation,
+                            titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let row = pendingActivityDelete { deleteActivity(row) }
+            }
+            Button("Cancel", role: .cancel) { pendingActivityDelete = nil }
+        }
     }
 
     private var layoutSections: [DashboardLayoutSection] {
@@ -1061,22 +1084,36 @@ struct OverviewDashboardView: View {
         let workout: WorkoutRow?
     }
 
+    /// Repository performs cross-source deduplication. This final natural-key guard also collapses
+    /// repeated rows returned from separate retained device namespaces before SwiftUI renders them.
+    static func uniqueActivityWorkouts(_ rows: [WorkoutRow]) -> [WorkoutRow] {
+        var seen = Set<String>()
+        return rows.filter { row in
+            seen.insert("\(row.startTs)|\(row.sport.lowercased())").inserted
+        }
+    }
+
     private var overviewActivityItems: [OverviewActivityItem] {
         let cutoff = Calendar.current.date(byAdding: .day, value: -13,
                                            to: Calendar.current.startOfDay(for: Date()))
             .map { Int($0.timeIntervalSince1970) } ?? 0
-        let sleeps = repo.sleeps.filter { $0.endTs >= cutoff }.map { session in
+        var seenSleepStarts = Set<Int>()
+        let uniqueSleeps = repo.sleeps
+            .filter { $0.endTs >= cutoff }
+            .sorted { $0.endTs > $1.endTs }
+            .filter { seenSleepStarts.insert($0.startTs).inserted }
+        let sleeps = uniqueSleeps.map { session in
             let start = session.effectiveStartTs
             let end = session.endTs
             let minutes = max(0, (end - start) / 60)
             return OverviewActivityItem(
-                id: "sleep-\\(session.startTs)", startTs: start, title: String(localized: "Sleep"),
+                id: "sleep-\(session.startTs)", startTs: start, title: String(localized: "Sleep"),
                 metric: String(format: "%d:%02d", minutes / 60, minutes % 60),
                 startTime: Night.clockString(start), endTime: Night.clockString(end),
                 symbol: "moon.fill", isSleep: true, workout: nil
             )
         }
-        let sessions = recentWorkouts.map { workout in
+        let sessions = Self.uniqueActivityWorkouts(recentWorkouts).map { workout in
             let sport = workout.sport.lowercased()
             let symbol: String
             if sport.contains("dance") { symbol = "figure.dance" }
@@ -1089,23 +1126,118 @@ struct OverviewDashboardView: View {
             let seconds = workout.durationS ?? Double(max(workout.endTs - workout.startTs, 0))
             let minutes = max(0, Int(seconds / 60))
             return OverviewActivityItem(
-                id: "workout-\\(workout.startTs)-\\(workout.sport)", startTs: workout.startTs,
+                id: "workout-\(workout.startTs)-\(workout.sport)", startTs: workout.startTs,
                 title: WorkoutSource.localizedDisplaySport(workout.sport),
-                metric: workout.strain.map { String(format: "%.1f", $0) }
+                metric: workout.strain.map { UnitFormatter.effortDisplay($0, scale: .whoop) }
                     ?? String(format: "%d:%02d", minutes / 60, minutes % 60),
                 startTime: Night.clockString(workout.startTs), endTime: Night.clockString(workout.endTs),
                 symbol: symbol, isSleep: false, workout: workout
             )
         }
         return Array((sleeps + sessions).sorted { $0.startTs > $1.startTs }.prefix(12))
-            .sorted { $0.startTs < $1.startTs }
+            .sorted { $0.startTs == $1.startTs ? $0.id < $1.id : $0.startTs < $1.startTs }
+    }
+
+    private func activityRow(_ item: OverviewActivityItem) -> some View {
+        let row = HStack(spacing: 7) {
+            Image(systemName: item.symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor)
+                .frame(width: 26, height: 26)
+                .background((item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor).opacity(0.12),
+                            in: Circle())
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.title.uppercased())
+                    .font(StrandFont.footnote.weight(.semibold))
+                    .foregroundStyle(StrandPalette.textPrimary).lineLimit(1)
+                Text("\(item.startTime) – \(item.endTime)")
+                    .font(StrandFont.caption).monospacedDigit()
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
+            Spacer(minLength: 4)
+            Text(item.metric)
+                .font(WhoopReferenceFont.metric(13)).monospacedDigit()
+                .foregroundStyle(StrandPalette.textPrimary)
+        }
+        .padding(.vertical, 3)
+        return Group {
+            if let workout = item.workout {
+                HStack(spacing: 5) {
+                    NavigationLink(value: TabRoute.workoutDetail(startTs: workout.startTs, sport: workout.sport)) {
+                        row.frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    Menu { activityRowMenu(workout) } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .frame(width: 28, height: 30)
+                            .contentShape(Rectangle())
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                }
+            } else {
+                row
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activityRowMenu(_ row: WorkoutRow) -> some View {
+        switch WorkoutSource.classify(row.source) {
+        case .detected:
+            Button("Edit details…") { presentActivityEditor(row) }
+            Divider()
+            Button("Dismiss (not a workout)", role: .destructive) {
+                Task {
+                    await repo.dismissDetected(row)
+                    await intelligence.analyzeRecent(allowDayReuse: false)
+                    lastLoadedKey = nil
+                    await load()
+                }
+            }
+        case .manual, .confirmed:
+            Button("Edit…") { presentActivityEditor(row) }
+            Divider()
+            Button("Delete", role: .destructive) {
+                pendingActivityDelete = row
+                showActivityDeleteConfirmation = true
+            }
+        case .whoop, .apple, .lifting, .activityFile, .hevy, .oura:
+            Button("Duplicate as manual…") { presentActivityEditor(asManualCopy(row), isCopy: true) }
+        }
+    }
+
+    private func presentActivityEditor(_ row: WorkoutRow, isCopy: Bool = false) {
+        activityEditingWorkout = row
+        activityEditIsCopy = isCopy
+        showActivityEditor = true
+    }
+
+    private func asManualCopy(_ row: WorkoutRow) -> WorkoutRow {
+        WorkoutRow(startTs: row.startTs, endTs: row.endTs, sport: WorkoutSource.displaySport(row.sport),
+                   source: "manual", durationS: row.durationS, energyKcal: row.energyKcal,
+                   avgHr: row.avgHr, maxHr: row.maxHr, strain: row.strain, distanceM: row.distanceM,
+                   zonesJSON: row.zonesJSON, notes: row.notes, steps: row.steps)
+    }
+
+    private func deleteActivity(_ row: WorkoutRow) {
+        RouteStore.remove(startTs: row.startTs, sport: row.sport)
+        Task {
+            await repo.deleteWorkout(row)
+            await intelligence.analyzeRecent(allowDayReuse: false)
+            lastLoadedKey = nil
+            await load()
+        }
+        pendingActivityDelete = nil
     }
 
     private var todayActivitiesSection: some View {
         let items = overviewActivityItems
-        return VStack(alignment: .leading, spacing: 7) {
+        return VStack(alignment: .leading, spacing: 5) {
             Text("TODAY'S ACTIVITIES").whoopReferenceOverline()
-            NoopCard(padding: 9) {
+            NoopCard(padding: 7) {
                 if items.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "figure.walk").foregroundStyle(StrandPalette.textTertiary)
@@ -1113,37 +1245,10 @@ struct OverviewDashboardView: View {
                             .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 5)
+                    .padding(.vertical, 3)
                 } else {
-                    VStack(spacing: 6) {
-                        ForEach(items) { item in
-                            let row = HStack(spacing: 9) {
-                                Image(systemName: item.symbol)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor)
-                                    .frame(width: 30, height: 30)
-                                    .background((item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor).opacity(0.12),
-                                                in: Circle())
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.title.uppercased())
-                                        .font(StrandFont.footnote.weight(.semibold))
-                                        .foregroundStyle(StrandPalette.textPrimary).lineLimit(1)
-                                    Text("\\(item.startTime) – \\(item.endTime)")
-                                        .font(StrandFont.caption).monospacedDigit()
-                                        .foregroundStyle(StrandPalette.textSecondary)
-                                }
-                                Spacer(minLength: 4)
-                                Text(item.metric)
-                                    .font(WhoopReferenceFont.metric(14)).monospacedDigit()
-                                    .foregroundStyle(StrandPalette.textPrimary)
-                            }
-                            .padding(.vertical, 5)
-                            if let workout = item.workout {
-                                NavigationLink(value: TabRoute.workoutDetail(startTs: workout.startTs, sport: workout.sport)) {
-                                    row
-                                }.buttonStyle(.plain)
-                            } else { row }
-                        }
+                    VStack(spacing: 4) {
+                        ForEach(items) { item in activityRow(item) }
                     }
                 }
             }
@@ -1151,13 +1256,13 @@ struct OverviewDashboardView: View {
                 Button { router.openTodayDetail(.workouts) } label: {
                     Label("Add Activity", systemImage: "plus")
                         .font(StrandFont.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.bordered)
                 Button { showLiveSession = true } label: {
                     Label("Start Activity", systemImage: "stopwatch")
                         .font(StrandFont.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.borderedProminent)
             }
