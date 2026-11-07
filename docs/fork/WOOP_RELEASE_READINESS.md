@@ -267,3 +267,15 @@ claim of all-sport classification or automatic background GPS. Successful writes
 non-reused follow-up analysis so workout-input changes do not leave cached training views stale.
 The VO2 article review is `VO2_PATENT_RESEARCH.md`; no unvalidated patent-derived score is introduced.
 Analysis migration required: no.
+
+## Dashboard refresh wiring
+
+Home and Today previously reloaded only the repository on pull. They now use one coalescing dashboard
+refresh: request a ready connected strap's existing manual sync, publish locally available current-day
+values, import a bounded three-day HealthKit window on iOS, then refresh the visible cache. Repeated
+pulls join one task instead of queueing duplicate requests. Health sync retains its authorization,
+write-back and source-resolution rules; disconnected bands are not represented as synced. The BLE
+transfer continues under the existing sync controller and completion callback after its request.
+A coordinator regression test pins coalescing and cache/import ordering. This removes a stale-refresh
+behavior and bounds manual Health reads; it does not establish a measured increase in radio throughput.
+Analysis migration required: no.

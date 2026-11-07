@@ -204,7 +204,10 @@ struct OverviewDashboardView: View {
             }
             // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
             // this screen was one of two Today styles with no way to pull for fresh data.
-            .refreshable { await repo.refresh() }
+            .refreshable {
+                if let model { await model.refreshDashboard() }
+                else { await repo.refresh() }
+            }
             #if os(iOS)
             // Scroll-to-top on an at-root Today re-tap; iOS-only — the tab shell is the only driver.
             .onChange(of: scrollToTopSignal) { _, _ in

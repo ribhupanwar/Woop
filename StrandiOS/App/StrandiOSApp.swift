@@ -214,6 +214,16 @@ struct StrandiOSApp: App {
         model.healthWriteBack = { [weak bridge] in
             _ = await bridge?.writeBackAfterNewData()
         }
+        model.healthReadSync = { [weak bridge, weak model] in
+            guard let bridge, let model else { return }
+            // A pull asks for fresh days, not a full-library import. The regular sync and
+            // explicit history tools retain their wider windows.
+            await HealthSyncRefreshCoordinator.run(sync: {
+                _ = await bridge.sync(days: 3)
+            }, refresh: {
+                await model.refreshAfterAppleHealthSync(authorized: bridge.auth == .authorized)
+            })
+        }
     }
 
     var body: some Scene {
