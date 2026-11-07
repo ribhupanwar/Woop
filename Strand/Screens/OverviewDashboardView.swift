@@ -1195,6 +1195,15 @@ struct OverviewDashboardView: View {
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
                 }
+            } else if item.isSleep {
+                // Sleep is a first-class activity in this feed. Its row must open the full
+                // Sleep screen just like a workout row opens its session detail.
+                Button { router.openSleep() } label: {
+                    row.frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open sleep details, \(item.metric), \(item.startTime) to \(item.endTime)")
             } else {
                 row
             }
