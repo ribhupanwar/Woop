@@ -72,18 +72,9 @@ mkdir -p "$STAGE/full/Payload" "$STAGE/lite/Payload"
 cp -R "$APP" "$STAGE/full/Payload/"
 cp -R "$APP" "$STAGE/lite/Payload/"
 
-# Thin only the staged AltStore copy. The watchOS app is unsupported by free-account sideloaders;
-# the 328 MB Nomic GGUF is optional because Coach keeps its on-device keyword retrieval fallback when
-# the semantic model is absent. Keep the full app, Watch app and model untouched in the Full IPA.
+# Thin only the staged AltStore copy — the watchOS app alone. The canonical build product and the
+# Full IPA stay intact.
 rm -rf "$STAGE/lite/Payload/$APP_NAME/Watch"
-NOMIC_MODEL_NAME="nomic-embed-text-v2-moe.Q4_K_M.gguf"
-FULL_NOMIC_MODEL="$(find "$STAGE/full/Payload/$APP_NAME" -name "$NOMIC_MODEL_NAME" -type f -print -quit)"
-[[ -n "$FULL_NOMIC_MODEL" ]] || { echo "Full IPA is missing the bundled Nomic model" >&2; exit 1; }
-LITE_NOMIC_MODEL="$(find "$STAGE/lite/Payload/$APP_NAME" -name "$NOMIC_MODEL_NAME" -type f -print -quit)"
-if [[ -n "$LITE_NOMIC_MODEL" ]]; then rm -f "$LITE_NOMIC_MODEL"; fi
-[[ -z "$(find "$STAGE/lite/Payload/$APP_NAME" -name "$NOMIC_MODEL_NAME" -type f -print -quit)" ]] || {
-  echo "Lite IPA still contains the optional Nomic model" >&2; exit 1;
-}
 
 [[ ! -e "$STAGE/lite/Payload/$APP_NAME/Watch" ]] || { echo "Lite IPA still has Watch" >&2; exit 1; }
 # Assert the widget SURVIVED, the inverse of the old check. What the bundle contains is the promise
