@@ -80,30 +80,10 @@ struct RootTabView: View {
     /// Whitespace alone is not a search — it would blank the index for a stray space.
     private var isSearchingMore: Bool { !SearchMatch.tokens(moreQuery).isEmpty }
 
-    /// The WHOOP-inspired overview is the default Today layout for fresh installs. Existing wearer
-    /// selections remain respected through AppStorage; the Settings picker can still select any layout.
-    /// This changes presentation only and leaves all five independent navigation stacks intact.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
-    private var todayDashboardStyle: TodayDashboardStyle {
-        TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview
-    }
-
-    /// The Today tab root, honouring the chosen dashboard style.
-    ///
-    /// The Heute-screen redesign prototype used to take priority here when its own
-    /// `noop.heuteRedesignEnabled` flag was on. The flag is no longer read and the prototype was deleted
-    /// on 2026-10-10, so no persisted `true` from an earlier build can resurrect it.
-    ///
-    /// Every style carries the same `AnalysisUpdateBanner` at its foot while an analysis migration runs.
-    @ViewBuilder private var todayTabRoot: some View {
-        Group {
-            switch todayDashboardStyle {
-            case .classic:  TodayView()
-            case .liquid:   LiquidTodayView()
-            case .trends:   TrendsDashboardView()
-            case .overview: OverviewDashboardView()
-            }
-        }
+    /// Home always opens the owner-approved reference dashboard, including on upgrades with a saved
+    /// legacy dashboard preference. Today has its own independent tab and navigation stack.
+    private var homeTabRoot: some View {
+        OverviewDashboardView()
         .safeAreaInset(edge: .bottom, spacing: 0) { AnalysisUpdateBanner() }
     }
 
@@ -200,7 +180,7 @@ struct RootTabView: View {
         // every tab.
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
-                tab(todayTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
                 tab(TodayView(), "Today", "calendar", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
                 tab(ScrollView { HealthspanSection().padding() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
