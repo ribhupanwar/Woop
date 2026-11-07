@@ -9,6 +9,18 @@ import StrandCore
 /// WorkoutSportTest intent for the same two sports.
 final class WorkoutCatalogTests: XCTestCase {
 
+    func testEverydaySearchTermsFindCanonicalActivities() {
+        XCTAssertTrue(WorkoutCatalog.matching("  DANCE ").contains { $0.name == "Dancing" })
+        XCTAssertTrue(WorkoutCatalog.matching("gym").contains { $0.name == "Strength" })
+        XCTAssertTrue(WorkoutCatalog.matching("indoor running").contains { $0.name == "Treadmill run" })
+        XCTAssertTrue(WorkoutCatalog.matching("breakdance").contains { $0.name == "Breakdancing" })
+        XCTAssertEqual(WorkoutCatalog.matching("").map(\.name), WorkoutCatalog.all.map(\.name))
+        XCTAssertTrue(WorkoutCatalog.matching("not-a-real-activity").isEmpty)
+        // Aliases are search metadata: they must never change persisted or imported labels.
+        XCTAssertNil(WorkoutCatalog.sport(named: "gym"))
+        XCTAssertEqual(WorkoutCatalog.sport(named: "Dancing")?.name, "Dancing")
+    }
+
     /// Asked for by a user. The Swift catalogue carries no Health Connect type, so what is pinned here
     /// is the label: it is the stored, cross-platform value and must read identically on Android.
     func testNordicWalkingIsOffered() {

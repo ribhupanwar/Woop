@@ -5,6 +5,15 @@ import StrandCore
 // The localized side of `WorkoutSource` (StrandCore): sport names in the wearer's language. Kept in the app so the
 // string catalogue keeps extracting them.
 extension WorkoutSource {
+    /// Local and confirmed detections can be corrected in place. Imported records keep their original
+    /// provenance; their list action offers a separate manual copy instead.
+    var canEditActivityDetails: Bool {
+        switch self {
+        case .detected, .manual, .confirmed: return true
+        case .whoop, .apple, .lifting, .activityFile, .hevy, .oura: return false
+        }
+    }
+
     /// Sport-cell text. The detector stores the machine token "detected"; show it as a neutral
     /// "Activity" (we don't claim a sport we didn't actually classify). WHOOP sport names arrive as
     /// concatenated camelCase (e.g. "TraditionalStrengthTraining"), which reads as one long

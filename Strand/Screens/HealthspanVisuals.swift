@@ -21,6 +21,67 @@ extension View {
 
 // MARK: - Age gauge
 
+/// Static decorative particles frame the existing calculated age. Their positions carry no health
+/// meaning; no animation timer, third-party image or synthetic measurement is used.
+struct HealthspanReferenceOrb: View {
+    let age: Double
+    let actualAge: Double
+
+    private var tint: Color {
+        age <= actualAge ? Color(red: 0.02, green: 0.85, blue: 0.65) : StrandPalette.agelessOld
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(stops: [
+                    .init(color: .black.opacity(0.75), location: 0),
+                    .init(color: .black.opacity(0.65), location: 0.55),
+                    .init(color: tint.opacity(0.12), location: 0.82),
+                    .init(color: tint.opacity(0.38), location: 0.98),
+                    .init(color: tint.opacity(0.08), location: 1)
+                ], center: .center, startRadius: 0, endRadius: 180))
+                .overlay { Circle().stroke(tint.opacity(0.65), lineWidth: 1) }
+                .shadow(color: tint.opacity(0.15), radius: 18)
+            Canvas { context, size in
+                let radius = min(size.width, size.height) * 0.5
+                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                for index in 0..<720 {
+                    let phase = Double(index) * 2.399963229728653
+                    let fraction = Double((index * 137 + 29) % 719) / 719
+                    let radial = 0.61 + 0.37 * sqrt(fraction)
+                    let x = center.x + CGFloat(cos(phase) * radial) * radius
+                    let y = center.y + CGFloat(sin(phase) * radial) * radius
+                    let diameter = CGFloat(0.8 + Double((index * 17) % 13) / 5)
+                    let dot = CGRect(x: x - diameter / 2, y: y - diameter / 2,
+                                     width: diameter, height: diameter)
+                    context.fill(Path(ellipseIn: dot),
+                                 with: .color(tint.opacity(0.16 + fraction * 0.66)))
+                }
+            }
+            .accessibilityHidden(true)
+            VStack(spacing: 8) {
+                Text(verbatim: HealthspanSection.years(age))
+                    .font(WhoopReferenceFont.score(52))
+                    .foregroundStyle(.white)
+                Text("WOOP AGE")
+                    .font(WhoopReferenceFont.label(15)).tracking(1.6)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                let words = Text(age <= actualAge ? "years younger" : "years older")
+                Text("\(Text(verbatim: HealthspanSection.years(abs(age - actualAge)))) \(words)")
+                    .font(WhoopReferenceFont.label(13))
+                    .foregroundStyle(tint)
+                    .lineLimit(1).minimumScaleFactor(0.75)
+            }
+            .padding(38)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: 380)
+        .padding(.vertical, 18)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// The AgeLess age on a half-circle gauge spanning ten years either side of the actual age, which sits at the
 /// top with its own mark. Younger, the arc fills from the young end to the age in an indigo to cyan glow; older,
 /// only the years past the actual age fill, in coral. The age and the years younger or older sit in the gauge's centre.

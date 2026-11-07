@@ -655,6 +655,31 @@ struct WorkoutActivityMetadataView: View {
 
 // MARK: - Presentation helper
 
+/// Dashboard activity buttons use the same recording flow as Live and Training. Keep the session
+/// observation here so workout state changes do not invalidate an entire dashboard.
+struct DashboardStartActivityButton<Label: View>: View {
+    @EnvironmentObject private var session: ActiveSessionController
+    @State private var showsPicker = false
+    private let label: Label
+
+    init(@ViewBuilder label: () -> Label) { self.label = label() }
+
+    var body: some View {
+        Button {
+            if session.kind != nil {
+                session.present()
+            } else {
+                showsPicker = true
+            }
+        } label: {
+            label
+        }
+        .workoutSelectionCover(isPresented: $showsPicker) {
+            StartWorkoutSheet(session: session)
+        }
+    }
+}
+
 extension View {
     /// Full-screen workout browser on iOS; plain sheet on macOS (no fullScreenCover there).
     @ViewBuilder

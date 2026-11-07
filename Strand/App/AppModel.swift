@@ -974,7 +974,24 @@ final class AppModel: ObservableObject {
     /// A closure rather than a direct reference because `HealthKitBridge` owns iOS-only HealthKit state
     /// while this type is shared with macOS, and the bridge is a `@StateObject` the app scene owns.
     var healthWriteBack: (() async -> Void)?
+    /// A bounded foreground import for a deliberate dashboard refresh, using existing Health gates.
+    var healthReadSync: (() async -> Void)?
     #endif
+
+    private let dashboardRefresh = DashboardRefreshCoordinator()
+
+    func refreshDashboard() async {
+        await dashboardRefresh.run(requestStrapSync: { [self] in
+            if live.historyReady && !live.backfilling { ble.syncNow() }
+        }, refreshLocal: { [self] in
+            await refreshCurrentDayActivity()
+            await repo.refresh()
+        }, syncHealth: { [self] in
+            #if os(iOS)
+            await healthReadSync?()
+            #endif
+        })
+    }
 
     /// Settle a re-score that is owed (#1538) — one an earlier attempt started and was killed partway
     /// through, or one a background trigger deferred rather than start where it could not finish.

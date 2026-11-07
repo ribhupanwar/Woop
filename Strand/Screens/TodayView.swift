@@ -243,6 +243,7 @@ struct TodayView: View {
     // passes clean tests), so it is left as a follow-up rather than rushed in alongside the load-path fix.
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var router: NavRouter
+    @Environment(\.dashboardAppModel) private var appModel
     /// The "update ringer", the bell in the top bar opens this inbox; dismissed Today cards post into it.
     @EnvironmentObject var updateStore: UpdateStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -566,6 +567,8 @@ struct TodayView: View {
     /// on the overview instead of Today). The full `WorkoutRow` is already in hand at the tap site, so
     /// there's no need for that screen's async by-key lookup at all.
     @State private var workoutDetailTarget: WorkoutDetailTarget?
+    @State private var showActivityEditor = false
+    @State private var activityEditingWorkout: WorkoutRow?
 
     // S4: the Synthesis card collapses to a single one-liner that expands on tap. Default collapsed so the
     // home screen stays tight; the live content (#506) is unchanged, only the chrome folds. @State (not
@@ -1545,7 +1548,10 @@ struct TodayView: View {
     }
 
     var body: some View {
-        ScreenScaffold(title: scaffoldTitle, onRefresh: { await repo.refresh() },
+        ScreenScaffold(title: scaffoldTitle, onRefresh: {
+            if let app = appModel { await app.refreshDashboard() }
+            else { await repo.refresh() }
+        },
                        // PERF (scroll): lazy column so the scaffold materialises Today's content on demand.
                        // Today supplies its own inner eager VStack (below), so the staggered section reveal is
                        // unchanged, this only defers building the single inner stack until it scrolls in.
@@ -1571,11 +1577,11 @@ struct TodayView: View {
                 }
                 if selectedDayOffset == 0, let currentDay = repo.today?.day,
                    currentDay == repo.days.last?.day { HealthAlertBanner() }
-                if selectedDayOffset == 0 { ActivitySuggestionPrompt() }
+                if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                 #else
                 if selectedDayOffset == 0, let currentDay = repo.today?.day,
                    currentDay == repo.days.last?.day { HealthAlertBanner() }
-                if selectedDayOffset == 0 { ActivitySuggestionPrompt() }
+                if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                 // Browse past days: chevrons + a date jump capped at today (no future days). Anchored to
                 // the LOGICAL day (the same anchor `selectedLogicalDay` uses) so the full-date label tracks
                 // the data shown in the 00:00-04:00 window instead of jumping a calendar day ahead (#14).
@@ -1790,6 +1796,14 @@ struct TodayView: View {
                 #else
                 .frame(width: 620, height: 720)
                 #endif
+        }
+        .sheet(isPresented: $showActivityEditor) {
+            ManualWorkoutSheet(editing: activityEditingWorkout, hrSource: repo) { row, replacing in
+                Task {
+                    await repo.saveManualWorkout(row, replacing: replacing)
+                    await appModel?.intelligence.analyzeRecent(allowDayReuse: false)
+                }
+            }
         }
         // Every Today layout/card affordance presents the same draft-based editor. Section-level buttons
         // deep-link to their child page; Cancel/Save semantics and Shown/Hidden rows stay identical.
@@ -4367,14 +4381,20 @@ struct TodayView: View {
         return rows.filter { $0.startTs >= cutoffTs }
     }
 
-    /// Sleep and workouts share one timeline. Keep the most recent 12 records, then render them
-    /// oldest-to-newest so the order reads naturally from morning to night.
+    /// Calendar boundaries for the selected day's timeline. Calendar arithmetic preserves 23/25-hour
+    /// daylight-saving days; the exclusive upper bound puts midnight into exactly one day.
+    static func activityDayWindow(day: Date, calendar: Calendar = .current) -> Range<Int>? {
+        guard let interval = calendar.dateInterval(of: .day, for: day) else { return nil }
+        return Int(interval.start.timeIntervalSince1970)..<Int(interval.end.timeIntervalSince1970)
+    }
+
+    /// Sleep belongs to its wake day; workouts belong to their start day. Historical day navigation
+    /// must never show a rolling recent feed under the selected day's heading.
     private var todayActivityItems: [TodayActivityFeedItem] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -13,
-                                           to: Calendar.current.startOfDay(for: Date()))
-            .map { Int($0.timeIntervalSince1970) } ?? 0
+        let day = Self.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay
+        guard let window = Self.activityDayWindow(day: day) else { return [] }
         let sleepItems = repo.sleeps
-            .filter { $0.endTs >= cutoff }
+            .filter { window.contains($0.endTs) }
             .map { session in
                 let start = session.effectiveStartTs
                 let end = session.endTs
@@ -4392,7 +4412,7 @@ struct TodayView: View {
                     workout: nil
                 )
             }
-        let workoutItems = Self.recentWorkoutsFeed(workouts).map { workout in
+        let workoutItems = workouts.filter { window.contains($0.startTs) }.map { workout in
             let sport = workout.sport.lowercased()
             let symbol: String
             if sport.contains("dance") {
@@ -4408,7 +4428,8 @@ struct TodayView: View {
             } else {
                 symbol = "figure.mixed.cardio"
             }
-            let metric = workout.strain.map { String(format: "%.1f", $0) } ?? workoutDuration(workout)
+            let metric = workout.strain.map { UnitFormatter.effortDisplay($0, scale: effortScale) }
+                ?? workoutDuration(workout)
             return TodayActivityFeedItem(
                 id: "workout-\(workout.startTs)-\(workout.sport)",
                 startTs: workout.startTs,
@@ -4421,8 +4442,9 @@ struct TodayView: View {
                 workout: workout
             )
         }
-        let newestTwelve = Array((sleepItems + workoutItems).sorted { $0.startTs > $1.startTs }.prefix(12))
-        return newestTwelve.sorted { $0.startTs < $1.startTs }
+        return (sleepItems + workoutItems).sorted {
+            $0.startTs == $1.startTs ? $0.id < $1.id : $0.startTs < $1.startTs
+        }
     }
 
     @ViewBuilder
@@ -4430,7 +4452,7 @@ struct TodayView: View {
         let items = todayActivityItems
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("TODAY'S ACTIVITIES")
+                Text(selectedDayOffset == 0 ? "TODAY'S ACTIVITIES" : "ACTIVITIES")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .tracking(1.0)
                     .foregroundStyle(.white)
@@ -4510,8 +4532,18 @@ struct TodayView: View {
                         if let workout = item.workout {
                             Button { workoutDetailTarget = WorkoutDetailTarget(row: workout) } label: { row }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    if WorkoutSource.classify(workout.source).canEditActivityDetails {
+                                        Button("Edit activity type and time…") {
+                                            activityEditingWorkout = workout
+                                            showActivityEditor = true
+                                        }
+                                    }
+                                }
                         } else {
-                            row
+                            Button { router.openSleep() } label: { row }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Open sleep details")
                         }
                     }
                 }
@@ -4519,7 +4551,8 @@ struct TodayView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    router.openTodayDetail(.workouts)
+                    activityEditingWorkout = nil
+                    showActivityEditor = true
                 } label: {
                     Label("ADD ACTIVITY", systemImage: "plus")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -4531,7 +4564,7 @@ struct TodayView: View {
                 }
                 .buttonStyle(.plain)
 
-                Button { showLiveSession = true } label: {
+                DashboardStartActivityButton {
                     Label("START ACTIVITY", systemImage: "stopwatch")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .tracking(0.8)

@@ -3608,10 +3608,10 @@ final class HealthKitBridge: ObservableObject {
     // MARK: - Entitlement detection (#348)
 
     /// True when this running build actually carries the `com.apple.developer.healthkit` entitlement —
-    /// i.e. it can genuinely reach Apple Health. False for a free-Apple-ID / AltStore / Sideloadly
-    /// re-sign, which strips the HealthKit capability: the framework links and `isHealthDataAvailable()`
-    /// is still true, but `requestAuthorization` is a dead-end and the app can never appear under
-    /// Settings › Health › Data Access & Devices.
+    /// i.e. its profile allows a HealthKit request. A sideloader can omit the capability even though
+    /// the framework links and `isHealthDataAvailable()` is true. Basic HealthKit is listed by Apple
+    /// for free developer accounts too; diagnose the profile rather than assuming access by team price.
+    /// The signed application and user authorization still determine actual access.
     ///
     /// Resolution order (most authoritative first), mirroring `IOSDiagnostics`'s profile parse:
     ///  1. If an `embedded.mobileprovision` is present (every dev / sideloaded / TestFlight build ships
@@ -3641,7 +3641,7 @@ final class HealthKitBridge: ObservableObject {
               let entitlements = plist["Entitlements"] as? [String: Any] else {
             return true
         }
-        // The key is present (and truthy) on an entitled build; a free re-sign omits it entirely.
+        // A re-signing tool that did not enable HealthKit on the App ID can omit this key.
         return entitlements["com.apple.developer.healthkit"] != nil
     }()
 

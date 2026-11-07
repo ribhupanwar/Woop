@@ -14,6 +14,7 @@ struct HealthspanDetailView: View {
     var showsDone = true
     @State private var index: Int
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.woopReferenceUI) private var referenceUI
 
     init(snapshot: HealthspanSnapshot, showsDone: Bool = true) {
         self.snapshot = snapshot
@@ -51,7 +52,10 @@ struct HealthspanDetailView: View {
             }
             .padding(NoopMetrics.space4)
         }
-        .background(StrandPalette.surfaceBase)
+        .background {
+            if referenceUI { WoopReferenceCanvas().ignoresSafeArea() }
+            else { StrandPalette.surfaceBase }
+        }
         .navigationTitle(Text("Healthspan"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

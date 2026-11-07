@@ -202,7 +202,7 @@ struct WorkoutsView: View {
         let resolved = effectiveRange
         let unscopedRows = sessions(for: resolved)
         let trendRows = recoveryTrendRows(from: unscopedRows)
-        return ScreenScaffold(title: "Workouts", subtitle: "Every session, threaded together.",
+        return ScreenScaffold(title: "Activity",
                        onRefresh: { await repo.refresh() },
                        // PERF: the column ends in the full "All Sessions" log (the breakdown grid, the
                        // zones card, and a row-per-session table). On a large imported history the eager
@@ -542,7 +542,7 @@ struct WorkoutsView: View {
     /// the user can fine-tune via Edit afterwards).
     private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
-                                        "CrossFit", "Hiking", "Tennis"]
+                                        "CrossFit", "Hiking", "Tennis", "Dancing"]
 
     // MARK: - Range control
 

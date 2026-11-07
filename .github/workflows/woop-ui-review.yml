@@ -1,0 +1,101 @@
+name: Woop reference UI review
+
+on:
+  push:
+    branches: [codex/consolidated-release]
+    paths:
+      - .github/workflows/woop-ui-review.yml
+      - WoopUIReviewTests/**
+      - StrandiOS/**
+      - StrandiOSShared/**
+      - StrandiOSWidgets/**
+      - NOOPWatch*/**
+      - Strand/**
+      - Packages/**
+      - Tools/bootstrap-nomic.sh
+      - project.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: woop-ui-review-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install XcodeGen
+        run: |
+          xcodebuild -version
+          if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
+      - name: Restore verified build inputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            Vendor/Nomic/llama.xcframework
+            Vendor/Nomic/Resources/nomic-embed-text-v2-moe.Q4_K_M.gguf
+          key: macos-26-nomic-${{ hashFiles('Tools/bootstrap-nomic.sh') }}
+      - name: Verify build inputs and generate project
+        run: |
+          bash Tools/bootstrap-nomic.sh
+          xcodegen generate
+      - name: Choose an available iPhone simulator
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - "$RUNNER_TEMP/simulators.json" >> "$GITHUB_ENV" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1]))
+          phones = [(runtime, device) for runtime, devices in data['devices'].items()
+                    if 'iOS' in runtime for device in devices
+                    if device.get('isAvailable') and 'iPhone' in device['name']]
+          if not phones:
+              raise SystemExit('No available iPhone simulator')
+          phones.sort(key=lambda pair: ('Pro Max' in pair[1]['name'], pair[0], pair[1]['name']), reverse=True)
+          runtime, device = phones[0]
+          print('WOOP_SIMULATOR=' + device['udid'])
+          print('WOOP_SIMULATOR_NAME=' + device['name'])
+          print('WOOP_SIMULATOR_RUNTIME=' + runtime)
+          PY
+      - name: Boot simulator
+        run: |
+          xcrun simctl boot "$WOOP_SIMULATOR" || true
+          xcrun simctl bootstatus "$WOOP_SIMULATOR" -b
+          xcrun simctl status_bar "$WOOP_SIMULATOR" override --time '9:41' --batteryState charged --batteryLevel 100
+      - name: Run navigation checks and capture empty-state UI
+        run: |
+          set -euo pipefail
+          xcodebuild test -project Strand.xcodeproj -scheme WoopUIReview \
+            -destination "platform=iOS Simulator,id=$WOOP_SIMULATOR" \
+            -derivedDataPath "$RUNNER_TEMP/woop-ui-derived" \
+            -resultBundlePath "$RUNNER_TEMP/WoopUIReview.xcresult" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$RUNNER_TEMP/woop-ui-review.log"
+      - name: Export screenshots and review provenance
+        if: always()
+        run: |
+          mkdir -p ui-review
+          if [ -d "$RUNNER_TEMP/WoopUIReview.xcresult" ]; then
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/WoopUIReview.xcresult" --output-path ui-review/attachments
+          fi
+          {
+            echo "Source: $GITHUB_SHA"
+            echo "Simulator: $WOOP_SIMULATOR_NAME ($WOOP_SIMULATOR_RUNTIME)"
+            echo 'Empty simulator store. No health scores or activities were seeded.'
+            echo 'These are candidate UI screenshots, not proof of matching the supplied populated reference.'
+            echo 'Physical-device iOS 27 screenshots and real data remain a separate verification step.'
+          } > ui-review/REVIEW.txt
+      - name: Upload screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: woop-reference-ui-review
+          path: |
+            ui-review/**
+            ${{ runner.temp }}/woop-ui-review.log

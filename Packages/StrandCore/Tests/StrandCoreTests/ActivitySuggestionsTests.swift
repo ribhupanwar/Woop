@@ -7,6 +7,65 @@ import WhoopProtocol
 final class ActivitySuggestionsTests: XCTestCase {
     typealias S = ActivitySuggestions
 
+    func testAutomaticSaveUsesLocomotionLabelsAndLeavesHeartRateOnlySportUnknown() {
+        let candidates = [candidate(10_000, track: "walk", kinds: ["run"]), candidate(14_000)]
+        let suggestions = S.resolve(candidates: candidates, answers: [], workouts: [], settings: .init())
+        let source = WorkoutSource.automaticDetectionSource(computedId: "recording-strap-noop")
+        let rows = S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 9_000,
+                                   now: 20_000, source: source)
+        XCTAssertEqual(rows.map(\.sport), ["Running", "detected"])
+        XCTAssertEqual(rows.map(\.avgHr), [128, 128])
+        XCTAssertTrue(rows.allSatisfy { $0.energyKcal == nil && $0.strain == nil && $0.distanceM == nil })
+        XCTAssertEqual(WorkoutSource.classify(source), .detected)
+        XCTAssertFalse(WorkoutSource.classify(source).isWearerLogged)
+        XCTAssertEqual(WorkoutSource.detectedOwner(source: source), "recording-strap-noop")
+        XCTAssertEqual(WorkoutPhysiology.deviceIds(source: source, activeStrapId: "different-strap",
+                                                   importedIds: ["different-strap"]), ["recording-strap"])
+    }
+
+    func testAutomaticSaveWaitsForSettlementAndNeverBackfillsBeforeActivation() {
+        let suggestions = S.resolve(candidates: [candidate(10_000)], answers: [], workouts: [], settings: .init())
+        let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")
+        XCTAssertTrue(S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 10_001,
+                                      now: 20_000, source: source).isEmpty)
+        XCTAssertTrue(S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 9_000,
+                                      now: 12_399, source: source).isEmpty)
+        XCTAssertEqual(S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 9_000,
+                                       now: 12_400, source: source).count, 1)
+    }
+
+    func testAutomaticSavePreservesImportsDismissalsAnswersAndExistingAutomaticRows() {
+        let candidateRow = candidate(10_000)
+        let suggestions = S.resolve(candidates: [candidateRow], answers: [], workouts: [], settings: .init())
+        let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")
+        func save(_ values: [S.Suggestion], _ existing: [WorkoutRow] = [], _ dismissed: [Range<Int>] = []) -> [WorkoutRow] {
+            S.automaticRows(values, existing: existing, dismissed: dismissed, activatedAt: 9_000,
+                            now: 20_000, source: source)
+        }
+        XCTAssertTrue(save(suggestions, [workout(9_900, 11_000, source: "apple-health")]).isEmpty)
+        XCTAssertTrue(save(suggestions, [], [9_999..<12_000]).isEmpty)
+        let answer = S.answer(suggestions[0], .housework, sport: nil, origin: .today,
+                              shownAt: nil, now: 19_000, workout: nil)
+        XCTAssertTrue(save(S.resolve(candidates: [candidateRow], answers: [answer], workouts: [], settings: .init())).isEmpty)
+        let saved = save(suggestions)
+        XCTAssertEqual(saved.count, 1)
+        XCTAssertTrue(save(suggestions, saved).isEmpty)
+        let reloaded = S.resolve(candidates: [candidateRow], answers: [], workouts: saved, settings: .init())
+        XCTAssertEqual(reloaded.first?.state, .logged)
+        XCTAssertTrue(S.toAsk(reloaded, now: 20_000).isEmpty)
+        // A later sync can extend a candidate; overlap must still prevent another physical session.
+        let grown = S.resolve(candidates: [candidate(9_900, minutes: 40)], answers: [], workouts: [], settings: .init())
+        XCTAssertTrue(save(grown, saved).isEmpty)
+    }
+
+    func testAutomaticSaveDoesNotPromoteLowLoadOrDisabledWalks() {
+        let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")
+        let suggestions = S.resolve(candidates: [candidate(10_000, load: 1), candidate(14_000, track: "walk", kinds: ["walk"])],
+                                    answers: [], workouts: [], settings: .init(walks: false))
+        XCTAssertTrue(S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 9_000,
+                                      now: 20_000, source: source).isEmpty)
+    }
+
     private func candidate(_ start: Int, minutes: Int = 30, track: String = "heartRate", load: Double = 100,
                            kinds: [String] = ["strength", "cycle", "other"]) -> ActivityCandidateRow {
         ActivityCandidateRow(deviceId: "my-whoop", track: track, startTs: start, endTs: start + minutes * 60,
