@@ -122,7 +122,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["today": 0, "trends": 1, "training": 2, "sleep": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 1, "activity": 2, "healthspan": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -199,10 +199,10 @@ struct RootTabView: View {
         // every tab.
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
-                tab(todayTabRoot, "Today", "square.grid.2x2", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
-                tab(TrendsView(), "Trends", "chart.line.uptrend.xyaxis", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
-                tab(TrainingHubView(), "Training", "dumbbell.fill", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(SleepView(), "Sleep", "bed.double", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
+                tab(todayTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(TodayView(), "Today", "calendar", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
+                tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
+                tab(ScrollView { HealthspanSection().padding() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
             // Overview Dashboard mockup fidelity (2026-08-31): the active tab reads green, not the
@@ -329,13 +329,12 @@ struct RootTabView: View {
                 tabPaths[4] = NavigationPath([MoreDestination.coach])
                 router.requestedDestination = nil
             case .trends:
-                // Trends is a primary tab on iPhone (not a pillar sheet) — switch to it.
-                withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = 1 }
+                // Trends remains available as its own destination after the primary tab redesign.
+                routedPillar = .trends
                 router.requestedDestination = nil
             case .sleep:
-                // Sleep is a primary tab too. Raised by the morning card's "Fix it" when last night's
-                // wake time looks truncated, so the editor is one tap away rather than a hunt.
-                withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = 3 }
+                // Keep Sleep deep links working without sending users to the Healthspan tab.
+                routedPillar = .sleep
                 router.requestedDestination = nil
             case .goals:
                 // Goal widget, lock-screen accessory, notification or Siri: the overview (and the goal)
