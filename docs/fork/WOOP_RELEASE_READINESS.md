@@ -221,6 +221,9 @@ Bundle `com.noopapp.noopai`, version `13.0.0`, app source `ea260337`. This chang
 and does not include later dashboard, activity-editor or HR-detail fixes. The full candidate build
 remains separate. A successful Health permission request AND actual data import on the phone are the
 next acceptance checks; do not describe this compatibility repack as the completed Woop release.
+The owner has now reported that Health permission was granted and actual Apple Watch data imported
+successfully on the free SideStore setup. Treat that as a user-confirmed compatibility result and
+preserve the signing/provisioning route during the redesign; it does not verify unrelated new UI code.
 The new preparation step's codesign verification runs on macOS CI; local Linux can check shell syntax
 but cannot validate iOS code signing or the user's installation.
 
@@ -228,3 +231,17 @@ Without direct HealthKit access, core WHOOP Bluetooth collection and on-device a
 from Apple Health. Existing Health export ZIP import and `ShortcutHealthImport` provide alternative
 input paths; `ShortcutHealthExport` sends strap data in the other direction. Shortcuts require setup,
 permissions and execution and must not be presented as a continuous live Watch sensor connection.
+
+## Reference layout expansion
+
+Analysis migration required: no. The iPhone redesign now applies a shared dark canvas, flat reference
+card surfaces and reference header typography across screens. A five-item black navigation bar keeps
+Home, Today, Activity, Healthspan and More, including the existing navigation stacks and reselect
+behavior. Home has a floating quick-action button and full-width activity rows; activity detail adds a
+strain hero using the existing recorded value. New/unconfigured iPhone installs display effort on the
+0–21 axis; explicit saved preferences and canonical stored values are retained.
+
+`WoopUIReview` is a separate simulator UI-test scheme. Its workflow checks tab selection and the Home
+quick-action entry, and captures seven empty-store screens without generating health data. Simulator
+captures are review evidence, not a claim of pixel equality with the supplied populated screenshot.
+The current environment lacks Xcode/Swift; Apple compilation and UI execution require the macOS jobs.

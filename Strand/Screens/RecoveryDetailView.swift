@@ -33,6 +33,7 @@ struct RecoveryDetailView: View {
     @State private var loaded = false
     @State private var historyRange: RecoveryHistoryRange = .week
     @State private var historyEndDay = ""
+    @Environment(\.woopReferenceUI) private var referenceUI
 
     private var score: Double? { display.pct }
 
@@ -80,7 +81,10 @@ struct RecoveryDetailView: View {
             .padding(NoopMetrics.screenPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(StrandPalette.surfaceBase.ignoresSafeArea())
+        .background {
+            if referenceUI { WoopReferenceCanvas().ignoresSafeArea() }
+            else { StrandPalette.surfaceBase.ignoresSafeArea() }
+        }
         .navigationTitle("Recovery")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

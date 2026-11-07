@@ -217,6 +217,22 @@ struct OverviewDashboardView: View {
         .background(LinearGradient(colors: [WoopHomePalette.canvasTop, WoopHomePalette.canvasBottom],
                                    startPoint: .top, endPoint: .bottom).ignoresSafeArea())
         .environment(\.colorScheme, .dark)
+        .overlay(alignment: .bottomTrailing) {
+            Button { router.requestQuickActions() } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 26, weight: .regular))
+                    .foregroundStyle(.black)
+                    .frame(width: 54, height: 54)
+                    .background(Color.white, in: Circle())
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Quick actions")
+            .accessibilityHint("Start an activity, log your journal or open other actions")
+            .accessibilityIdentifier("woop.home.quickActions")
+            .padding(.trailing, NoopMetrics.screenPadding)
+            .padding(.bottom, 18)
+        }
         .simultaneousGesture(daySwipeGesture)
         // The visible-section set joins the id because `load()` now skips the reads that only feed a
         // hidden section: showing one has to re-run the load that fills it, or it would render empty
@@ -1132,7 +1148,8 @@ struct OverviewDashboardView: View {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = .current
-        formatter.dateFormat = "h:mm a"
+        let day = Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(timestamp)))
+        formatter.dateFormat = day == selectedDayKey ? "h:mm a" : "'['EEE']' h:mm a"
         return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
     }
 
@@ -1172,7 +1189,7 @@ struct OverviewDashboardView: View {
             return OverviewActivityItem(
                 id: "workout-\(workout.startTs)-\(workout.sport)", startTs: workout.startTs,
                 title: WorkoutSource.localizedDisplaySport(workout.sport),
-                metric: workout.strain.map { UnitFormatter.effortDisplay($0, scale: .whoop) }
+                metric: workout.strain.map { UnitFormatter.effortDisplay($0, scale: effortScale) }
                     ?? String(format: "%d:%02d", minutes / 60, minutes % 60),
                 startTime: activityClockString(workout.startTs), endTime: activityClockString(workout.endTs),
                 symbol: symbol, isSleep: false, workout: workout
@@ -1212,21 +1229,12 @@ struct OverviewDashboardView: View {
         .background(WoopHomePalette.activityRow, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         return Group {
             if let workout = item.workout {
-                HStack(spacing: 5) {
-                    NavigationLink(value: TabRoute.workoutDetail(startTs: workout.startTs, sport: workout.sport)) {
-                        row.frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                    Menu { activityRowMenu(workout) } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(StrandPalette.textTertiary)
-                            .frame(width: 28, height: 30)
-                            .contentShape(Rectangle())
-                    }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
+                NavigationLink(value: TabRoute.workoutDetail(startTs: workout.startTs, sport: workout.sport)) {
+                    row.frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .buttonStyle(.plain)
+                .contextMenu { activityRowMenu(workout) }
+                .accessibilityHint("Open activity details; touch and hold for editing options")
             } else if item.isSleep {
                 // Sleep is a first-class activity in this feed. Its row must open the full
                 // Sleep screen just like a workout row opens its session detail.

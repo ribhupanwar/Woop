@@ -169,27 +169,19 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        // The platform tab bar drives navigation. NOOP drew its own floating bar for one reason — a
-        // native TabView can't host a centre item that overflows the bar, and the signature gold FAB
-        // sat there. That FAB has since moved to the top-right of each screen's header, which left a
-        // custom bar doing exactly what the native one does, minus the system's safe-area handling,
-        // Dynamic Type and (on iOS 26) Liquid Glass. Reverting to native also stops this shell
-        // diverging from upstream, which is where the duplicated-bar merge damage came from.
-        //
-        // The ZStack stays for the draggable CoachFloatingButton below, which still floats over
-        // every tab.
+        // TabView retains all five navigation stacks. The reference bar only drives its existing
+        // selection binding, so re-tap, pop-to-root and scroll restoration keep one owner.
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
                 tab(TodayView(), "Today", "calendar", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(ScrollView { HealthspanSection().padding() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
+                tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
-            // Overview Dashboard mockup fidelity (2026-08-31): the active tab reads green, not the
-            // configurable Accent colour. `.tint()` colours the whole bar uniformly — there is no native
-            // per-tab-item override — so this is deliberately a global change across all four tabs.
-            .tint(StrandPalette.chargeColor)
+            // White active navigation follows the supplied dark reference; score colors stay local.
+            .tint(StrandPalette.textPrimary)
+            .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
             // #1841: the same "Hide bar when scrolling" preference the macOS settings screen exposes.
             // Here the system owns the behaviour — iOS 26's tab bar MINIMISES to a pill on scroll down
             // rather than sliding away entirely, so this is the platform's read of the same intent.
@@ -222,6 +214,10 @@ struct RootTabView: View {
             )
             // The minimized running workout, above the tab bar on every tab.
             .activeSessionMiniBar()
+            // Outside the mini-bar inset so an active workout remains ABOVE the navigation bar.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !bottomBarAutoHide { referenceTabBar }
+            }
 
             // Draggable floating Coach button — an alternative entry to the Today banner, honouring the
             // user's Coach-entry preference. Floats over every tab; a tap opens the chat.
@@ -229,6 +225,8 @@ struct RootTabView: View {
                 CoachFloatingButton(isPresented: $showCoach)
             }
         }
+        .preferredColorScheme(.dark)
+        .environment(\.woopReferenceUI, true)
         .coachCover(isPresented: $showCoach, coach: coach)
         .activeSessionPresentation()
         .task { await session.restoreIfNeeded() }
@@ -518,6 +516,40 @@ struct RootTabView: View {
     /// Calm-easing curve (cubic-bezier(0.22,1,0.36,1)) at the README sheet-present duration.
     private static let sheetEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
 
+    private var referenceTabBar: some View {
+        HStack(spacing: 0) {
+            referenceTabItem(0, "Home", "house")
+            referenceTabItem(1, "Today", "calendar")
+            referenceTabItem(2, "Activity", "figure.run")
+            referenceTabItem(3, "Healthspan", "heart.text.square")
+            referenceTabItem(4, "More", "line.3.horizontal")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(WoopHomePalette.canvasBottom.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
+        }
+    }
+
+    private func referenceTabItem(_ tag: Int, _ title: LocalizedStringKey, _ symbol: String) -> some View {
+        Button { nativeTabSelection.wrappedValue = tag } label: {
+            VStack(spacing: 5) {
+                Image(systemName: symbol).font(.system(size: 22, weight: .regular))
+                Text(title).font(WhoopReferenceFont.body(10))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(selectedTab == tag ? Color.white : Color.white.opacity(0.44))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(selectedTab == tag ? .isSelected : [])
+        .accessibilityIdentifier("woop.tab.\(tag)")
+    }
+
     // MARK: - Quick-action sheet
 
     /// Routes a chosen quick action to the existing screen, or shows the action menu itself.
@@ -636,6 +668,7 @@ struct RootTabView: View {
         // Drive this tab's root scroll-to-top on an at-root re-tap (#198 follow-up); read by ScreenScaffold
         // / LiquidTodayView inside. Only THIS tab's token changes on its reselect, so the others don't scroll.
         .environment(\.scrollToTopSignal, scrollSignal)
+        .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
         .tabItem { Label(title, systemImage: icon) }
     }
 
@@ -703,6 +736,7 @@ struct RootTabView: View {
         .onChangeCompat(of: path.wrappedValue.count) { _ in moreSearchFocused = false }
         // Scroll the More index to the top on an at-root re-tap (#198 follow-up); read by its ScreenScaffold.
         .environment(\.scrollToTopSignal, scrollSignal)
+        .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
         .tabItem { Label("More", systemImage: "ellipsis") }
     }
 

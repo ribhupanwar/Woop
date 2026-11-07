@@ -35,6 +35,7 @@ struct WorkoutDetailView: View {
     @StateObject private var profile = ProfileStore()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dashboardAppModel) private var appModel
+    @Environment(\.woopReferenceUI) private var referenceUI
     @State private var showsActivityEditor = false
     @State private var heartRateReadout: WorkoutRow?
     private var displayedAverageHR: Int? { heartRateReadout?.avgHr ?? row.avgHr }
@@ -108,6 +109,7 @@ struct WorkoutDetailView: View {
                        // needs no extra macOS NavigationStack of its own.
                        topBackground: liquidScaffoldSky()) {
             headerCard
+            if referenceUI, let strain = row.strain { referenceStrainHero(strain) }
             GoalContributionNote(row: row)
             statStrip
             routeCard
@@ -123,7 +125,7 @@ struct WorkoutDetailView: View {
             workoutExportCard
             zonesCard
             heartRateRecoveryCard
-            if let strain = row.strain {
+            if !referenceUI, let strain = row.strain {
                 effortCard(strain: strain)
             }
             SessionRPECard(startTs: row.startTs, sport: row.sport,
@@ -376,6 +378,35 @@ struct WorkoutDetailView: View {
                 sourceBadge(row.source)
             }
         }
+    }
+
+    private func referenceStrainHero(_ strain: Double) -> some View {
+        let value = UnitFormatter.effortValue(strain, scale: effortScale)
+        return VStack(spacing: 14) {
+            Text("ACTIVITY STRAIN").whoopReferenceOverline()
+            ZStack {
+                Circle().stroke(Color.white.opacity(0.12), lineWidth: 12)
+                Circle().trim(from: 0, to: min(1, max(0, strain / 100)))
+                    .stroke(WoopHomePalette.strain, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                VStack(spacing: 4) {
+                    Text(UnitFormatter.effortDisplay(strain, scale: effortScale))
+                        .font(WhoopReferenceFont.score(48))
+                        .foregroundStyle(StrandPalette.textPrimary)
+                    Text(effortScale == .whoop ? "of 21" : "of 100")
+                        .font(WhoopReferenceFont.label(11))
+                        .foregroundStyle(StrandPalette.textSecondary)
+                }
+            }
+            .frame(width: 200, height: 200)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Activity strain \(value.formatted())")
+            Text("Recorded session load")
+                .font(WhoopReferenceFont.body(12))
+                .foregroundStyle(StrandPalette.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
     }
 
     // MARK: - Stat strip

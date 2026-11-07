@@ -100,6 +100,7 @@ public struct NoopPanelSurface: View {
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.noopCardKind) private var environmentKind
     @Environment(\.noopQuietCardRims) private var quietRims
+    @Environment(\.woopReferenceUI) private var referenceUI
     /// Reduce Transparency is enforced HERE rather than at each caller that passes a `surfaceOpacity`.
     /// The setting was previously honoured in three places (`StrandCard`, `LiquidTodayView`,
     /// `LiquidPrimitives`), which meant it held exactly as long as every future caller remembered it —
@@ -144,13 +145,15 @@ public struct NoopPanelSurface: View {
         shape
             .fill(
                 LinearGradient(
-                    colors: [NoopVisualStyle.surfaceTop, NoopVisualStyle.surfaceBottom],
+                    colors: referenceUI
+                        ? [WoopHomePalette.activityCard, WoopHomePalette.activityCard]
+                        : [NoopVisualStyle.surfaceTop, NoopVisualStyle.surfaceBottom],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             )
             .overlay {
-                if let tint {
+                if let tint, !referenceUI || (kind ?? environmentKind) == .state {
                     shape.fill(
                         LinearGradient(
                             colors: [tint.opacity(0.055), tint.opacity(0.012), .clear],
@@ -197,11 +200,14 @@ public struct NoopPanelSurface: View {
 /// Shared edge-to-edge chrome for sheet and split-view headers. Unlike a card it has no
 /// rounded outline or elevation, but it uses the same top-lit surface ramp and divider token.
 public struct NoopChromeSurface: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     public init() {}
 
     public var body: some View {
         LinearGradient(
-            colors: [NoopVisualStyle.surfaceTop, NoopVisualStyle.surfaceBottom],
+            colors: referenceUI
+                ? [WoopHomePalette.activityCard, WoopHomePalette.activityCard]
+                : [NoopVisualStyle.surfaceTop, NoopVisualStyle.surfaceBottom],
             startPoint: .top,
             endPoint: .bottom
         )

@@ -4425,7 +4425,8 @@ struct TodayView: View {
             } else {
                 symbol = "figure.mixed.cardio"
             }
-            let metric = workout.strain.map { String(format: "%.1f", $0) } ?? workoutDuration(workout)
+            let metric = workout.strain.map { UnitFormatter.effortDisplay($0, scale: effortScale) }
+                ?? workoutDuration(workout)
             return TodayActivityFeedItem(
                 id: "workout-\(workout.startTs)-\(workout.sport)",
                 startTs: workout.startTs,

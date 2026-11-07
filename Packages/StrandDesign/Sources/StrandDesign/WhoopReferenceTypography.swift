@@ -1,5 +1,25 @@
 import SwiftUI
 
+private struct WoopReferenceUIKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+public extension EnvironmentValues {
+    /// The iPhone reference redesign opts in; shared macOS and legacy presentation remain separate.
+    var woopReferenceUI: Bool {
+        get { self[WoopReferenceUIKey.self] }
+        set { self[WoopReferenceUIKey.self] = newValue }
+    }
+}
+
+public struct WoopReferenceCanvas: View {
+    public init() {}
+    public var body: some View {
+        LinearGradient(colors: [WoopHomePalette.canvasTop, WoopHomePalette.canvasBottom],
+                       startPoint: .top, endPoint: .bottom)
+    }
+}
+
 /// Dark Home surfaces and metric accents matched to the owner's supplied activity-dashboard reference.
 /// These are independent color tokens; no third-party artwork or font files are bundled.
 public enum WoopHomePalette {
