@@ -568,6 +568,7 @@ struct TodayView: View {
     /// there's no need for that screen's async by-key lookup at all.
     @State private var workoutDetailTarget: WorkoutDetailTarget?
     @State private var showActivityEditor = false
+    @State private var activityEditingWorkout: WorkoutRow?
 
     // S4: the Synthesis card collapses to a single one-liner that expands on tap. Default collapsed so the
     // home screen stays tight; the live content (#506) is unchanged, only the chrome folds. @State (not
@@ -1573,11 +1574,11 @@ struct TodayView: View {
                 }
                 if selectedDayOffset == 0, let currentDay = repo.today?.day,
                    currentDay == repo.days.last?.day { HealthAlertBanner() }
-                if selectedDayOffset == 0 { ActivitySuggestionPrompt() }
+                if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                 #else
                 if selectedDayOffset == 0, let currentDay = repo.today?.day,
                    currentDay == repo.days.last?.day { HealthAlertBanner() }
-                if selectedDayOffset == 0 { ActivitySuggestionPrompt() }
+                if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                 // Browse past days: chevrons + a date jump capped at today (no future days). Anchored to
                 // the LOGICAL day (the same anchor `selectedLogicalDay` uses) so the full-date label tracks
                 // the data shown in the 00:00-04:00 window instead of jumping a calendar day ahead (#14).
@@ -1794,7 +1795,7 @@ struct TodayView: View {
                 #endif
         }
         .sheet(isPresented: $showActivityEditor) {
-            ManualWorkoutSheet(hrSource: repo) { row, replacing in
+            ManualWorkoutSheet(editing: activityEditingWorkout, hrSource: repo) { row, replacing in
                 Task {
                     await repo.saveManualWorkout(row, replacing: replacing)
                     await appModel?.intelligence.analyzeRecent(allowDayReuse: false)
@@ -4527,6 +4528,14 @@ struct TodayView: View {
                         if let workout = item.workout {
                             Button { workoutDetailTarget = WorkoutDetailTarget(row: workout) } label: { row }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    if WorkoutSource.classify(workout.source).canEditActivityDetails {
+                                        Button("Edit activity type and time…") {
+                                            activityEditingWorkout = workout
+                                            showActivityEditor = true
+                                        }
+                                    }
+                                }
                         } else {
                             Button { router.openSleep() } label: { row }
                                 .buttonStyle(.plain)
@@ -4538,6 +4547,7 @@ struct TodayView: View {
 
             HStack(spacing: 10) {
                 Button {
+                    activityEditingWorkout = nil
                     showActivityEditor = true
                 } label: {
                     Label("ADD ACTIVITY", systemImage: "plus")

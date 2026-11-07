@@ -34,6 +34,8 @@ struct WorkoutDetailView: View {
     @EnvironmentObject private var repo: Repository
     @StateObject private var profile = ProfileStore()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dashboardAppModel) private var appModel
+    @State private var showsActivityEditor = false
 
     @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
     @AppStorage(UnitPrefs.distanceSystemKey) private var distanceSystemRaw = ""
@@ -125,12 +127,31 @@ struct WorkoutDetailView: View {
                            durationS: row.durationS ?? Double(row.endTs - row.startTs))
         }
         .toolbar {
+            if WorkoutSource.classify(row.source).canEditActivityDetails {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showsActivityEditor = true } label: {
+                        Label("Edit activity", systemImage: "pencil")
+                    }
+                }
+            }
             // A Done affordance for the sheet on both platforms (iOS gets the grabber too).
             ToolbarItem(placement: .cancellationAction) {
                 Button("Done") { dismiss() }
             }
         }
         .task { await load() }
+        .sheet(isPresented: $showsActivityEditor) {
+            ManualWorkoutSheet(editing: row, hrSource: repo) { edited, replacing in
+                Task {
+                    await repo.saveManualWorkout(edited, replacing: replacing)
+                    await appModel?.intelligence.analyzeRecent(allowDayReuse: false)
+                    await repo.refresh()
+                    // The detail's immutable natural key may have changed with the corrected sport.
+                    // Return to the refreshed list instead of continuing to display the old record.
+                    dismiss()
+                }
+            }
+        }
     }
 
     // MARK: - Load

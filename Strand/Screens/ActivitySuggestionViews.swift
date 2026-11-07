@@ -13,12 +13,17 @@ import WhoopStore
 /// The prompt pinned above Today's reorderable cards. It slides in when something was detected and stays
 /// until it is answered or put off with "Later"; with several open it names the newest and how many more.
 struct ActivitySuggestionPrompt: View {
+    /// A dashboard scopes suggestions to its selected day; other surfaces can retain the full inbox.
+    var dayKey: String? = nil
     @EnvironmentObject var repo: Repository
     @ObservedObject private var center = ActivitySuggestionCenter.shared
     @State private var showList = false
 
     var body: some View {
-        let toAsk = center.toAsk
+        let toAsk = center.toAsk.filter { suggestion in
+            guard let dayKey else { return true }
+            return Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(suggestion.start))) == dayKey
+        }
         VStack(spacing: 0) {
             if let s = toAsk.first {
                 ActivitySuggestionCard(suggestion: s, more: toAsk.count - 1, onMore: { showList = true })

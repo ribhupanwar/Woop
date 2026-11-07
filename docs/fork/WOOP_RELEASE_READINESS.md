@@ -67,10 +67,12 @@ These are code findings, not completed hardware or end-to-end verification.
 
 The next UI pass adapts the independent reference screens at DSTA commit `8d946e38`:
 
-- Home uses Woop branding, a full selected-day date, the Recovery/Sleep/Strain metric strip and the
-  reference's 17pt section spacing. Existing contributor, health, goal, workout and customization
-  surfaces remain available. The strip reads the same resolved values and scale as the hero rings;
-  carried Recovery keeps its caption.
+- Home follows the owner-supplied screenshot: avatar/date/battery row, centered Woop wordmark,
+  Sleep/Recovery/Strain rings, My Day and a prominent Activities card with colored metric tiles and
+  stacked start/end times. Dedicated dark surfaces and sleep/strain accents live in StrandDesign.
+  The screenshot supersedes the earlier metric-strip experiment. Existing contributor, health,
+  goal, workout and customization surfaces remain below the pinned rings and daily activity feed.
+  Ring values use the existing score resolvers and effort scale; carried Recovery keeps its caption.
 - Recovery uses the reference's 214pt hero and a scored-night date. The Week/Month selector is
   functional over seven/thirty civil days, with missing days left blank instead of substituted with
   zero or visually joined to another night. Invalid/non-finite history values are not charted.
@@ -102,3 +104,33 @@ certification. Regression tests cover week/month civil-day boundaries, leap days
 
 Build 256 succeeded and published an unsigned IPA artifact. This is build evidence only, not evidence
 that all the product, hardware, performance or screenshot gates above passed.
+
+## Activity correction and automatic-detection evidence
+
+The owner requires same-day activity records and manual correction of a mistaken sport name.
+Home's row menu and the activity-detail pencil now open the existing manual editor for local,
+legacy-detected and confirmed-detection records. Today also exposes correction through the row's
+context menu. Save goes through `Repository.saveManualWorkout`, which already retires the old natural
+key, suppresses a corrected legacy detection and carries recorded measurements for editable local
+sessions. Imports retain their original provenance and the existing manual-copy flow.
+
+The current `ActivityDetectionScore.Kind` roster is walk/run/cycle/strength/other. `Dancing` exists in
+the manual workout catalogue, but a dedicated automatic dance classifier is NOT implemented or verified.
+The current confirmation-based detection engine is not equivalent to WHOOP's fully automatic logging.
+Home now surfaces its existing suggestions, scoped to the selected current day. Detection settings and
+permission choices remain in force. Do not claim all-sport or dance auto-detection from this UI change.
+
+Primary-source research reviewed on 7 November 2026:
+
+- [WHOOP activity detection and correction](https://www.whoop.com/us/en/thelocker/how-whoop-detects-and-labels-your-workouts-activities/):
+  separate detection from classification, use HR plus movement, and allow type/time correction while
+  retaining cardiovascular observations. A low-confidence bout may remain a generic activity.
+- [Oura activity editing](https://support.ouraring.com/hc/en-us/articles/360025577813-Edit-or-Manually-Add-an-Activity):
+  edit type/time/duration from the timeline; manually add missed sessions, including historical days.
+- [Strava sport correction](https://support.strava.com/en-us/articles/15401975-how-do-i-change-my-activity-type):
+  saved activities offer sport changes through Edit; derived analysis can change with sport type.
+
+Remaining detection acceptance: distinguish genuine exercise from stress/heat, test gaps/off-body
+signals and overlapping manual/imported workouts, validate run/walk/cycle boundaries, and collect
+labeled dance/strength recordings before extending classification. Preserve corrections across a
+reanalysis and sync. Auto GPS routes cannot be claimed for time periods without recorded locations.

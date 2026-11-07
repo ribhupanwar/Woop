@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// Dark Home surfaces and metric accents matched to the owner's supplied activity-dashboard reference.
+/// These are independent color tokens; no third-party artwork or font files are bundled.
+public enum WoopHomePalette {
+    public static let canvasTop = Color(red: 0.157, green: 0.192, blue: 0.216)
+    public static let canvasBottom = Color(red: 0.059, green: 0.071, blue: 0.082)
+    public static let activityCard = Color(red: 0.184, green: 0.208, blue: 0.224)
+    public static let activityRow = Color(red: 0.259, green: 0.278, blue: 0.290)
+    public static let sleep = Color(red: 0.529, green: 0.651, blue: 0.725)
+    public static let strain = Color(red: 0.263, green: 0.565, blue: 0.878)
+}
+
 /// Clean-room typographic roles for reference-matched iPhone screens.
 /// WHOOP's bundled DINPro files are proprietary and are not redistributed.
 /// This separate layer approximates their compact sans-serif character with system fonts,

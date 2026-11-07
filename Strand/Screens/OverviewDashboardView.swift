@@ -133,6 +133,7 @@ struct OverviewDashboardView: View {
     }
     @State private var selectedDayOffset = 0
     @State private var showDayPicker = false
+    @State private var showProfile = false
     @State private var showStepGoalSetting = false
     @State private var activityEditingWorkout: WorkoutRow?
     @State private var showActivityEditor = false
@@ -160,7 +161,7 @@ struct OverviewDashboardView: View {
     }
 
     /// DSTA's independent reference Home uses 17pt section spacing and inset metric surfaces.
-    private static let sectionSpacing: CGFloat = 17
+    private static let sectionSpacing: CGFloat = 22
     private static let cardPadding: CGFloat = 16
 
     var body: some View {
@@ -175,7 +176,7 @@ struct OverviewDashboardView: View {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
                     Color.clear.frame(height: 0).id(Self.topAnchorID)
                     header
-                    referenceScoreStrip
+                    overviewCard
                     // Pinned ABOVE the reorderable block, exactly where Classic and Liquid Today pin
                     // them: a raised health alert or a running workout must not be reorderable below the
                     // fold. Every card here renders NOTHING when it has nothing to report, so the
@@ -185,8 +186,12 @@ struct OverviewDashboardView: View {
                     // rewrite and restored; these two dashboards then shipped without it. Same shared
                     // leaf, so all four Today screens cannot drift apart.
                     ActiveWorkoutIndicatorSection()
+                    todayActivitiesSection
+                    if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                     MorningSuggestionCard(showPlan: $showPlan)
-                    ForEach(layoutSections) { section in dashboardSection(section) }
+                    ForEach(layoutSections.filter { $0 != .overview && $0 != .activity }) {
+                        section in dashboardSection(section)
+                    }
                     // Below the metric sections on purpose: once accepted, the committed session is an
                     // ambient reminder rather than a demand for the top of the screen.
                     PlanTodayCard(showPlan: $showPlan)
@@ -209,7 +214,9 @@ struct OverviewDashboardView: View {
             .ignoresSafeArea(edges: .top)
             }
         }
-        .background(StrandPalette.surfaceBase.ignoresSafeArea())
+        .background(LinearGradient(colors: [WoopHomePalette.canvasTop, WoopHomePalette.canvasBottom],
+                                   startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+        .environment(\.colorScheme, .dark)
         .simultaneousGesture(daySwipeGesture)
         // The visible-section set joins the id because `load()` now skips the reads that only feed a
         // hidden section: showing one has to re-run the load that fills it, or it would render empty
@@ -253,6 +260,9 @@ struct OverviewDashboardView: View {
             DashboardExtraSectionsSheet(dashboard: "overview", title: String(localized: "Dashboard sections"))
         }
         .sheet(isPresented: $showDayPicker) { dashboardDayPicker }
+        .sheet(isPresented: $showProfile) {
+            NavigationStack { SettingsView(initialPage: .profile) }
+        }
         .sheet(isPresented: $showStepGoalSetting) { DashboardStepGoalSheet() }
         .sheet(isPresented: $showActivityEditor) {
             ManualWorkoutSheet(editing: activityEditingWorkout, hrSource: repo) { row, replacing in
@@ -276,7 +286,9 @@ struct OverviewDashboardView: View {
     private var layoutSections: [DashboardLayoutSection] {
         let order = DashboardLayoutPrefs.order(layoutOrderRaw, dashboard: "overview")
         let hidden = DashboardLayoutPrefs.hidden(layoutHiddenRaw, dashboard: "overview")
-        return order.filter { !hidden.contains($0) }
+        return [.overview, .activity] + order.filter {
+            $0 != .overview && $0 != .activity && !hidden.contains($0)
+        }
     }
 
     /// Stable identity of the VISIBLE section set, for the load `.task` id. Reordering alone must not
@@ -583,93 +595,72 @@ struct OverviewDashboardView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 3) {
-        HStack {
-            Text("WOOP")
-                .font(WhoopReferenceFont.label(11))
-                .tracking(2)
+        VStack(spacing: 22) {
+            HStack(spacing: 8) {
+                Button { showProfile = true } label: {
+                    ProfileAvatarView(imageData: profile.avatarImageData, size: 34)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Profile")
+                Spacer(minLength: 0)
+                HStack(spacing: 0) {
+                    Button { changeDashboardDay(by: 1) } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 32, height: 44)
+                    }
+                    .disabled(selectedDayOffset >= earliestDayOffset)
+                    .accessibilityLabel("Previous day")
+                    Button { showDayPicker = true } label: {
+                        Text(Self.headerDateFormatter.string(
+                            from: TodayView.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay).uppercased())
+                            .font(WhoopReferenceFont.label(11))
+                            .tracking(0.8)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(minWidth: 100, minHeight: 32)
+                            .background(Capsule().fill(StrandPalette.surfaceOverlay))
+                    }
+                    .accessibilityLabel("Choose dashboard day")
+                    Button { changeDashboardDay(by: -1) } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 15, weight: .bold))
+                            .frame(width: 32, height: 44)
+                    }
+                    .disabled(selectedDayOffset == 0)
+                    .accessibilityLabel("Next day")
+                }
+                .buttonStyle(.plain)
                 .foregroundStyle(StrandPalette.textPrimary)
-                // Keep customization off the visible control row; this mirrors Trends and preserves
-                // the reference header's + as a real quick-action entry point.
-                .contentShape(Rectangle())
-                .onLongPressGesture { showExtraSections = true }
-            Spacer()
-            HStack(spacing: 6) {
+                .background(Capsule().fill(StrandPalette.surfaceRaised))
+                Spacer(minLength: 0)
                 DashboardBatteryButton(size: 28)
-                headerIconButton(systemName: "plus", tint: StrandPalette.textPrimary) {
-                    router.requestQuickActions()
-                }
-                headerIconButton(systemName: updateStore.unreadCount > 0 ? "bell.badge" : "bell",
-                                 tint: StrandPalette.textPrimary, badge: updateStore.unreadCount) {
-                    showUpdatesInbox = true
-                }
-                if coachFeatureEnabled, coachUIEnabled {
-                    headerIconButton(systemName: "person.fill", tint: StrandPalette.textPrimary) { showCoach = true }
-                }
             }
-        }
-        Button { showDayPicker = true } label: {
-            HStack(spacing: 4) {
-                Text(Self.headerDateFormatter.string(
-                    from: TodayView.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay))
-                    .font(WhoopReferenceFont.heading(21))
-                Image(systemName: "calendar").font(.system(size: 13, weight: .medium))
-            }
-                .foregroundStyle(StrandPalette.textPrimary)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Choose a dashboard day, or swipe to change day")
+            Text("WOOP")
+                .font(.system(size: 17, weight: .light))
+                .tracking(3)
+                .foregroundStyle(StrandPalette.textSecondary)
+                .frame(maxWidth: .infinity)
+                .contextMenu {
+                    Button("Quick actions") { router.requestQuickActions() }
+                    Button("Customize Home") { showExtraSections = true }
+                    Button("Updates") { showUpdatesInbox = true }
+                    if coachFeatureEnabled, coachUIEnabled {
+                        Button("Coach") { showCoach = true }
+                    }
+                }
         }
     }
 
-    /// Reuse the DSTA reference strip's hierarchy, with Woop's existing score resolvers and routes.
-    private var referenceScoreStrip: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 0) {
-                referenceScore("RECOVERY", value: chargeDisplay.pct.map { "\(Int($0.rounded()))%" } ?? "—",
-                               tint: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
-                               route: .metricSourced(key: "recovery", source: Repository.whoopSource))
-                Divider().frame(height: 32).overlay(StrandPalette.hairline)
-                referenceScore("SLEEP", value: restScore.map { "\(Int($0.rounded()))%" } ?? "—",
-                               tint: StrandPalette.restColor, route: .sleep)
-                Divider().frame(height: 32).overlay(StrandPalette.hairline)
-                referenceScore("STRAIN", value: effortValue.map { UnitFormatter.effortDisplay($0, scale: effortScale) } ?? "—",
-                               tint: StrandPalette.effortColor,
-                               route: .metricSourced(key: "strain", source: Repository.whoopSource))
-            }
-            if let caption = chargeDisplay.carriedCaption {
-                Text(caption)
-                    .font(WhoopReferenceFont.body(11))
-                    .foregroundStyle(StrandPalette.textSecondary)
-            }
-        }
-        .padding(.vertical, 13)
-        .background(NoopPanelSurface(cornerRadius: 17))
-    }
-
-    private func referenceScore(_ title: LocalizedStringKey, value: String, tint: Color,
-                                route: TabRoute) -> some View {
-        NavigationLink(value: route) {
-            VStack(spacing: 6) {
-                Text(title)
-                    .font(WhoopReferenceFont.label(9))
-                    .tracking(0.7)
-                    .foregroundStyle(StrandPalette.textSecondary)
-                Text(value)
-                    .font(WhoopReferenceFont.metric(16))
-                    .monospacedDigit()
-                    .foregroundStyle(tint)
-            }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+    private func changeDashboardDay(by delta: Int) {
+        let next = min(earliestDayOffset, max(0, selectedDayOffset + delta))
+        withAnimation(StrandMotion.interactive) { selectedDayOffset = next }
     }
 
     private static let headerDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = AppLanguage.activeLocale
-        formatter.setLocalizedDateFormatFromTemplate("EEEEdMMM")
+        formatter.setLocalizedDateFormatFromTemplate("EEEMMMd")
         return formatter
     }()
 
@@ -719,66 +710,63 @@ struct OverviewDashboardView: View {
         return .positive
     }
 
-    @ViewBuilder
     private var overviewCard: some View {
-        let d = displayDay
-        NoopCard(padding: Self.cardPadding) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Today at a glance")
-                    .font(WhoopReferenceFont.label())
-                    .tracking(1.1)
-                    .textCase(.uppercase)
+        VStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                NavigationLink(value: TabRoute.sleep) {
+                    referenceRing("SLEEP", value: restScore, color: WoopHomePalette.sleep,
+                                  format: { "\(Int($0.rounded()))%" })
+                }
+                NavigationLink(value: TabRoute.metricSourced(key: "recovery", source: Repository.whoopSource)) {
+                    referenceRing("RECOVERY", value: chargeDisplay.pct,
+                                  color: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
+                                  format: { "\(Int($0.rounded()))%" })
+                }
+                NavigationLink(value: TabRoute.metricSourced(key: "strain", source: Repository.whoopSource)) {
+                    referenceRing("STRAIN", value: effortValue, color: WoopHomePalette.strain,
+                                  format: { UnitFormatter.effortDisplay($0, scale: effortScale) })
+                }
+            }
+            .buttonStyle(.plain)
+            if let caption = chargeDisplay.carriedCaption {
+                Text(caption).font(WhoopReferenceFont.body(11))
                     .foregroundStyle(StrandPalette.textSecondary)
-                HStack(alignment: .top, spacing: 0) {
-                    // Charge resolves through `ChargeDisplay` (see load()): today's own score, else the
-                    // carried last-scored night drawn DIMMED with its date as the detail line (#802/#543),
-                    // else the calibrating countdown, else "—". Same order, same copy and the same catalog
-                    // keys as classic Today and Liquid.
-                    NavigationLink(value: TabRoute.metricSourced(key: "recovery", source: Repository.whoopSource)) { overviewRing(label: "Recovery", value: chargeDisplay.pct,
-                                color: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
-                                mainFormat: { "\(Int($0.rounded()))" }, suffix: "%", denominatorCaption: nil,
-                                // Same word tier `MomentumCard`'s recovery-state uses (#1405: a
-                                // different axis from ReadinessEngine's training verdict — never
-                                // "Primed" here, that word means something else on this screen).
-                                word: chargeDisplay.pct.map { MomentumCopy.stateWord($0) },
-                                detail: recoveryDetail(),
-                                dimmed: chargeDisplay.carriedCaption != nil,
-                                emptyTitle: chargeDisplay.emptyRingLines?.title,
-                                emptySubtitle: chargeDisplay.emptyRingLines?.subtitle) }.buttonStyle(.plain)
-                    Divider().overlay(StrandPalette.hairline).padding(.top, 16).padding(.bottom, 3)
-                    NavigationLink(value: TabRoute.metricSourced(key: "strain", source: Repository.whoopSource)) { overviewRing(label: "Strain", value: effortValue,
-                                color: StrandPalette.effortColor,
-                                // Real scale from Settings (0…100 or WHOOP 0…21) — the same source
-                                // TodayView/LiquidTodayView's own Effort rings read (Units.swift). The
-                                // denominator is the ring's true "out of X", never an invented one.
-                                mainFormat: { UnitFormatter.effortDisplay($0, scale: effortScale) }, suffix: "",
-                                denominatorCaption: "/\(UnitFormatter.effortScaleMax(effortScale))",
-                                word: effortValue.map { effortWord($0) },
-                                detail: strainDetail()) }.buttonStyle(.plain)
-                    Divider().overlay(StrandPalette.hairline).padding(.top, 22).padding(.bottom, 4)
-                    NavigationLink(value: TabRoute.metricSourced(key: "sleep_performance", source: Repository.whoopSource)) { overviewRing(label: "Sleep", value: restScore,
-                                color: StrandPalette.restColor,
-                                mainFormat: { "\(Int($0.rounded()))" }, suffix: "%", denominatorCaption: nil,
-                                word: restScore.map { restWord($0) },
-                                detail: sleepDetail(d)) }.buttonStyle(.plain)
-                }
-                Divider().overlay(StrandPalette.hairline)
-                NavigationLink(value: TabRoute.health) {
-                    HStack(spacing: 6) {
-                        Image(systemName: overviewTone == .positive ? "checkmark.circle" : "exclamationmark.triangle")
-                            .foregroundStyle(overviewTone.color)
-                        Text(overviewSummaryText)
-                            .foregroundStyle(StrandPalette.textPrimary)
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(StrandPalette.textTertiary)
-                    }
-                    .font(StrandFont.footnote.weight(.semibold))
-                }
-                .buttonStyle(.plain)
+            } else if let lines = chargeDisplay.emptyRingLines {
+                Text("\(lines.title) · \(lines.subtitle)")
+                    .font(WhoopReferenceFont.body(11))
+                    .foregroundStyle(StrandPalette.textSecondary)
             }
         }
+        .padding(.vertical, 8)
+    }
+
+    private func referenceRing(_ title: LocalizedStringKey, value: Double?, color: Color,
+                               format: (Double) -> String) -> some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle().stroke(StrandPalette.textPrimary.opacity(0.12), lineWidth: 6)
+                if let value {
+                    Circle().trim(from: 0, to: min(1, max(0, value / 100)))
+                        .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                }
+                Text(value.map(format) ?? "—")
+                    .font(WhoopReferenceFont.score(26))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(width: 84, height: 84)
+            HStack(spacing: 3) {
+                Text(title).font(WhoopReferenceFont.label(10)).tracking(0.9)
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(StrandPalette.textTertiary)
+            }
+            .foregroundStyle(StrandPalette.textPrimary)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
     }
 
     /// The overall chip's word. Honest about the alternative too — this is not always "alles im grünen
@@ -1195,33 +1183,33 @@ struct OverviewDashboardView: View {
     }
 
     private func activityRow(_ item: OverviewActivityItem) -> some View {
-        let row = HStack(spacing: 7) {
-            Image(systemName: item.symbol)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor)
-                .frame(width: 26, height: 26)
-                .background((item.isSleep ? StrandPalette.restColor : StrandPalette.chargeColor).opacity(0.12),
-                            in: Circle())
-            // WHOOP-style metric placement: effort/duration sits immediately beside the
-            // activity icon; sleep duration sits immediately beside the moon icon.
-            Text(item.metric)
-                .font(WhoopReferenceFont.metric(13)).monospacedDigit()
-                .foregroundStyle(StrandPalette.textPrimary)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+        let tint = item.isSleep ? WoopHomePalette.sleep : WoopHomePalette.strain
+        let row = HStack(spacing: 14) {
+            HStack(spacing: 7) {
+                Image(systemName: item.symbol).font(.system(size: 22, weight: .medium))
+                Text(item.metric).font(WhoopReferenceFont.score(18)).monospacedDigit()
+                    .lineLimit(1).minimumScaleFactor(0.65)
+            }
+            .foregroundStyle(.white)
+            .frame(width: 100, height: 44)
+            .background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             Text(item.title.uppercased())
-                .font(StrandFont.footnote.weight(.semibold))
+                .font(WhoopReferenceFont.label(12)).tracking(1)
                 .foregroundStyle(StrandPalette.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: 6)
-            // The session window is the rightmost element on every row.
-            Text("\(item.startTime) – \(item.endTime)")
-                .font(StrandFont.caption).monospacedDigit()
-                .foregroundStyle(StrandPalette.textSecondary)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .trailing, spacing: 7) {
+                Text(item.startTime)
+                Text(item.endTime)
+            }
+            .font(WhoopReferenceFont.metric(10))
+            .foregroundStyle(StrandPalette.textSecondary)
+            .fixedSize(horizontal: true, vertical: false)
+            Capsule().fill(tint).frame(width: 2, height: 28)
         }
-        .padding(.vertical, 3)
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .background(WoopHomePalette.activityRow, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         return Group {
             if let workout = item.workout {
                 HStack(spacing: 5) {
@@ -1258,7 +1246,7 @@ struct OverviewDashboardView: View {
     private func activityRowMenu(_ row: WorkoutRow) -> some View {
         switch WorkoutSource.classify(row.source) {
         case .detected:
-            Button("Edit details…") { presentActivityEditor(row) }
+            Button("Edit activity type and time…") { presentActivityEditor(row) }
             Divider()
             Button("Dismiss (not a workout)", role: .destructive) {
                 Task {
@@ -1269,7 +1257,7 @@ struct OverviewDashboardView: View {
                 }
             }
         case .manual, .confirmed:
-            Button("Edit…") { presentActivityEditor(row) }
+            Button("Edit activity type and time…") { presentActivityEditor(row) }
             Divider()
             Button("Delete", role: .destructive) {
                 pendingActivityDelete = row
@@ -1306,9 +1294,20 @@ struct OverviewDashboardView: View {
 
     private var todayActivitiesSection: some View {
         let items = overviewActivityItems
-        return VStack(alignment: .leading, spacing: 5) {
-            Text(selectedDayOffset == 0 ? "TODAY'S ACTIVITIES" : "ACTIVITIES").whoopReferenceOverline()
-            NoopCard(padding: 7) {
+        return VStack(alignment: .leading, spacing: 16) {
+            Text("My Day")
+                .font(WhoopReferenceFont.heading(22))
+                .foregroundStyle(StrandPalette.textPrimary)
+            VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("ACTIVITIES").whoopReferenceOverline()
+                        Spacer()
+                        NavigationLink(value: TabRoute.workouts) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .frame(width: 28, height: 28)
+                        }
+                        .accessibilityLabel("See all activities")
+                    }
                 if items.isEmpty {
                     HStack(spacing: 8) {
                         Image(systemName: "figure.walk").foregroundStyle(StrandPalette.textTertiary)
@@ -1318,11 +1317,13 @@ struct OverviewDashboardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.vertical, 3)
                 } else {
-                    VStack(spacing: 4) {
+                    VStack(spacing: 12) {
                         ForEach(items) { item in activityRow(item) }
                     }
                 }
             }
+            .padding(12)
+            .background(WoopHomePalette.activityCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             HStack(spacing: 8) {
                 Button {
                     activityEditingWorkout = nil
