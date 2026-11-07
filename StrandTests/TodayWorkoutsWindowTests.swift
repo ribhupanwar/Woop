@@ -13,6 +13,30 @@ import WhoopStore
 /// other platform shows, which is exactly the class of drift that produced the issue.
 final class TodayWorkoutsWindowTests: XCTestCase {
 
+    func testSelectedActivityDayIncludesMidnightAndExcludesNextMidnight() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Kolkata"))
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 7, hour: 12)))
+        let window = try XCTUnwrap(TodayView.activityDayWindow(day: day, calendar: calendar))
+        XCTAssertTrue(window.contains(window.lowerBound))
+        XCTAssertTrue(window.contains(window.upperBound - 1))
+        XCTAssertFalse(window.contains(window.lowerBound - 1))
+        XCTAssertFalse(window.contains(window.upperBound))
+        let next = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        let nextWindow = try XCTUnwrap(TodayView.activityDayWindow(day: next, calendar: calendar))
+        XCTAssertEqual(window.upperBound, nextWindow.lowerBound)
+    }
+
+    func testSelectedActivityDayFollowsDaylightSavingBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        for (month, day, hours) in [(3, 8, 23), (11, 1, 25)] {
+            let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: 12)))
+            let window = try XCTUnwrap(TodayView.activityDayWindow(day: date, calendar: calendar))
+            XCTAssertEqual(window.count, hours * 3_600)
+        }
+    }
+
     /// Fixed clock so "13 days back, start of day" is not evaluated against a moving now.
     private let now = Date(timeIntervalSince1970: 1_756_000_000)  // 2025-08-24T02:26:40Z
 

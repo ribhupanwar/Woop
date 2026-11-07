@@ -4367,14 +4367,20 @@ struct TodayView: View {
         return rows.filter { $0.startTs >= cutoffTs }
     }
 
-    /// Sleep and workouts share one timeline. Keep the most recent 12 records, then render them
-    /// oldest-to-newest so the order reads naturally from morning to night.
+    /// Calendar boundaries for the selected day's timeline. Calendar arithmetic preserves 23/25-hour
+    /// daylight-saving days; the exclusive upper bound puts midnight into exactly one day.
+    static func activityDayWindow(day: Date, calendar: Calendar = .current) -> Range<Int>? {
+        guard let interval = calendar.dateInterval(of: .day, for: day) else { return nil }
+        return Int(interval.start.timeIntervalSince1970)..<Int(interval.end.timeIntervalSince1970)
+    }
+
+    /// Sleep belongs to its wake day; workouts belong to their start day. Historical day navigation
+    /// must never show a rolling recent feed under the selected day's heading.
     private var todayActivityItems: [TodayActivityFeedItem] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -13,
-                                           to: Calendar.current.startOfDay(for: Date()))
-            .map { Int($0.timeIntervalSince1970) } ?? 0
+        let day = Self.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay
+        guard let window = Self.activityDayWindow(day: day) else { return [] }
         let sleepItems = repo.sleeps
-            .filter { $0.endTs >= cutoff }
+            .filter { window.contains($0.endTs) }
             .map { session in
                 let start = session.effectiveStartTs
                 let end = session.endTs
@@ -4392,7 +4398,7 @@ struct TodayView: View {
                     workout: nil
                 )
             }
-        let workoutItems = Self.recentWorkoutsFeed(workouts).map { workout in
+        let workoutItems = workouts.filter { window.contains($0.startTs) }.map { workout in
             let sport = workout.sport.lowercased()
             let symbol: String
             if sport.contains("dance") {
@@ -4421,8 +4427,9 @@ struct TodayView: View {
                 workout: workout
             )
         }
-        let newestTwelve = Array((sleepItems + workoutItems).sorted { $0.startTs > $1.startTs }.prefix(12))
-        return newestTwelve.sorted { $0.startTs < $1.startTs }
+        return (sleepItems + workoutItems).sorted {
+            $0.startTs == $1.startTs ? $0.id < $1.id : $0.startTs < $1.startTs
+        }
     }
 
     @ViewBuilder
@@ -4430,7 +4437,7 @@ struct TodayView: View {
         let items = todayActivityItems
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("TODAY'S ACTIVITIES")
+                Text(selectedDayOffset == 0 ? "TODAY'S ACTIVITIES" : "ACTIVITIES")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .tracking(1.0)
                     .foregroundStyle(.white)

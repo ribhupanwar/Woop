@@ -169,15 +169,16 @@ struct RootTabView: View {
     /// rebuild the tab roots underneath it. The same class of rebuild is what #197 caused with an
     /// `.id()` reset and #198 had to undo — it lost scroll position and re-ran `.task`.
     ///
-    /// Only a decisive horizontal flick switches tabs. Today uses horizontal swipe to change DAYS, so
-    /// the attachment mask below disables this recognizer there entirely. Both thresholds are unchanged
+    /// Only a decisive horizontal flick switches tabs. Both Home dashboard styles and Today can use
+    /// horizontal swipe to change days, so neither participates in this ancestor gesture.
+    /// Both thresholds are unchanged
     /// from the original gesture.
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
             .onEnded { v in
                 // Defensive guard for a selection change during an in-flight gesture. The GestureMask at
                 // the attachment site keeps this recognizer out of Today hit testing in the steady state.
-                guard selectedTab != 0 else { return }
+                guard selectedTab > 1 else { return }
                 let dx = v.translation.width, dy = v.translation.height
                 guard abs(dx) > 60, abs(dx) > abs(dy) * 1.6 else { return }
                 let next = min(4, max(0, selectedTab + (dx < 0 ? 1 : -1)))
@@ -237,7 +238,7 @@ struct RootTabView: View {
             // interactive-pop itself: far worse than the bug being fixed.
             .simultaneousGesture(
                 tabSwipeGesture,
-                including: selectedTab != 0 && tabPaths[selectedTab].isEmpty ? .all : .subviews
+                including: selectedTab > 1 && tabPaths[selectedTab].isEmpty ? .all : .subviews
             )
             // The minimized running workout, above the tab bar on every tab.
             .activeSessionMiniBar()
