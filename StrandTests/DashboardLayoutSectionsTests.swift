@@ -58,6 +58,12 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "trends").isEmpty)
     }
 
+    func testOverviewAlwaysKeepsTodayActivitiesVisibleEvenWhenOldPreferenceHidIt() {
+        XCTAssertFalse(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "overview").contains(.activity))
+        XCTAssertTrue(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "overview").contains(.workoutsList))
+        XCTAssertTrue(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "trends").contains(.activity))
+    }
+
     func testRoundTripPreservesAUserArrangement() {
         let visible: [DashboardLayoutSection] = [.hero, .activity, .goals, .coach]
         let hidden: [DashboardLayoutSection] = [.trendsChart, .metricStrip]
