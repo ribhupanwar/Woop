@@ -542,7 +542,7 @@ struct WorkoutsView: View {
     /// the user can fine-tune via Edit afterwards).
     private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
-                                        "CrossFit", "Hiking", "Tennis"]
+                                        "CrossFit", "Hiking", "Tennis", "Dancing"]
 
     // MARK: - Range control
 
