@@ -4197,7 +4197,14 @@ public final class DailyAnalysis {
                 if !added.isEmpty, host.storedBool(ActivitySuggestions.enabledKey),
                    host.storedBool(ActivitySuggestions.automaticSaveKey),
                    host.storedString(ActivitySuggestions.automaticSaveSinceKey) == String(since) {
-                    do { _ = try await store.upsertWorkouts(added, deviceId: computedId) }
+                    do {
+                        let written = try await store.upsertWorkouts(added, deviceId: computedId)
+                        if written > 0 {
+                            // Workout mutations do not change raw-sample fingerprints. Reuse must be off
+                            // once so training load and workout windows include the newly saved input.
+                            enqueueFollowup(maxDays: maxDays, reason: .semanticChange)
+                        }
+                    }
                     catch { host.diagnostic("activity-auto-save: write failed; candidates retained for retry", domain: .workouts) }
                 }
             }

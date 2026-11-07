@@ -260,3 +260,10 @@ domain washes and rims in that mode. State-card tints and increased-contrast rim
 legacy detail cards and sheets through the existing shared component without changing their content
 or data. UI navigation verification now opens the actual Start Activity picker from Home quick actions.
 Analysis migration required: no.
+
+Additional capture audit and source boundaries are recorded in `RUNNING_GPS_READINESS.md` and
+`DSTA_ACTIVITY_INTEGRATION.md`. Optional automatic activity saving is implemented but is not a tested
+claim of all-sport classification or automatic background GPS. Successful writes queue one normal
+non-reused follow-up analysis so workout-input changes do not leave cached training views stale.
+The VO2 article review is `VO2_PATENT_RESEARCH.md`; no unvalidated patent-derived score is introduced.
+Analysis migration required: no.

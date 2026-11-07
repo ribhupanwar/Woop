@@ -21,6 +21,9 @@ final class WorkoutPhysiologyTests: XCTestCase {
         XCTAssertEqual(minutes, [0, 20, 0, 0, 0], "the active strap's zone-five trace must not leak into the gym strap's session")
         let detected = await WorkoutPhysiology.buckets(reader: reader, from: start, to: start + 1_200, source: "gym-noop")
         XCTAssertEqual(detected, buckets)
+        let automatic = await WorkoutPhysiology.buckets(reader: reader, from: start, to: start + 1_200,
+            source: WorkoutSource.automaticDetectionSource(computedId: "gym-noop"))
+        XCTAssertEqual(automatic, buckets, "automatically saved workouts must retain the recording strap's HR")
     }
 
     func testUnknownOrReversedWindowsRemainUnmeasured() async throws {
