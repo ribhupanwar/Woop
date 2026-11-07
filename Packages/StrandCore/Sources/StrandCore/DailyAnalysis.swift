@@ -4176,18 +4176,40 @@ public final class DailyAnalysis {
 
         markPostLoopPhase("activity")
         // Activity detection (plan blocks 5 and 6): the recent days' suggestions, stored for the Today prompt,
-        // the inbox, the logging sheet and notifications. Shown, never scored; off unless the wearer turned it on.
+        // the inbox, logging sheet and notifications. Optional automatic saves remain detector output,
+        // never confirmed training labels; both detection and automatic saving are wearer-controlled.
         if host.storedBool(ActivitySuggestions.enabledKey),
            let found = try? await ActivitySuggestions.refresh(store: store, deviceId: deviceId, computedId: computedId,
-                                                              hrMax: maxHeartRateToday.wholeBpm, now: now),
-           workoutsTraceActive {
-            let spans = found.map { ActivityDetectionScore.Span(start: $0.start, end: $0.end) }
-            let matched = ActivityDetectionScore.match(candidates: spans, labels: activityShadowLabels)
-            for (i, c) in found.enumerated() {
-                host.diagnostic(ActivityDetectionScore.shadowLine(
-                    day: ActivitySuggestions.dayKey(c.start, .current), track: c.track.rawValue,
-                    ruleVersion: ActivityCandidates.ruleVersion, span: spans[i], avgBpm: c.avgBpm ?? 0,
-                    matchedKind: matched[i].map { activityShadowLabels[$0].kind }), domain: .workouts)
+                                                              hrMax: maxHeartRateToday.wholeBpm, now: now) {
+            if host.storedBool(ActivitySuggestions.automaticSaveKey),
+               let since = host.storedString(ActivitySuggestions.automaticSaveSinceKey).flatMap(Int.init),
+               let answers = try? await store.activitySuggestionAnswers(from: since, to: now + 1) {
+                let existing = await repo.workoutRows(days: ActivitySuggestions.listDays + 2, reconcileHrCap: 0)
+                let candidateRows = found.map { ActivitySuggestions.row($0, deviceId: deviceId) }
+                let level = host.storedString(ActivitySuggestions.levelKey).flatMap(ActivityCandidates.Level.init(rawValue:)) ?? .balanced
+                let settings = ActivitySuggestions.Settings(level: level,
+                    walks: host.storedBool(ActivitySuggestions.walksKey))
+                let resolved = ActivitySuggestions.resolve(candidates: candidateRows, answers: answers,
+                                                           workouts: existing, settings: settings)
+                let added = ActivitySuggestions.automaticRows(resolved, existing: existing,
+                    dismissed: repo.dismissedDetectedWorkoutWindows(), activatedAt: since, now: now,
+                    source: WorkoutSource.automaticDetectionSource(computedId: computedId))
+                if !added.isEmpty, host.storedBool(ActivitySuggestions.enabledKey),
+                   host.storedBool(ActivitySuggestions.automaticSaveKey),
+                   host.storedString(ActivitySuggestions.automaticSaveSinceKey) == String(since) {
+                    do { _ = try await store.upsertWorkouts(added, deviceId: computedId) }
+                    catch { host.diagnostic("activity-auto-save: write failed; candidates retained for retry", domain: .workouts) }
+                }
+            }
+            if workoutsTraceActive {
+                let spans = found.map { ActivityDetectionScore.Span(start: $0.start, end: $0.end) }
+                let matched = ActivityDetectionScore.match(candidates: spans, labels: activityShadowLabels)
+                for (i, c) in found.enumerated() {
+                    host.diagnostic(ActivityDetectionScore.shadowLine(
+                        day: ActivitySuggestions.dayKey(c.start, .current), track: c.track.rawValue,
+                        ruleVersion: ActivityCandidates.ruleVersion, span: spans[i], avgBpm: c.avgBpm ?? 0,
+                        matchedKind: matched[i].map { activityShadowLabels[$0].kind }), domain: .workouts)
+                }
             }
         }
 
