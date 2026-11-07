@@ -138,6 +138,18 @@ final class DashboardLayoutSectionsTests: XCTestCase {
                    distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
     }
 
+    func testOverviewActivityRowsDeduplicateRepeatedNaturalKeys() {
+        let first = row(startingAt: 300)
+        let duplicate = WorkoutRow(startTs: 300, endTs: 2_100, sport: "Running", source: "apple",
+                                   durationS: 1_800, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
+                                   distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
+        let otherSport = WorkoutRow(startTs: 300, endTs: 2_100, sport: "Cycling", source: "whoop",
+                                    durationS: 1_800, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
+                                    distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
+        let unique = OverviewDashboardView.uniqueActivityWorkouts([first, duplicate, otherSport])
+        XCTAssertEqual(unique.map(\.sport), ["Running", "Cycling"])
+    }
+
     func testMoreWorkoutsKeepsTheNewestRowWhenRecentActivityIsHidden() {
         let workouts = [row(startingAt: 300), row(startingAt: 200), row(startingAt: 100)]
 
