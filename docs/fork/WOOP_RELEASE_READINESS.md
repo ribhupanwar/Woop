@@ -185,6 +185,20 @@ provision and preserve HealthKit. Foreground import and background delivery are 
 mapping that causes SideStore to strip the entitlement, and its author reports a patched free-account
 test. The PR was open/unmerged when inspected; this is not proof that the user's released installer
 supports it. Installer name/version and the actual signed profile must be checked before claiming a fix.
+
+The reported installer `0.7.0-20261013.1503` matches
+[SideStore nightly run 38463957675](https://github.com/SideStore/SideStore/actions/runs/38463957675),
+whose artifact is `SideStore-0.7.0-20261013.1503+12ff39c6.ipa`. Its source commit
+`12ff39c6b6c0ccd8180f0834a893a4bbaf7bcd31` pins SideSign at
+`752d1ef602aa792a432ffa1e71646dc1ecf7363c`. At that exact dependency revision,
+[`Feature.swift`](https://github.com/SideStore/SideSign/blob/752d1ef602aa792a432ffa1e71646dc1ecf7363c/Sources/Models/Feature.swift)
+has no HealthKit entitlement-to-feature mapping, and
+[`Entitlement.swift`](https://github.com/SideStore/SideSign/blob/752d1ef602aa792a432ffa1e71646dc1ecf7363c/Sources/Models/Entitlement.swift)
+omits HealthKit from `freeEntitlements`. This is a version-specific source finding, not merely an
+inference from an unmerged PR or the account type. Woop's template alone cannot repair that installer.
+A trusted installer build containing the capability mapping/allowlist fix, followed by actual profile
+and device authorization verification, is necessary for this signing route. No installer has been
+replaced on the user's device and no free-account device installation has been verified here.
 The new preparation step's codesign verification runs on macOS CI; local Linux can check shell syntax
 but cannot validate iOS code signing or the user's installation.
 
