@@ -30,6 +30,10 @@ final class ReferenceNavigationTests: XCTestCase {
         app.buttons["woop.home.quickActions"].tap()
         XCTAssertTrue(app.staticTexts["Start workout"].waitForExistence(timeout: 5),
                       "the floating action must reach the existing recording entry point")
+        app.staticTexts["Start workout"].tap()
+        XCTAssertTrue(app.staticTexts["Start a workout"].waitForExistence(timeout: 10),
+                      "starting an activity must open the recorder picker, not Silent Guardian")
+        capture("empty-start-activity")
     }
 
     func testCaptureEmptyReferenceScreens() {

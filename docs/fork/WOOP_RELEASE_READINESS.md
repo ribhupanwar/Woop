@@ -253,3 +253,10 @@ Healthspan age and uses the existing pace slider. Particles are decorative, neve
 with an actual Healthspan result. Missing-input gates, basis disclosures, weekly history and calculations
 are retained. No App Store artwork or third-party font is included in the app. The supplied Home screenshot
 remains the Home layout reference; newer marketing images do not replace it. Analysis migration required: no.
+
+A follow-up shared-surface audit found that `FrostedCardSurface` still used the old raised palette even
+when the reference environment was enabled. It now follows the reference card fill and omits decorative
+domain washes and rims in that mode. State-card tints and increased-contrast rims remain. This reaches
+legacy detail cards and sheets through the existing shared component without changing their content
+or data. UI navigation verification now opens the actual Start Activity picker from Home quick actions.
+Analysis migration required: no.

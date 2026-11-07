@@ -38,6 +38,7 @@ public struct FrostedCardSurface: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.noopCardKind) private var environmentKind
     @Environment(\.noopQuietCardRims) private var quietRims
+    @Environment(\.woopReferenceUI) private var referenceUI
     // "Card transparency" setting (reactive): fades the whole glass surface toward the background. 100 =
     // solid (default). Reading it here makes every card update live when the Settings slider moves.
     @AppStorage(CardAppearancePrefs.opacityKey) private var cardOpacityPercent = CardAppearancePrefs.defaultPercent
@@ -77,7 +78,8 @@ public struct FrostedCardSurface: View {
         // Design Reset: a flat raised fill reads cleaner than the navy bevel gradient. Tinted and
         // neutral cards now share the same flat surface; tint identity is carried by the softened
         // hue wash + the tinted hairline below, not a gradient, so cards stay familiar but flatten.
-        let baseFill = AnyShapeStyle(StrandPalette.surfaceRaised)
+        let baseFill = AnyShapeStyle(referenceUI ? WoopHomePalette.activityCard : StrandPalette.surfaceRaised)
+        let keepsStateTint = !referenceUI || (kind ?? environmentKind) == .state
         let chrome = NoopCardChrome.resolve(
             kind: kind ?? environmentKind,
             isLight: scheme == .light,
@@ -92,8 +94,8 @@ public struct FrostedCardSurface: View {
                 shape.fill(
                     LinearGradient(
                         colors: [
-                            (tint ?? .clear).opacity(0.05 * washStrength),
-                            (tint ?? .clear).opacity(0.015 * washStrength),
+                            (keepsStateTint ? tint ?? .clear : .clear).opacity(0.05 * washStrength),
+                            (keepsStateTint ? tint ?? .clear : .clear).opacity(0.015 * washStrength),
                             .clear
                         ],
                         startPoint: .topLeading, endPoint: .bottomTrailing
@@ -103,7 +105,7 @@ public struct FrostedCardSurface: View {
             // Liquid redesign (2026-07-02): a 1px resting hairline in BOTH themes so every card
             // matches the liquid home card's edge (LiquidTodayView.card), not just fill contrast.
             .overlay {
-                if let rim = rimColor(chrome.rim) {
+                if (!referenceUI || keepsStateTint || contrast == .increased), let rim = rimColor(chrome.rim) {
                     shape.strokeBorder(rim, lineWidth: chrome.rim == .strong ? 1.5 : 1)
                 }
             }
