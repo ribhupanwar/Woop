@@ -1,7 +1,10 @@
 # Woop consolidated release readiness
 
-Analysis migration required: no. This change only filters stored records for presentation and fixes
-navigation gesture ownership. No scores, raw samples, source precedence or derived tables change.
+Analysis migration required: no. The candidate combines presentation/navigation repairs, read-only HR
+reconciliation, optional new activity records after explicit activation, and dashboard refresh wiring.
+It does not rewrite historical raw data or change score formulas. New workout records queue normal
+non-reused analysis so their inputs reach training views. See `OWNER_ACCEPTANCE_CHECKLIST.md` for the
+complete owner-requested scope and open acceptance gates.
 
 ## Product acceptance
 
