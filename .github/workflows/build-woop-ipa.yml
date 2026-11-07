@@ -71,7 +71,7 @@ jobs:
           set -euo pipefail
           echo "Validating latest Woop source before IPA packaging."
           echo "The final iOS device archive is the iOS compile gate."
-          NOOP_LOCAL_TESTS_SKIP_IOS_SIMULATOR_BUILD=1 Tools/local-tests.sh origin/main
+          NOOP_LOCAL_TESTS_SKIP_IOS_SIMULATOR_BUILD=1 bash Tools/local-tests.sh origin/main
 
       - name: Generate original Woop app icon
         run: |
