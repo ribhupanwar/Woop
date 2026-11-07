@@ -156,8 +156,8 @@ struct OverviewDashboardView: View {
     /// The reference packs everything — three rings, three focus cards, a six-row list — onto one
     /// screen with no scrolling. `NoopMetrics.sectionSpacing`/`.cardPadding` (26pt / 16pt) are tuned for
     /// Classic/Liquid's roomier cards; this screen uses its own tighter scale to match.
-    private static let sectionSpacing: CGFloat = 11
-    private static let cardPadding: CGFloat = 12
+    private static let sectionSpacing: CGFloat = 9
+    private static let cardPadding: CGFloat = 10
 
     var body: some View {
         GeometryReader { proxy in
@@ -654,7 +654,7 @@ struct OverviewDashboardView: View {
     private var overviewCard: some View {
         let d = displayDay
         NoopCard(padding: Self.cardPadding) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Today at a glance")
                     .font(WhoopReferenceFont.label())
                     .tracking(1.1)
@@ -676,7 +676,7 @@ struct OverviewDashboardView: View {
                                 dimmed: chargeDisplay.carriedCaption != nil,
                                 emptyTitle: chargeDisplay.emptyRingLines?.title,
                                 emptySubtitle: chargeDisplay.emptyRingLines?.subtitle) }.buttonStyle(.plain)
-                    Divider().overlay(StrandPalette.hairline).padding(.top, 22).padding(.bottom, 4)
+                    Divider().overlay(StrandPalette.hairline).padding(.top, 16).padding(.bottom, 3)
                     NavigationLink(value: TabRoute.metricSourced(key: "strain", source: Repository.whoopSource)) { overviewRing(label: "Strain", value: effortValue,
                                 color: StrandPalette.effortColor,
                                 // Real scale from Settings (0…100 or WHOOP 0…21) — the same source
@@ -803,7 +803,7 @@ struct OverviewDashboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private static let ringDiameter: CGFloat = 80
+    private static let ringDiameter: CGFloat = 72
 
     /// The Recovery ring's detail line, keyed on what the ring DRAWS. A carried night spends the line on
     /// its provenance ("Last night · 2 Sep") instead of a training verdict: this ring has no room for both,
@@ -994,7 +994,7 @@ struct OverviewDashboardView: View {
     private func miniCard<Content: View>(icon: String, tint: Color, title: LocalizedStringKey,
                                          @ViewBuilder content: @escaping () -> Content) -> some View {
         NoopCard(padding: 8, tint: tint) {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 5) {
                     ZStack {
                         Circle().fill(tint.opacity(0.16))
