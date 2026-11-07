@@ -21,8 +21,8 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         XCTAssertEqual(Array(DashboardLayoutSection.defaultOrder(for: "trends").prefix(5)),
                        [.coach, .hero, .trendsChart, .metricStrip, .activity])
         // Goals sit among the reference blocks on both (plan §10.1: every Today style shows them).
-        XCTAssertEqual(Array(DashboardLayoutSection.defaultOrder(for: "overview").prefix(5)),
-                       [.coach, .overview, .focus, .goals, .health])
+        XCTAssertEqual(Array(DashboardLayoutSection.defaultOrder(for: "overview").prefix(6)),
+                       [.coach, .overview, .activity, .focus, .goals, .health])
 
         // Every optional section is PLACED on both dashboards, and none is placed twice. Placement is
         // checked by identity rather than by counting `isExtra`: Momentum is still a
@@ -117,8 +117,9 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         }
         // Trends shows "Recent activity" by default, so its workout read must still happen there.
         XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "trends").contains(.activity))
-        // Overview has no `.activity` block at all, which is why it can skip workouts entirely.
-        XCTAssertFalse(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
+        // Overview now shows Today’s Activities by default, so its load must include the workout feed.
+        XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "overview").contains(.activity))
+        XCTAssertTrue(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
     }
 
     // MARK: - "More workouts"
