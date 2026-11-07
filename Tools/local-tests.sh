@@ -73,16 +73,21 @@ if [ "$APP" = 1 ]; then
   echo "local-tests: macOS Strand + StrandTests"
   xcodebuild -project Strand.xcodeproj -scheme Strand -destination 'platform=macOS' \
     -derivedDataPath "$DERIVED/mac" CODE_SIGNING_ALLOWED=NO test -quiet
-  echo "local-tests: iOS NOOPiOS build"
-  IOS_LOG="$DERIVED/ios-build.log"
-  xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -destination 'generic/platform=iOS Simulator' \
-    -derivedDataPath "$DERIVED/ios" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build -quiet 2>&1 | tee "$IOS_LOG"
-  # The app ships to iOS 17, but Swift only warns about a newer-OS conformance (EnumeratedSequence as a
-  # collection, TupleContent as a View): that compiles and then crashes on iOS 17/18 (Settings, 12.0.1).
-  # An incremental build re-reports only recompiled files, so this sees new sites, not old ones.
-  if grep -E "warning: .*(is only available in iOS|does not implement 'buildLimitedAvailability')" "$IOS_LOG" >&2; then
-    echo "local-tests: the iOS build uses an API newer than the iOS 17 deployment target (above); gate or replace it." >&2
-    exit 1
+
+  if [ "${NOOP_LOCAL_TESTS_SKIP_IOS_SIMULATOR_BUILD:-0}" = "1" ]; then
+    echo "local-tests: iOS Simulator build skipped; the final iOS device archive is the compile gate."
+  else
+    echo "local-tests: iOS NOOPiOS build"
+    IOS_LOG="$DERIVED/ios-build.log"
+    xcodebuild -project Strand.xcodeproj -scheme NOOPiOS -destination 'generic/platform=iOS Simulator' \
+      -derivedDataPath "$DERIVED/ios" ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build -quiet 2>&1 | tee "$IOS_LOG"
+    # The app ships to iOS 17, but Swift only warns about a newer-OS conformance (EnumeratedSequence as a
+    # collection, TupleContent as a View): that compiles and then crashes on iOS 17/18 (Settings, 12.0.1).
+    # An incremental build re-reports only recompiled files, so this sees new sites, not old ones.
+    if grep -E "warning: .*(is only available in iOS|does not implement 'buildLimitedAvailability')" "$IOS_LOG" >&2; then
+      echo "local-tests: the iOS build uses an API newer than the iOS 17 deployment target (above); gate or replace it." >&2
+      exit 1
+    fi
   fi
   RAN+=("app")
 fi

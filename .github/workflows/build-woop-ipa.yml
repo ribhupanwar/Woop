@@ -64,13 +64,14 @@ jobs:
           Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh --check
 
-      # Validate a clean checkout before generating the local app-icon assets.
-      - name: Run package, macOS, and iOS simulator validation
+      # Validate package logic and the macOS app. The Release device archive below is the iOS
+      # compile gate; a separate simulator build here compiled the same app a second time.
+      - name: Run package and macOS validation
         run: |
           set -euo pipefail
-          echo "Validating latest feature/whoop-575-ui-parity source before IPA packaging."
-          echo "Includes RecoveryDetailView iOS-only navigation modifier guard."
-          Tools/local-tests.sh origin/main
+          echo "Validating latest Woop source before IPA packaging."
+          echo "The final iOS device archive is the iOS compile gate."
+          NOOP_LOCAL_TESTS_SKIP_IOS_SIMULATOR_BUILD=1 Tools/local-tests.sh origin/main
 
       - name: Generate original Woop app icon
         run: |
@@ -113,6 +114,11 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             | tee "$RUNNER_TEMP/woop-archive.log"
+          # Keep the iOS 17 availability gate without a second simulator compile.
+          if grep -E "warning: .*(is only available in iOS|does not implement 'buildLimitedAvailability')" "$RUNNER_TEMP/woop-archive.log" >&2; then
+            echo "::error::The iOS archive uses an API newer than the iOS 17 deployment target."
+            exit 1
+          fi
 
       - name: Package and verify IPA
         shell: bash
@@ -150,6 +156,7 @@ jobs:
             echo "## Woop unsigned IPA"
             echo "- Branch: $GITHUB_REF_NAME"
             echo "- IPA: Woop-unsigned.ipa"
+            echo "- IPA size: $(stat -f%z Woop-unsigned.ipa) bytes"
             echo "- SHA-256: $(cut -d ' ' -f 1 Woop-unsigned.ipa.sha256)"
             echo "- Signing: unsigned; install using SideStore/AltStore signing."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -163,13 +170,15 @@ jobs:
             Woop-unsigned.ipa.sha256
           if-no-files-found: error
           retention-days: 7
+          # IPA is already a ZIP; don't spend runner time trying to compress it a second time.
+          compression-level: 0
 
       - name: Preserve archive log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: woop-ios-build-log
-          path: \${{ runner.temp }}/woop-archive.log
+          path: ${{ runner.temp }}/woop-archive.log
           if-no-files-found: ignore
           retention-days: 14
 

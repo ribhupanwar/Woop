@@ -23,6 +23,7 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         // Goals sit among the reference blocks on both (plan §10.1: every Today style shows them).
         XCTAssertEqual(Array(DashboardLayoutSection.defaultOrder(for: "overview").prefix(5)),
                        [.coach, .overview, .focus, .goals, .health])
+        XCTAssertEqual(DashboardLayoutSection.activity.title, String(localized: "Today’s Activities"))
 
         // Every optional section is PLACED on both dashboards, and none is placed twice. Placement is
         // checked by identity rather than by counting `isExtra`: Momentum is still a

@@ -2127,7 +2127,7 @@ struct SettingsView: View {
 
     /// Which Today dashboard renders (Classic/Liquid/Trends/Overview). Replaces the old
     /// `noop.liquidTodayEnabled` bool — migrated once at app launch, see `TodayDashboardStyle`.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.liquid.rawValue
+    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
 
     /// The Trends dashboard's four metric-strip slots. Deliberately configured ONLY here — never as an
     /// edit affordance on the dashboard itself, see `TrendsMetricSlotsPrefs`.

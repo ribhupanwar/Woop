@@ -89,7 +89,7 @@ enum DashboardLayoutSection: String, CaseIterable, Identifiable {
         case .hero: return String(localized: "Charge / Effort / Rest")
         case .trendsChart: return String(localized: "Your trends")
         case .metricStrip: return String(localized: "Key Metrics")
-        case .activity: return String(localized: "Recent activity")
+        case .activity: return String(localized: "Today’s Activities")
         case .overview: return String(localized: "Today at a glance")
         case .focus: return String(localized: "Today's focus")
         case .health: return String(localized: "Your health")
