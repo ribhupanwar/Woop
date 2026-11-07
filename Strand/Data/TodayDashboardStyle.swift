@@ -41,8 +41,8 @@ enum TodayDashboardStyle: String, CaseIterable, Identifiable {
     static func migrateLegacyBoolIfNeeded(in defaults: UserDefaults = .standard) {
         guard defaults.string(forKey: storageKey) == nil else { return }
         // Preserve an explicit pre-migration choice, but let genuinely fresh installs use the
-        // current default. Treating a missing legacy key as Liquid would override the new default
-        // before RootTabView's @AppStorage gets a chance to apply it.
+        // current WHOOP-inspired Overview default. Existing users with a saved four-way choice
+        // return above and are never changed.
         if let wasLiquid = defaults.object(forKey: legacyLiquidEnabledKey) as? Bool {
             defaults.set((wasLiquid ? TodayDashboardStyle.liquid : .classic).rawValue, forKey: storageKey)
         } else {

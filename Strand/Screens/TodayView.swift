@@ -205,8 +205,8 @@ struct TodayView: View {
     // to be tighter than the gap between sections inside one card, which read backwards. This is
     // deliberately local rather than reused directly: changing the shared metrics would resize every
     // screen that composes NoopCard / ScreenScaffold, not just this one's outer rhythm.
-    private static let classicSectionSpacing: CGFloat = NoopMetrics.sectionGap
-    private static let classicKeyMetricTileHeight: CGFloat = 116
+    private static let classicSectionSpacing: CGFloat = max(12, NoopMetrics.sectionGap - 4)
+    private static let classicKeyMetricTileHeight: CGFloat = 108
     private static let classicHeaderControlSize: CGFloat = 34
     private static let classicHeaderHitSize: CGFloat = 36
     @AppStorage(DayCycleMode.storageKey) private var dayCycleModeRaw = DayCycleMode.sleepOnset.rawValue
@@ -538,6 +538,20 @@ struct TodayView: View {
     // the ring shows (never a second store read) plus the folded Readiness, so the sheet can never disagree
     // with the ring. A calibrating night (empty drivers) taps through to the EXISTING calibration countdown.
     @State private var showChargeBreakdown = false
+
+    /// One chronological Today feed row. Sleep and workouts share one presentation without
+    /// changing either source's stored records or the Workouts screen's all-time query.
+    private struct TodayActivityFeedItem: Identifiable {
+        let id: String
+        let startTs: Int
+        let title: String
+        let metricValue: String
+        let startTime: String
+        let endTime: String
+        let symbol: String
+        let isSleep: Bool
+        let workout: WorkoutRow?
+    }
 
     /// Wraps a tapped row so `.sheet(item:)` can present its detail (`WorkoutRow` isn't `Identifiable`) —
     /// mirrors `WorkoutsView.WorkoutDetailTarget` exactly.
@@ -4353,44 +4367,186 @@ struct TodayView: View {
         return rows.filter { $0.startTs >= cutoffTs }
     }
 
+    /// Sleep and workouts share one timeline. Keep the most recent 12 records, then render them
+    /// oldest-to-newest so the order reads naturally from morning to night.
+    private var todayActivityItems: [TodayActivityFeedItem] {
+        let cutoff = Calendar.current.date(byAdding: .day, value: -13,
+                                           to: Calendar.current.startOfDay(for: Date()))
+            .map { Int($0.timeIntervalSince1970) } ?? 0
+        let sleepItems = repo.sleeps
+            .filter { $0.endTs >= cutoff }
+            .map { session in
+                let start = session.effectiveStartTs
+                let end = session.endTs
+                let minutes = max(0, (end - start) / 60)
+                let value = String(format: "%d:%02d", minutes / 60, minutes % 60)
+                return TodayActivityFeedItem(
+                    id: "sleep-\(session.startTs)",
+                    startTs: start,
+                    title: String(localized: "Sleep"),
+                    metricValue: value,
+                    startTime: Night.clockString(start),
+                    endTime: Night.clockString(end),
+                    symbol: "moon.fill",
+                    isSleep: true,
+                    workout: nil
+                )
+            }
+        let workoutItems = Self.recentWorkoutsFeed(workouts).map { workout in
+            let sport = workout.sport.lowercased()
+            let symbol: String
+            if sport.contains("dance") {
+                symbol = "figure.dance"
+            } else if sport.contains("walk") || sport.contains("hike") {
+                symbol = "figure.walk"
+            } else if sport.contains("cycl") || sport.contains("bike") {
+                symbol = "bicycle"
+            } else if sport.contains("strength") || sport.contains("weight") || sport.contains("lift") {
+                symbol = "figure.strengthtraining.traditional"
+            } else if sport.contains("run") {
+                symbol = "figure.run"
+            } else {
+                symbol = "figure.mixed.cardio"
+            }
+            let metric = workout.strain.map { String(format: "%.1f", $0) } ?? workoutDuration(workout)
+            return TodayActivityFeedItem(
+                id: "workout-\(workout.startTs)-\(workout.sport)",
+                startTs: workout.startTs,
+                title: WorkoutSource.localizedDisplaySport(workout.sport),
+                metricValue: metric,
+                startTime: Night.clockString(workout.startTs),
+                endTime: Night.clockString(workout.endTs),
+                symbol: symbol,
+                isSleep: false,
+                workout: workout
+            )
+        }
+        let newestTwelve = Array((sleepItems + workoutItems).sorted { $0.startTs > $1.startTs }.prefix(12))
+        return newestTwelve.sorted { $0.startTs < $1.startTs }
+    }
+
     @ViewBuilder
     private var workoutsSection: some View {
-        // #1702: window HERE, not on `workouts`. That array is shared — it also feeds the Data Sources
-        // Apple-workout count and the HR chart's sport glyphs, both all-time by design — so windowing it
-        // at the source would silently shrink two unrelated numbers on this same screen.
-        let recent = Self.recentWorkoutsFeed(workouts)
-        if !recent.isEmpty {
-            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-                // "14 days" describes the window, like Android's today_workouts_14_days. The old
-                // "\(count) total" counted every workout ever recorded while showing at most six.
-                SectionHeader("Latest Workouts", overline: "Activity",
-                              trailing: String(localized: "14 days"))
-                LazyVGrid(columns: grid, alignment: .leading, spacing: NoopMetrics.gap) {
-                    ForEach(Array(recent.prefix(6).enumerated()), id: \.offset) { _, w in
-                        // Opens THIS workout's detail directly as a sheet — not a push through the
-                        // Workouts overview screen (see `workoutDetailTarget`'s doc comment).
-                        Button { workoutDetailTarget = WorkoutDetailTarget(row: w) } label: {
-                            StatTile(
-                                label: "\(WorkoutSource.localizedDisplaySport(w.sport))",
-                                value: workoutDuration(w),
-                                caption: Self.workoutCaption(w),
-                                // A workout without a stored Effort gets a neutral accent: the lowest-effort
-                                // tint would claim a zero load that was never measured.
-                                accent: w.strain.map { StrandPalette.effortTint(fraction: $0 / StrainScorer.maxStrain) }
-                                    ?? StrandPalette.textTertiary
-                                // No kcal chip here. In a three-column tile the chip and the duration
-                                // cannot both fit: letting the chip compress rendered "327 kcal" as
-                                // "3…", and giving it its natural width instead pushed the DURATION —
-                                // the tile's headline — down to "…". Neither is worth having, so the
-                                // tile keeps sport + duration + when, and calories stay one tap away
-                                // in the workout detail (and on the Workouts screen, which has the room).
+        let items = todayActivityItems
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("TODAY'S ACTIVITIES")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .tracking(1.0)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button { router.openTodayDetail(.workouts) } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.65))
+                        .frame(width: 40, height: 40)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("See all activities")
+            }
+
+            VStack(spacing: 10) {
+                if items.isEmpty {
+                    HStack(spacing: 12) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.65))
+                        Text("Your sleep and workouts will appear here.")
+                            .font(StrandFont.body)
+                            .foregroundStyle(Color.white.opacity(0.70))
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 16)
+                    .background(Color(red: 0.25, green: 0.27, blue: 0.28),
+                                in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                } else {
+                    ForEach(items) { item in
+                        let row = HStack(spacing: 18) {
+                            HStack(spacing: 12) {
+                                Image(systemName: item.symbol)
+                                    .font(.system(size: 25, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                Text(item.metricValue)
+                                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+                            }
+                            .frame(width: 126, height: 62)
+                            .background(
+                                item.isSleep
+                                    ? Color(red: 0.48, green: 0.64, blue: 0.75)
+                                    : Color(red: 0.02, green: 0.55, blue: 0.88),
+                                in: RoundedRectangle(cornerRadius: 17, style: .continuous)
                             )
+
+                            Text(item.title.uppercased())
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .tracking(0.8)
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.78)
+
+                            Spacer(minLength: 2)
+
+                            VStack(alignment: .trailing, spacing: 8) {
+                                Text(item.startTime)
+                                Text(item.endTime)
+                            }
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.white.opacity(0.68))
+                            .fixedSize(horizontal: true, vertical: false)
                         }
-                        .buttonStyle(.plain)
+                        .padding(8)
+                        .frame(maxWidth: .infinity, minHeight: 78)
+                        .background(Color(red: 0.25, green: 0.27, blue: 0.28),
+                                    in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                        if let workout = item.workout {
+                            Button { workoutDetailTarget = WorkoutDetailTarget(row: workout) } label: { row }
+                                .buttonStyle(.plain)
+                        } else {
+                            row
+                        }
                     }
                 }
             }
+
+            HStack(spacing: 10) {
+                Button {
+                    router.openTodayDetail(.workouts)
+                } label: {
+                    Label("ADD ACTIVITY", systemImage: "plus")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .foregroundStyle(.white)
+                        .background(Color(red: 0.25, green: 0.27, blue: 0.28),
+                                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                Button { showLiveSession = true } label: {
+                    Label("START ACTIVITY", systemImage: "stopwatch")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 68)
+                        .foregroundStyle(.white)
+                        .background(Color(red: 0.25, green: 0.27, blue: 0.28),
+                                    in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(red: 0.17, green: 0.19, blue: 0.20),
+                    in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     // MARK: (d) DATA SOURCES, one full-width footer card.

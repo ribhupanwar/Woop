@@ -61,7 +61,7 @@ actor NomicTextEmbeddingProvider: TextEmbeddingProvider {
         }
         guard FileManager.default.fileExists(atPath: modelURL.path) else {
             throw SemanticMemoryError.modelUnavailable(
-                "The bundled Nomic model is missing. Run Tools/bootstrap-nomic.sh before xcodegen."
+                "The optional Nomic model is not included in this Lite build. Coach will use keyword retrieval instead."
             )
         }
 

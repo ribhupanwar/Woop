@@ -23,6 +23,7 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         // Goals sit among the reference blocks on both (plan §10.1: every Today style shows them).
         XCTAssertEqual(Array(DashboardLayoutSection.defaultOrder(for: "overview").prefix(5)),
                        [.coach, .overview, .focus, .goals, .health])
+        XCTAssertEqual(DashboardLayoutSection.activity.title, String(localized: "Today’s Activities"))
 
         // Every optional section is PLACED on both dashboards, and none is placed twice. Placement is
         // checked by identity rather than by counting `isExtra`: Momentum is still a
@@ -56,6 +57,12 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         XCTAssertTrue(DashboardLayoutPrefs.hidden(DashboardLayoutPrefs.noneHiddenSentinel,
                                                   dashboard: "trends").isEmpty)
         XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "trends").isEmpty)
+    }
+
+    func testOverviewAlwaysKeepsTodayActivitiesVisibleEvenWhenOldPreferenceHidIt() {
+        XCTAssertFalse(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "overview").contains(.activity))
+        XCTAssertTrue(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "overview").contains(.workoutsList))
+        XCTAssertTrue(DashboardLayoutPrefs.hidden("activity,workoutsList", dashboard: "trends").contains(.activity))
     }
 
     func testRoundTripPreservesAUserArrangement() {
@@ -117,8 +124,10 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         }
         // Trends shows "Recent activity" by default, so its workout read must still happen there.
         XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "trends").contains(.activity))
-        // Overview has no `.activity` block at all, which is why it can skip workouts entirely.
-        XCTAssertFalse(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
+        // Both dashboards show the primary activity feed by default; the optional "More workouts"
+        // section remains hidden until the wearer enables it.
+        XCTAssertTrue(DashboardLayoutSection.defaultOrder(for: "overview").contains(.activity))
+        XCTAssertFalse(DashboardLayoutPrefs.hidden("", dashboard: "overview").contains(.activity))
     }
 
     // MARK: - "More workouts"
@@ -128,6 +137,18 @@ final class DashboardLayoutSectionsTests: XCTestCase {
         WorkoutRow(startTs: ts, endTs: ts + 1_800, sport: "Running", source: "whoop",
                    durationS: 1_800, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
                    distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
+    }
+
+    func testOverviewActivityRowsDeduplicateRepeatedNaturalKeys() {
+        let first = row(startingAt: 300)
+        let duplicate = WorkoutRow(startTs: 300, endTs: 2_100, sport: "Running", source: "apple",
+                                   durationS: 1_800, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
+                                   distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
+        let otherSport = WorkoutRow(startTs: 300, endTs: 2_100, sport: "Cycling", source: "whoop",
+                                    durationS: 1_800, energyKcal: nil, avgHr: nil, maxHr: nil, strain: nil,
+                                    distanceM: nil, zonesJSON: nil, notes: nil, steps: nil)
+        let unique = OverviewDashboardView.uniqueActivityWorkouts([first, duplicate, otherSport])
+        XCTAssertEqual(unique.map(\.sport), ["Running", "Cycling"])
     }
 
     func testMoreWorkoutsKeepsTheNewestRowWhenRecentActivityIsHidden() {

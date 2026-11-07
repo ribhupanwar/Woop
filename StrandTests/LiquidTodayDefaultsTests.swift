@@ -4,12 +4,12 @@ import XCTest
 /// Liquid Today's fresh defaults apply only to keys that were never written; every saved choice wins.
 final class LiquidTodayDefaultsTests: XCTestCase {
 
-    func testFreshLayoutLeadsWithTheHeroAndHidesRecoveryVitals() {
+    func testFreshLayoutLeadsWithScoresThenRecoveryVitals() {
         let visible = LiquidTodayDefaults.visibleSections(orderRaw: nil, hiddenRaw: nil)
         XCTAssertEqual(Array(visible.prefix(8)),
-                       [.hero, .synthesis, .goals, .keyMetrics, .trainingLoad, .energy, .workouts, .heartRate])
+                       [.hero, .recoveryVitals, .synthesis, .goals, .keyMetrics, .trainingLoad, .workouts, .energy])
         XCTAssertTrue(visible.contains(.yourCards))
-        XCTAssertFalse(visible.contains(.recoveryVitals))
+        XCTAssertTrue(visible.contains(.recoveryVitals))
         XCTAssertFalse(visible.contains(.dataSources))
         // An @AppStorage String with a "" default reads an unset key as "", which must still be fresh.
         XCTAssertEqual(LiquidTodayDefaults.visibleSections(orderRaw: "", hiddenRaw: nil), visible)
@@ -38,9 +38,9 @@ final class LiquidTodayDefaultsTests: XCTestCase {
         XCTAssertEqual(visible.first, .coach, "a customised layout reads the shared order, not Liquid's")
     }
 
-    func testEditorSeedKeepsHiddenSectionsInPlace() {
+    func testEditorSeedKeepsRecoveryVitalsVisibleInPlace() {
         let fresh = LiquidTodayDefaults.layout(orderRaw: nil, hiddenRaw: nil)
-        XCTAssertEqual(fresh.hidden, [.recoveryVitals])
+        XCTAssertEqual(fresh.hidden, [])
         XCTAssertTrue(fresh.order.contains(.recoveryVitals))
         XCTAssertFalse(fresh.order.contains(.dataSources))
     }

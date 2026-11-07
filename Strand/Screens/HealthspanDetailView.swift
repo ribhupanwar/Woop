@@ -52,7 +52,7 @@ struct HealthspanDetailView: View {
             .padding(NoopMetrics.space4)
         }
         .background(StrandPalette.surfaceBase)
-        .navigationTitle(Text("AgeLess"))
+        .navigationTitle(Text("Healthspan"))
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -135,9 +135,9 @@ struct HealthspanDetailView: View {
         let lever = n.lever.map(HealthspanSection.componentName)
         switch n.kind {
         case .reversing:
-            if let helper { return String(localized: "Your last 30 days beat your six-month average so clearly that your AgeLess age is falling. \(helper) helps you most; keep it up.") }
+            if let helper { return String(localized: "Your last 30 days beat your six-month average so clearly that your healthspan age is falling. \(helper) helps you most; keep it up.") }
         case .youngerSteady:
-            if let helper { return String(localized: "Your AgeLess age is below your actual age and your pace is steady or slowing. \(helper) helps you most; keep it up.") }
+            if let helper { return String(localized: "Your healthspan age is below your actual age and your pace is steady or slowing. \(helper) helps you most; keep it up.") }
         case .youngerAccelerating:
             if let lever { return String(localized: "Your last 30 days are less healthy than your six-month average, so your AgeLess age is starting to rise. \(lever) would help most right now.") }
         case .olderImproving:
@@ -223,7 +223,7 @@ struct HealthspanInfoButton: View {
 
     var body: some View {
         Button { presented = true } label: {
-            Label("About AgeLess", systemImage: "info.circle")
+            Label("About Healthspan", systemImage: "info.circle")
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $presented) { AgeLessAboutSheet() }
