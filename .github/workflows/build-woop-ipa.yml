@@ -121,6 +121,16 @@ jobs:
           rm -rf "$RUNNER_TEMP/ipa/Payload/Woop.app/Watch" "$RUNNER_TEMP/ipa/Payload/Woop.app/PlugIns"
           test ! -e "$RUNNER_TEMP/ipa/Payload/Woop.app/Watch"
           test ! -e "$RUNNER_TEMP/ipa/Payload/Woop.app/PlugIns"
+          # The 328 MB Nomic GGUF is only needed for optional semantic Coach retrieval. The Lite
+          # SideStore IPA keeps keyword retrieval and omits this model; the full Xcode archive keeps it.
+          MODEL_NAME="nomic-embed-text-v2-moe.Q4_K_M.gguf"
+          ARCHIVE_MODEL="$(find "$APP" -name "$MODEL_NAME" -type f -print -quit)"
+          test -n "$ARCHIVE_MODEL" || { echo "::error::Nomic model missing from full archive"; exit 1; }
+          IPA_MODEL="$(find "$RUNNER_TEMP/ipa/Payload/Woop.app" -name "$MODEL_NAME" -type f -print -quit)"
+          test -n "$IPA_MODEL" || { echo "::error::Nomic model missing before Lite IPA trim"; exit 1; }
+          rm -f "$IPA_MODEL"
+          test -z "$(find "$RUNNER_TEMP/ipa/Payload/Woop.app" -name "$MODEL_NAME" -type f -print -quit)"
+          echo "Lite IPA excludes optional Nomic GGUF; full archive retains it."
           (cd "$RUNNER_TEMP/ipa" && /usr/bin/zip -qry "$GITHUB_WORKSPACE/Woop-unsigned.ipa" Payload)
           test -s Woop-unsigned.ipa
           unzip -t Woop-unsigned.ipa
@@ -141,7 +151,7 @@ jobs:
             Woop-unsigned.ipa
             Woop-unsigned.ipa.sha256
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 7
 
       - name: Preserve archive log
         if: always()
