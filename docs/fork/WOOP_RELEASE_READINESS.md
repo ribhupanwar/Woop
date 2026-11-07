@@ -13,6 +13,25 @@ Approved screenshots are the visual acceptance baseline. The baseline images and
 display scale and appearance must be identified before claiming zero visual deviation. The images
 in `docs/assets/screenshots` are repository examples, not evidence of owner approval.
 
+### Existing reference source identified by the owner
+
+The owner identified `ribhupanwar/dsta` as the existing WHOOP reverse-engineering/reference repository.
+Consult that work before requesting duplicate reference material:
+
+- [WHOOP 5.75.0 IPA UI analysis branch](https://github.com/ribhupanwar/dsta/tree/analysis/whoop-5-75-0-ipa-ui),
+  commit `034ba05ba78eb43319552e624a82abee7d7929ae`.
+- [Successful extraction run](https://github.com/ribhupanwar/dsta/actions/runs/41476885119), artifact
+  `whoop-5.75.0-ipa-ui-reference` (artifact ID `13158456060`, available at inspection).
+- [DSTA reference UI implementation](https://github.com/ribhupanwar/dsta/tree/feature/woop-reference-ui-port),
+  commit `8d946e38e4e298d770a53d619093f985ac2738ce`: Home, Recovery and Sleep reference screens.
+- [Existing Woop cross-repository audit](https://github.com/ribhupanwar/Woop/blob/audit/whoop-5-75-0-ui-parity/docs/reverse-engineering/whoop-5.75.0-ui-audit.md),
+  branch head `e36c514cd81241bbfcab9888b5e591202db46772`.
+
+That audit records the exact app version/build, static NIB/storyboard/resource findings and a reuse
+map. It explicitly leaves runtime screenshots and visual comparison unchecked. DSTA's independent
+SwiftUI experiments are references to adapt to Woop's existing data layer, not recovered WHOOP source
+or a completed pixel-parity certification. Preserve Woop's verified readouts when adapting them.
+
 No unavailable sensor input may become a fabricated number. Measured, imported, manually entered,
 estimated and predicted values must be distinguished. A calculated score is not a sensor measurement.
 
