@@ -205,8 +205,8 @@ struct TodayView: View {
     // to be tighter than the gap between sections inside one card, which read backwards. This is
     // deliberately local rather than reused directly: changing the shared metrics would resize every
     // screen that composes NoopCard / ScreenScaffold, not just this one's outer rhythm.
-    private static let classicSectionSpacing: CGFloat = NoopMetrics.sectionGap
-    private static let classicKeyMetricTileHeight: CGFloat = 116
+    private static let classicSectionSpacing: CGFloat = max(12, NoopMetrics.sectionGap - 4)
+    private static let classicKeyMetricTileHeight: CGFloat = 108
     private static let classicHeaderControlSize: CGFloat = 34
     private static let classicHeaderHitSize: CGFloat = 36
     @AppStorage(DayCycleMode.storageKey) private var dayCycleModeRaw = DayCycleMode.sleepOnset.rawValue
