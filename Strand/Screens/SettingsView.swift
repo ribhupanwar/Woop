@@ -3439,12 +3439,20 @@ struct SettingsView: View {
                 .onChangeCompat(of: autoDetectWorkoutsEnabled) { on in
                     guard on else { return }
                     if automaticActivitySave {
-                        UserDefaults.standard.set(String(Int(Date().timeIntervalSince1970)),
+                        UserDefaults.standard.set(String(ActivitySuggestions.automaticSaveActivationStart(
+                            now: Int(Date().timeIntervalSince1970))),
                                                   forKey: ActivitySuggestions.automaticSaveSinceKey)
                         UserDefaults.standard.set(activityWalks, forKey: ActivitySuggestions.walksKey)
                     }
                     ActivitySuggestionNotifier.requestAuthorization()
-                    Task { await model.repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm) }
+                    Task {
+                        if automaticActivitySave {
+                            await model.intelligence.analyzeRecent(maxDays: 3)
+                            await model.repo.refresh()
+                        } else {
+                            await model.repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm)
+                        }
+                    }
                 }
                 Text(automaticActivitySave
                      ? "After sync and analysis, eligible detected activities are saved automatically. You can change their type or times, or dismiss them. Existing workouts are skipped. Beta."
@@ -3458,9 +3466,16 @@ struct SettingsView: View {
                         .onChangeCompat(of: automaticActivitySave) { enabled in
                             if enabled {
                                 // New activation starts a new capture window, without backfilling old suggestions.
-                                UserDefaults.standard.set(String(Int(Date().timeIntervalSince1970)),
+                                UserDefaults.standard.set(String(ActivitySuggestions.automaticSaveActivationStart(
+                                    now: Int(Date().timeIntervalSince1970))),
                                                           forKey: ActivitySuggestions.automaticSaveSinceKey)
                                 UserDefaults.standard.set(activityWalks, forKey: ActivitySuggestions.walksKey)
+                                // A toggle does not change raw-sensor fingerprints; force a short
+                                // analysis pass to recover today's earlier background sessions.
+                                Task {
+                                    await model.intelligence.analyzeRecent(maxDays: 3)
+                                    await model.repo.refresh()
+                                }
                             }
                         }
                     Text("After sync and analysis, completed detected activities are added to your timeline. Running and walking use available strap movement data; other types stay Activity until you edit them. Detection needs enough sensor data and is not continuous phone GPS recording.")

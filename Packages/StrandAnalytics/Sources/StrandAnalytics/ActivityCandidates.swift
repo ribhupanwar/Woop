@@ -20,13 +20,17 @@ import Foundation
 public enum ActivityCandidates {
 
     /// Bumped whenever a threshold or rule below changes, so stored suggestions and answers can be told apart.
-    public static let ruleVersion = "activity-v1"
+    public static let ruleVersion = "activity-v2"
 
     public static let minimumMinutes = 15
     public static let boutShare = 0.8
     /// Longest run of non-qualifying minutes inside a span.
     public static let maxGapMinutes = 2
     public static let walkCadence = 80
+    /// Recover background runs when movement-class bytes were not available after sync.
+    /// High steps per minute alone are insufficient: exercising heart rate is required.
+    public static let runCadence = 140
+    public static let runMinimumBpm = 110
     public static let everydayMarginHRR = 0.12
     public static let everydayQuantile = 0.75
     /// Without enough history, the heart-rate track uses this fixed reserve instead of the everyday level.
@@ -122,12 +126,22 @@ public enum ActivityCandidates {
         return (m.walkSeconds ?? 0) + (m.runSeconds ?? 0) >= 30 && steps >= walkCadence
     }
 
+    /// Cadence-first fallback: usable steps and elevated HR despite missing class seconds.
+    /// Explicit walking stays walking even at unusually high step rates.
+    static func isCadenceRunMinute(_ m: Minute) -> Bool {
+        guard !m.asleep, let steps = m.steps, steps >= runCadence,
+              let bpm = m.bpm, bpm >= Double(runMinimumBpm) else { return false }
+        return (m.walkSeconds ?? 0) < 30
+    }
+
     public static func walkCandidates(_ minutes: [Minute], hrMax: Int) -> [Candidate] {
-        bouts(minutes, qualifies: isWalkMinute).map { range in
+        bouts(minutes, qualifies: { isWalkMinute($0) || isCadenceRunMinute($0) }).map { range in
             let span = Array(minutes[range])
             let walk = span.reduce(0) { $0 + ($1.walkSeconds ?? 0) }
             let run = span.reduce(0) { $0 + ($1.runSeconds ?? 0) }
-            return candidate(.walk, span, hrMax: hrMax, kinds: [run > walk ? .run : .walk])
+            let cadenceRunMinutes = span.filter(isCadenceRunMinute).count
+            let inferredRun = cadenceRunMinutes * 2 >= span.count && run >= walk
+            return candidate(.walk, span, hrMax: hrMax, kinds: [run > walk || inferredRun ? .run : .walk])
         }
     }
 

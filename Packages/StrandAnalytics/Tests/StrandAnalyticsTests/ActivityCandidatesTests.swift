@@ -38,6 +38,27 @@ final class ActivityCandidatesTests: XCTestCase {
         XCTAssertEqual(A.walkCandidates(minutes, hrMax: 185).first?.kinds, [.run])
     }
 
+    func testBackgroundRunFromStepsAndHeartRateWithoutMotionClass() {
+        // A 46-minute running bout may offload its steps after the iOS app was suspended.
+        let minutes = day(150) { i in
+            if (50..<96).contains(i) { return (155, 164, nil, nil, nil) }
+            return (65, 0, nil, nil, nil)
+        }
+        let all = A.candidates(minutes, restingHR: 55, hrMax: 185, everydayHRR: nil)
+        XCTAssertEqual(all.count, 1)
+        XCTAssertEqual(all.first?.track, .walk)
+        XCTAssertEqual(all.first?.kinds, [.run])
+        XCTAssertEqual(all.first?.durationMinutes, 46)
+        XCTAssertEqual(all.first?.cadence, 164)
+    }
+
+    func testFastStepsWithoutExerciseHeartRateDoNotCreateRun() {
+        let minutes = day(150) { i in
+            (50..<96).contains(i) ? (85, 168, nil, nil, nil) : (65, 0, nil, nil, nil)
+        }
+        XCTAssertTrue(A.walkCandidates(minutes, hrMax: 185).isEmpty)
+    }
+
     func testAWhoop4WithoutAStepStreamFindsNoWalkButStillAHeartRateSpan() {
         let minutes = day { i in (100..<140).contains(i) ? (140, nil, nil, nil, nil) : (65, nil, nil, nil, nil) }
         XCTAssertTrue(A.walkCandidates(minutes, hrMax: 180).isEmpty)

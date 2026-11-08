@@ -23,6 +23,33 @@ final class ActivitySuggestionsTests: XCTestCase {
                                                    importedIds: ["different-strap"]), ["recording-strap"])
     }
 
+    func testAutomaticSaveRecoversEarlierRunOnActivationDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        let d = calendar.date(from: DateComponents(year: 2026, month: 11, day: 8,
+                                                   hour: 9, minute: 40))!
+        let now = Int(d.timeIntervalSince1970)
+        let midnight = Int(calendar.startOfDay(for: d).timeIntervalSince1970)
+        XCTAssertEqual(S.automaticSaveActivationStart(now: now, calendar: calendar), midnight)
+        let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")
+        let run = candidate(midnight + 7 * 3600, minutes: 46, track: "walk", kinds: ["run"])
+        let suggestions = S.resolve(candidates: [run], answers: [], workouts: [], settings: .init())
+        let restored = S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: midnight,
+                                       now: now, source: source)
+        XCTAssertEqual(restored.map { $0.sport }, ["Running"])
+        XCTAssertTrue(S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: now,
+                                      now: now, source: source).isEmpty)
+    }
+
+    func testHeartRateRunClassificationIsSavedAsRunning() {
+        let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")
+        let c = candidate(10_000, track: "heartRate", kinds: ["run", "walk", "other"])
+        let suggestions = S.resolve(candidates: [c], answers: [], workouts: [], settings: .init())
+        let result = S.automaticRows(suggestions, existing: [], dismissed: [], activatedAt: 9_000,
+                                     now: 20_000, source: source)
+        XCTAssertEqual(result.map { $0.sport }, ["Running"])
+    }
+
     func testAutomaticSaveWaitsForSettlementAndNeverBackfillsBeforeActivation() {
         let suggestions = S.resolve(candidates: [candidate(10_000)], answers: [], workouts: [], settings: .init())
         let source = WorkoutSource.automaticDetectionSource(computedId: "strap-noop")

@@ -125,6 +125,12 @@ public enum ActivitySuggestions {
     public static let automaticSaveKey = "woop.activityDetection.automaticSave"
     public static let automaticSaveSinceKey = "woop.activityDetection.automaticSaveSince"
 
+    /// When the wearer enables recording, recover any eligible session from today,
+    /// even if background sync completed after the session; never import prior days.
+    public static func automaticSaveActivationStart(now: Int, calendar: Calendar = .current) -> Int {
+        Int(calendar.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(now))).timeIntervalSince1970)
+    }
+
     /// Auto-save is a separate wearer-controlled policy. It only adds settled, eligible sessions
     /// beginning after activation, never rewrites an imported/edited session, and retains dismissals.
     /// A sport label is used only for the strap's locomotion track; HR-only spans stay generic.
@@ -146,8 +152,8 @@ public enum ActivitySuggestions {
             let span = s.start..<s.end
             guard !(occupied + dismissed).contains(where: { $0.overlaps(span) }) else { continue }
             let sport: String
-            if s.track == .walk, s.kinds == [.run] { sport = "Running" }
-            else if s.track == .walk, s.kinds == [.walk] { sport = "Walking" }
+            if s.likelyKind == .run { sport = "Running" }
+            else if s.track == .walk, s.likelyKind == .walk { sport = "Walking" }
             else { sport = "detected" }
             rows.append(WorkoutRow(startTs: s.start, endTs: s.end, sport: sport, source: source,
                                    durationS: Double(s.end - s.start), energyKcal: nil, avgHr: s.avgBpm,
@@ -192,11 +198,15 @@ public enum ActivitySuggestions {
             let next = Int(calendar.date(byAdding: .day, value: 1, to: Date(timeIntervalSince1970: TimeInterval(day)))!
                 .timeIntervalSince1970)
             let key = dayKey(day, calendar), previous = dayKey(day - 43_200, calendar)
+            let dayMinutes = slice(minutes, day, next)
             if let rest = restingByDay[key] ?? restingByDay[previous] {
-                let dayMinutes = slice(minutes, day, next)
                 let everyday = ActivityCandidates.everydayHRR(history: slice(minutes, day - 14 * 86_400, day),
                                                               restingHR: rest, hrMax: hrMax)
                 found += ActivityCandidates.candidates(dayMinutes, restingHR: rest, hrMax: hrMax, everydayHRR: everyday)
+            } else {
+                // RHR gaps must not suppress a sustained cadence/HR-confirmed run.
+                // Only motion-led candidates are eligible without a resting HR baseline.
+                found += ActivityCandidates.walkCandidates(dayMinutes, hrMax: hrMax)
             }
             day = next
         }
