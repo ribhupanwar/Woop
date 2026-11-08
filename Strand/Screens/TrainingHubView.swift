@@ -18,6 +18,7 @@ struct TrainingHubView: View {
     @EnvironmentObject private var profile: ProfileStore
     @AppStorage(ActivitySuggestions.enabledKey) private var detectActivities = false
     @EnvironmentObject private var repo: Repository
+    @AppStorage(UnitPrefs.systemKey) private var distanceUnitsRaw = UnitSystem.metric.rawValue
     @StateObject private var model = TrainingHubModel()
     @State private var showingStarterPlans = false
     @State private var showingStart = false
@@ -45,6 +46,7 @@ struct TrainingHubView: View {
                     } else {
                         // Starting first, then planning, then looking back: the order the tab is used in.
                         startCard
+                        runningProgressCard
                         automaticTrackingCard
                         ActivitySuggestionPrompt()
                         GoalsContextCard(context: .training)
@@ -235,6 +237,46 @@ struct TrainingHubView: View {
         } else {
             TrainingQuickStartCard(strength: strengthEntry, onStartStrength: start, onShowAll: openStart)
         }
+    }
+
+    private var runningProgressCard: some View {
+        let summary = model.runningSummary
+        let units = UnitSystem(rawValue: distanceUnitsRaw) ?? .metric
+        return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Running", overline: "Last 7 days")
+            NoopCard {
+                VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                    HStack(alignment: .top, spacing: NoopMetrics.space3) {
+                        runningStat("Runs", value: summary.count.formatted())
+                        runningStat("Distance", value: summary.distanceM.map {
+                            UnitFormatter.distanceFromMeters($0, system: units)
+                        } ?? "—")
+                        runningStat("Pace", value: UnitFormatter.paceFromSecPerKm(summary.paceSecPerKm, system: units))
+                    }
+                    if let last = summary.latest {
+                        Divider()
+                        NavigationLink(value: TabRoute.workoutDetail(startTs: last.startTs, sport: last.sport)) {
+                            HStack {
+                                Text(Date(timeIntervalSince1970: TimeInterval(last.startTs)), style: .date)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.accent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func runningStat(_ title: LocalizedStringKey, value: String) -> some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+            Text(title).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+            Text(verbatim: value).font(StrandFont.subhead.weight(.semibold))
+                .foregroundStyle(StrandPalette.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var automaticTrackingCard: some View {

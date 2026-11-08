@@ -16,6 +16,9 @@ This change is based on `codex/consolidated-release` at `3eced46`. References ar
 - Reference fonts use normal-width system type; the dashboard has compact 56-point minimum rows with two value lines. Recorded comparison dates remain accessible without adding a third visible line.
 - Arrows show the actual direction. Higher HRV/steps and lower resting HR are favorable (green); the opposite is unfavorable (orange). Unchanged and context-dependent metrics remain neutral. This is presentation only, with no scoring change.
 
+- Running now includes a seven-day summary of completed sessions, recorded distance and distance-weighted pace, plus the latest run's detail link. A session with missing distance leaves the aggregate distance/pace unknown. This adds no stored metric or training score.
+- [OpenGym](https://github.com/DuarteSantos8/openGym) was reviewed as the feature reference. The existing native hub already supports starter routines, previous-performance prefill, progression, warm-up sets, plate calculation, rest timers and OpenGym plan import. The work exposes that hub in Activity while retaining Woop's local sensor and GPS integration.
+
 ## Model selection
 
 For iPhone camera-assisted repetition counting, the recommended starting point is Apple's native [Create ML Components action-repetition counter](https://developer.apple.com/documentation/createmlcomponents/counting-human-body-action-repetitions-in-a-live-video-feed). It operates on a pose stream from live video. It is not wrist-only tracking or a universal exercise recognizer. Camera placement, exercise-specific evaluation, permission copy and a confirmation step are required before shipping a set count. This review does not enable camera capture or install a model.

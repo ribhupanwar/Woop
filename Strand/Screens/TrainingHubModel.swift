@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import StrandDesign
 import StrandTraining
+import WhoopStore
 import UserNotifications
 
 @MainActor
@@ -26,6 +27,7 @@ final class TrainingHubModel: ObservableObject {
         let alreadyImported: Set<UUID>
     }
 
+    @Published private(set) var runningSummary = TrainingRunSummary()
     @Published private(set) var loaded = false
     @Published private(set) var exercises: [TrainingExercise] = []
     @Published private(set) var plan = TrainingPlan()
@@ -51,12 +53,14 @@ final class TrainingHubModel: ObservableObject {
         async let exercises = repo.nativeTrainingExercises()
         async let plan = repo.nativeTrainingPlan(weekStartsOn: weekStartsOn)
         async let workouts = repo.nativeWorkouts()
+        async let recentActivities = repo.workoutRows(days: 8)
         async let trackers = repo.nativeTrainingTrackers()
         async let resolved = repo.resolvedStrengthHistory(days: ResolvedStrengthHistory.allHistoryDays)
         self.exercises = await exercises
         self.plan = await plan
         self.workouts = await workouts
         self.trackers = await trackers
+        runningSummary = TrainingRunSummary.resolve(await recentActivities, now: Date())
         self.resolvedHistory = await resolved
         refreshPerformanceHistory()
         activityDays = TrainingActivityDay.pastYear(sessions: resolvedHistory.sessions,
@@ -285,5 +289,44 @@ final class TrainingHubModel: ObservableObject {
     static func weekday(_ date: Date) -> TrainingWeekday {
         let value = Calendar.current.component(.weekday, from: date)
         return TrainingWeekday(rawValue: value == 1 ? 7 : value - 1) ?? .monday
+    }
+}
+
+// Presentation-only summary of canonical, completed running sessions. Missing distance
+// stays unknown; a partial distance must not be displayed as the whole week's total.
+struct TrainingRunSummary {
+    var count = 0
+    var distanceM: Double?
+    var paceSecPerKm: Double?
+    var latest: WorkoutRow?
+
+    static func resolve(_ rows: [WorkoutRow], now: Date) -> Self {
+        let end = Int(now.timeIntervalSince1970)
+        let start = end - 7 * 24 * 60 * 60
+        let names: Set<String> = ["running", "run", "treadmill run", "trail running", "jogging"]
+        let runs = rows.filter {
+            names.contains($0.sport.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+                && $0.startTs >= start && $0.endTs <= end && $0.endTs > $0.startTs
+        }
+        var result = Self()
+        result.count = runs.count
+        result.latest = runs.max { $0.startTs < $1.startTs }
+        guard !runs.isEmpty else { return result }
+        let distances = runs.compactMap { row -> Double? in
+            guard let value = row.distanceM, value.isFinite, value > 0 else { return nil }
+            return value
+        }
+        guard distances.count == runs.count else { return result }
+        let distance = distances.reduce(0, +)
+        guard distance.isFinite, distance > 0 else { return result }
+        let seconds = runs.reduce(0.0) { total, row in
+            let duration = row.durationS.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+                ?? Double(row.endTs - row.startTs)
+            return total + duration
+        }
+        result.distanceM = distance
+        let pace = seconds / distance * 1000
+        result.paceSecPerKm = pace.isFinite && pace > 0 ? pace : nil
+        return result
     }
 }
