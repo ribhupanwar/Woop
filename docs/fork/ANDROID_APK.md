@@ -63,3 +63,9 @@ Analysis migration required: no.
 Gradle's official distribution redirect returned HTTP 504 after the wrapper timeout repair. CI now
 bootstraps Gradle 8.7 with retry and an alternate mirror only when official download fails; both paths
 must match the repository's existing pinned SHA-256. Dependency verification/lockfiles remain enabled.
+
+Reference follow-up: Android uses the 0-21 effort display by default while retaining explicit saved scale
+choices; timeline strain uses the same formatter as the hero. The healthspan detail now draws a static,
+independent particle orb over the existing calculated age. Android translated display strings replace
+legacy NOOP branding without renaming resource keys, package identities or preference keys.
+Analysis migration required: no.

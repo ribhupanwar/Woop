@@ -193,9 +193,9 @@ object UnitPrefs {
     /** SharedPreferences key for the Effort display scale (#268). Mirrors macOS @AppStorage("effort.scale"). */
     const val KEY_EFFORT_SCALE = "effort.scale"
 
-    /** The Effort display scale (default 0–100). Read once into Compose state like the other prefs. */
+    /** Reference app default is the 0–21 display axis; an explicit saved scale is retained. */
     fun effortScale(context: Context): EffortScale =
-        EffortScale.fromRaw(NoopPrefs.of(context).getString(KEY_EFFORT_SCALE, null))
+        EffortScale.fromRaw(NoopPrefs.of(context).getString(KEY_EFFORT_SCALE, EffortScale.WHOOP.raw))
 
     /** Persist the Effort display scale. */
     fun setEffortScale(context: Context, scale: EffortScale) {

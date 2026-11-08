@@ -1,5 +1,11 @@
 package com.noop.ui.forge
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -116,13 +122,27 @@ private fun WeekSwitcher(week: CoreAgeLess.Week, hasPrevious: Boolean, hasNext: 
 @Composable
 private fun AgeCard(week: CoreAgeLess.Week) {
     val younger = week.delta <= 0
-    AgelessCard {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(years(week.age), style = Forge.type.title1, color = ageColor(week.delta))
-            Spacer(Modifier.width(ForgeMetrics.space2))
+    val tint = if (younger) WoopReferenceColors.healthGood else WoopReferenceColors.stressHigh
+    Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(280.dp)) {
+            val radius = size.minDimension / 2
+            drawCircle(Brush.radialGradient(listOf(Color.Black, tint.copy(alpha = 0.10f), tint.copy(alpha = 0.45f))), radius)
+            drawCircle(tint.copy(alpha = 0.7f), radius - 1, style = Stroke(1.dp.toPx()))
+            repeat(500) { index ->
+                val phase = index * 2.399963229728653
+                val fraction = ((index * 137 + 29) % 499) / 499.0
+                val radial = 0.61 + 0.37 * kotlin.math.sqrt(fraction)
+                drawCircle(tint.copy(alpha = (0.16 + fraction * 0.66).toFloat()),
+                    radius = (0.6 + (index * 17 % 13) / 10.0).dp.toPx(),
+                    center = center + Offset((kotlin.math.cos(phase) * radial * radius).toFloat(), (kotlin.math.sin(phase) * radial * radius).toFloat()))
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(years(week.age), style = Forge.type.title1.copy(fontSize = 48.sp, fontWeight = FontWeight.Bold), color = Forge.colors.text)
+            Text("WOOP AGE", style = Forge.type.overline, color = Forge.colors.textSecondary)
             Text(stringResource(R.string.forge_join_space, years(abs(week.delta)),
                                 stringResource(if (younger) R.string.forge_ageless_younger else R.string.forge_ageless_older)),
-                 style = Forge.type.subhead, color = Forge.colors.textSecondary, modifier = Modifier.padding(bottom = 4.dp))
+                 style = Forge.type.subhead, color = tint)
         }
     }
 }

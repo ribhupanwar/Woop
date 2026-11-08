@@ -33,14 +33,15 @@ internal fun WoopActivityTimeline(date: LocalDate, vm: AppViewModel, onActivitie
         }
     }
     val zone = ZoneId.systemDefault()
-    val entries = remember(workouts, nights, date) {
+    val effortScale = com.noop.ui.UnitPrefs.effortScale(context)
+    val entries = remember(workouts, nights, date, effortScale) {
         val sleep = nights.filter { Instant.ofEpochSecond(it.endTs).atZone(zone).toLocalDate() == date }.map { night ->
             val mins = night.minutes?.filterKeys { it != "wake" }?.values?.sum()?.toInt()
             TimelineEntry(night.startTs, night.endTs, "SLEEP", mins?.let { "%d:%02d".format(it / 60, it % 60) } ?: "—", true)
         }
         val activity = workouts.filter { Instant.ofEpochSecond(it.startTs).atZone(zone).toLocalDate() == date }
             .distinctBy { Triple(it.startTs, it.endTs, it.sport.lowercase()) }.map {
-                TimelineEntry(it.startTs, it.endTs, (if (it.sport.equals("detected", true)) "ACTIVITY" else it.sport.uppercase()), it.strain?.let { n -> "%.1f".format(n) } ?: "—", false)
+                TimelineEntry(it.startTs, it.endTs, (if (it.sport.equals("detected", true)) "ACTIVITY" else it.sport.uppercase()), it.strain?.let { n -> com.noop.ui.UnitFormatter.effortDisplay(n, effortScale) } ?: "—", false)
             }
         (sleep + activity).sortedBy { it.start }
     }
