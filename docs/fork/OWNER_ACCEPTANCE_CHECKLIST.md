@@ -84,3 +84,10 @@ caches immediately, before the scoring follow-up. Previously the pass refreshed 
 these writes and the new timeline row could wait for another pass. Detection thresholds, activation
 time, source provenance, deduplication and stored calculations are unchanged. This publishes completed
 saves sooner; it does not make hardware detection continuous or provide missing sport classifications.
+
+Latest owner clarification: Tonight's Sleep opens the illustrated planner; Health replaces the
+Healthspan tab and is SECOND, after Home. Healthspan calculations and contributor drill-down stay inside
+Health. Firmware updating under More is requested; current implementation exposes read-only version
+status only, because validated flashing/recovery support is absent. The owner has no Strava API app;
+current official docs require subscription to register one. See UI_LAYOUT_REVIEW.md for exact boundaries.
+Analysis migration required: no.

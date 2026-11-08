@@ -86,6 +86,24 @@ final class ReferenceNavigationTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Stress Monitor"].waitForExistence(timeout: 10))
     }
 
+    func testHealthIsSecondAndTonightSleepOpensPlanner() {
+        launch()
+        let home = app.buttons["woop.tab.0"]
+        let health = app.buttons["woop.tab.3"]
+        let activity = app.buttons["woop.tab.2"]
+        XCTAssertLessThan(home.frame.midX, health.frame.midX)
+        XCTAssertLessThan(health.frame.midX, activity.frame.midX)
+        let tonight = app.buttons["woop.home.tonightSleep"]
+        for _ in 0..<6 {
+            if tonight.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(tonight.isHittable)
+        tonight.tap()
+        XCTAssertTrue(app.navigationBars["Sleep Planner"].waitForExistence(timeout: 10))
+        capture("empty-sleep-planner")
+    }
+
     private func capture(_ name: String) {
         // Allow the empty-store loading state to settle; no sensor data is generated for screenshots.
         Thread.sleep(forTimeInterval: 3)

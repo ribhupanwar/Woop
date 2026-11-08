@@ -280,6 +280,7 @@ private struct SyncStatusSection: View {
 /// Live HR hero, split into its own view so the ~1Hz HR stream only re-renders this
 /// subtree — the static vitals grid does not. Depends on `live` and `profile` only.
 private struct HeartRateSection: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var live: LiveState
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var model: AppModel
@@ -361,6 +362,13 @@ private struct HeartRateSection: View {
     }
 
     var body: some View {
+        Group {
+            if referenceUI { ReferenceLiveHeartRate() }
+            else { legacyContent }
+        }
+    }
+
+    private var legacyContent: some View {
         // Compute the derived live values ONCE per body pass and thread them into the
         // subviews, instead of re-evaluating heavy computed properties multiple times.
         let displayHR = self.displayHR
@@ -369,7 +377,12 @@ private struct HeartRateSection: View {
         let zone = hrZone(displayHR)
         let series = hrSeries(displayHR)
 
-        return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+        return legacyHeartRate(displayHR: displayHR, hasLiveHR: hasLiveHR, fraction: fraction, zone: zone, series: series)
+    }
+
+    private func legacyHeartRate(displayHR: Int?, hasLiveHR: Bool, fraction: Double,
+                                 zone: Int, series: [LiveHRSample]) -> some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Heart Rate", overline: "Live", trailing: hrIsDerived ? String(localized: "from R-R") : nil)
 
             // The live HR hero is a flat WHOOP card tinted rose — heart-rate's metric accent.

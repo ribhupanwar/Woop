@@ -102,7 +102,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "health": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -125,6 +125,7 @@ struct RootTabView: View {
                     reselectTab(tag)
                 } else {
                     selectedTab = tag
+                    if tag == 0 { Task { await model.refreshDashboard() } }
                 }
             }
         )
@@ -135,7 +136,10 @@ struct RootTabView: View {
     /// pop is skipped, so scroll position survives and the refresh doesn't double with a re-run of the
     /// root's `.task` (#198).
     private func reselectTab(_ tag: Int) {
-        Task { await repo.refresh() }
+        Task {
+            if tag == 0 { await model.refreshDashboard() }
+            else { await repo.refresh() }
+        }
         if !tabPaths[tag].isEmpty {
             tabPaths[tag] = NavigationPath()   // on a subpage: animated pop back to the root
         } else {
@@ -153,7 +157,7 @@ struct RootTabView: View {
     /// horizontal swipe to change days, so neither participates in this ancestor gesture.
     /// Both thresholds are unchanged
     /// from the original gesture.
-    private static let visibleTabTags = [0, 2, 3, 4]
+    private static let visibleTabTags = [0, 3, 2, 4]
 
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
@@ -179,8 +183,8 @@ struct RootTabView: View {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(ReferenceHealthHub(), "Health", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
             // White active navigation follows the supplied dark reference; score colors stay local.
@@ -528,8 +532,8 @@ struct RootTabView: View {
     private var referenceTabBar: some View {
         HStack(spacing: 0) {
             referenceTabItem(0, "Home", "house")
+            referenceTabItem(3, "Health", "heart.text.square")
             referenceTabItem(2, "Activity", "figure.run")
-            referenceTabItem(3, "Healthspan", "heart.text.square")
             referenceTabItem(4, "More", "line.3.horizontal")
         }
         .padding(.horizontal, 8)
@@ -822,7 +826,7 @@ enum MoreDestination: Hashable {
     case body, energyPlan
     case ageless, rhythmAge
     case fusedRecord, appleHealth, miBand, dataSources, backupSync, shortcutsExport, noopLimitations
-    case alarms, automations, testCentre, siriShortcuts, powerSaving, settings
+    case alarms, automations, testCentre, siriShortcuts, powerSaving, settings, firmware
     /// Settings opened from a search hit, carrying the query so the screen lands already filtered to
     /// the matching section. Distinct from `.settings` (the plain row) so an ordinary tap on the
     /// Settings row still opens the whole screen.
@@ -873,6 +877,7 @@ enum MoreDestination: Hashable {
         case .alarms:          SmartAlarmView()
         case .automations:     AutomationsView()
         case .testCentre:      TestCentreView()
+        case .firmware:        BandFirmwareView()
         case .siriShortcuts:   SiriShortcutsSettingsView()
         case .powerSaving:     PowerSavingView()
         case .settings:        SettingsView()

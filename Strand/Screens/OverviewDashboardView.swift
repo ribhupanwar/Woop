@@ -197,6 +197,7 @@ struct OverviewDashboardView: View {
                     // leaf, so all four Today screens cannot drift apart.
                     ActiveWorkoutIndicatorSection()
                     todayActivitiesSection
+                    if selectedDayOffset == 0 { TonightSleepCard() }
                     if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                     MorningSuggestionCard(showPlan: $showPlan)
                     ForEach(layoutSections.filter { $0 != .overview && $0 != .activity }) {
@@ -629,7 +630,7 @@ struct OverviewDashboardView: View {
         VStack(spacing: 22) {
             HStack(spacing: 8) {
                 Button { showProfile = true } label: {
-                    ProfileAvatarView(imageData: profile.avatarImageData, size: 34)
+                    ReferenceProfileBadge(name: profile.displayName, imageData: profile.avatarImageData)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Profile")

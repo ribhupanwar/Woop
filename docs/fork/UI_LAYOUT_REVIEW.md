@@ -60,3 +60,39 @@ loads only while Home is active and shows no timeline on unsupported historical 
 strain/recovery uses stored daily rows, separate 0-21 and percentage axes, labels and recovery colors.
 Missing days split lines instead of creating interpolated readings. No sample data or timer is added.
 Analysis migration required: no. New chart compilation and screenshot validation remain pending.
+
+## Sleep planner and Health landing page
+
+Analysis migration required: no. Latest owner order is Home / Health / Activity / More; stable route tags
+are preserved. Health hosts the existing healthspan age/orb, Pace of Aging, ECG entry and detailed age
+contributors, plus Health Monitor, paired recorded BP and intraday stress. BP pairs require the same
+timestamp, day, source and mmHg units; the card opens Health Records for measured values. It does not
+claim access to MG's proprietary BP estimator. The age engine and historical derived scores are unchanged.
+
+Home now hosts Tonight's Sleep, opening a dedicated Sleep Planner and existing alarm editor. Its plan
+reuses SleepModel's ledger and habitual-main-night nap credit, adding at most two hours of nightly debt
+repayment. This is an explicit Woop planning heuristic, not decoded WHOOP coefficients, predicted sleep
+consistency or guaranteed time asleep. Empty history has no fabricated bedtime. Alarm labeling shares
+NextStrapAlarm's enabled/model/weekday gates. Plan bounds, empty data and elapsed duration have tests.
+
+Health Monitor's reference HR uses actual BLE receipt timestamps and the shared spike-filtered HR.
+It drops the animated gauge and synthetic R-R/flat-line timestamp fallback in reference mode. Disconnect
+clears the local chart; a 180-sample/time cap bounds drawing. It does not change sensor decoding/scoring.
+Home entry/re-tap calls the coalesced strap + Apple Health refresh; other tabs retain local refresh.
+Header avatar uses profile initials/photo; band/battery is an independent outline and valid percentage.
+Translated UI values replace the legacy NOOP name with Woop while localization lookup keys and storage,
+URL schemes, signing identity and technical identifiers remain unchanged.
+
+## Firmware and Strava boundaries
+
+More includes a read-only Band firmware screen using the live handshake version. ENTER_BLE_DFU in the
+protocol catalog does not establish firmware sourcing, signature validation, flash transfer, resume or
+recovery. No firmware update or DFU command is sent by the new screen; direct updating remains open.
+
+The official Strava Getting Started documentation checked on 2026-11-08 explicitly requires a Strava
+subscription to create an API application. Earlier free-registration assumptions are obsolete. With no
+registered application, direct OAuth/upload is not implemented. Existing FIT export remains available.
+Source: https://developers.strava.com/docs/getting-started/
+
+New batch still requires app compilation, fresh screenshots and real-band validation. A successful
+3eced46 UI/IPA workflow predates these changes and cannot certify them.

@@ -312,7 +312,7 @@ struct HealthspanTopRow: View {
             }
         }
         .onAppear {
-            if reduceMotion { progress = 1 } else { withAnimation(.easeOut(duration: 0.9)) { progress = 1 } }
+            if reduceMotion || referenceUI { progress = 1 } else { withAnimation(.easeOut(duration: 0.9)) { progress = 1 } }
         }
     }
 
