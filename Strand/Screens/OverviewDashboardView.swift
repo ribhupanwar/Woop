@@ -1124,6 +1124,7 @@ struct OverviewDashboardView: View {
                 Text("Show all metrics").font(WhoopReferenceFont.label(12))
                     .foregroundStyle(StrandPalette.accent).frame(maxWidth: .infinity, minHeight: 44)
             }.buttonStyle(.plain)
+            HomeReferenceCharts(dayKey: selectedDayKey, days: recentDays)
         }
     }
 

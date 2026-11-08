@@ -51,3 +51,12 @@ Reference defaults include HRV, RHR, steps and VO2; an existing custom metric se
 Customize opens the existing dashboard editor, and each metric retains its existing detail route.
 Cards are static and reuse already-loaded values, with no animation timer or additional queries.
 Analysis migration required: no. Fresh screenshot review and app compilation remain required.
+
+## Charts below dashboard metrics
+
+Home now hosts Stress Monitor and Strain & Recovery cards below its metric cards. The intraday card
+reuses StressDayCurve caching, background scoring and the gap-preserving gradient line renderer. It
+loads only while Home is active and shows no timeline on unsupported historical selections. Seven-day
+strain/recovery uses stored daily rows, separate 0-21 and percentage axes, labels and recovery colors.
+Missing days split lines instead of creating interpolated readings. No sample data or timer is added.
+Analysis migration required: no. New chart compilation and screenshot validation remain pending.

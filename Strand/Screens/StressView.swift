@@ -1052,7 +1052,7 @@ extension StressMath {
 struct DaytimeLoadLine: View {
     let hours: [DaytimeStress.HourPoint]
 
-    private let chartHeight: CGFloat = 78
+    var chartHeight: CGFloat = 78
 
     var body: some View {
         GeometryReader { geo in
