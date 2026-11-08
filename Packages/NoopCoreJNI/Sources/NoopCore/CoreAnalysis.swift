@@ -67,6 +67,11 @@ public enum CoreAnalysis {
         /// One pass over every day with raw heart rate, unchanged days reused, as Apple runs when the strength
         /// switch flips (`reanalyzeHistoryReusingUnchangedDays`); the extras key `historyRescore`.
         public var historyRescore = false
+        public var activityDetectionEnabled = false
+        public var activityAutomaticSave = false
+        public var activityAutomaticSaveSince = 0
+        public var activityWalks = true
+        public var activityDetectionLevel = "balanced"
         public init(effortBanister: Bool, sleepStagerV2: Bool, motionAwareWake: Bool, deepHrvWindow: Bool,
                     dayCycleMode: String?, healthspan: Bool = false, rhythmAge: Bool = false,
                     dismissedSleepSpans: [String] = [], dismissedWorkoutSpans: [String] = [],
@@ -133,6 +138,13 @@ public enum CoreAnalysis {
         if let v = bool("spo2CandidateDisplay") { settings.spo2CandidateDisplay = v }
         if let v = bool("effortStrengthBonus") { settings.effortStrengthBonus = v }
         if let v = bool("historyRescore") { settings.historyRescore = v }
+        if let v = bool("activityDetectionEnabled") { settings.activityDetectionEnabled = v }
+        if let v = bool("activityAutomaticSave") { settings.activityAutomaticSave = v }
+        if let v = int("activityAutomaticSaveSince"), v > 0 { settings.activityAutomaticSaveSince = v }
+        if let v = bool("activityWalks") { settings.activityWalks = v }
+        if let v = o["activityDetectionLevel"] as? String, ActivityCandidates.Level(rawValue: v) != nil {
+            settings.activityDetectionLevel = v
+        }
         if let v = double("waistCm") { profile.waistCm = v }
         if let v = double("stepTicksPerStep"), v > 0 { profile.stepTicksPerStep = v }
         if let v = double("stepsManualCoefficient") { profile.stepsManualCoefficient = v }
@@ -383,7 +395,15 @@ public enum CoreAnalysis {
         static var strings: [String: String] = [:]
         var bools: [String: Bool] { get { Self.bools } set { Self.bools = newValue } }
         var strings: [String: String] { get { Self.strings } set { Self.strings = newValue } }
-        init(_ settings: Settings) { self.settings = settings }
+        init(_ settings: Settings) {
+            self.settings = settings
+            Self.bools[ActivitySuggestions.enabledKey] = settings.activityDetectionEnabled
+            Self.bools[ActivitySuggestions.automaticSaveKey] = settings.activityAutomaticSave
+            Self.bools[ActivitySuggestions.walksKey] = settings.activityWalks
+            Self.strings[ActivitySuggestions.automaticSaveSinceKey] = settings.activityAutomaticSaveSince > 0
+                ? String(settings.activityAutomaticSaveSince) : nil
+            Self.strings[ActivitySuggestions.levelKey] = settings.activityDetectionLevel
+        }
         func analysisSettings() -> AnalysisSettings { settings.analysisSettings }
         func diagnostic(_ line: String, domain: TestDomain?) {}
         func storedBool(_ key: String) -> Bool { bools[key] ?? false }

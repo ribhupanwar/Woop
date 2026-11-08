@@ -39,3 +39,15 @@ Android compilation and JVM tests run on CI. Pixel comparison, actual BLE/GPS an
 Health Connect, complete automatic-save settings/provenance UI, reference charts and all secondary-screen
 parity remain unverified or incomplete. No Android release is certified by the iPhone workflow.
 Analysis migration required: no.
+
+## Automatic save host wiring
+
+Android passes its detection switch, separate automatic-save opt-in, activation timestamp, walking
+choice and sensitivity through the existing analysis extras to the shared host. The same ActivitySuggestions
+eligibility, settlement, activation and deduplication rules run after analysis. Re-enabling detection with
+automatic saving active resets the capture window; enabling automatic saving also resets it. Defaults
+remain off. Core-only automatic rows strip the provenance prefix when resolving the actual storage owner
+for edits/dismissal. Timeline/sleep reads observe committed core revisions, avoiding stale rows until a
+workout-count change. Tests cover default-off extras and automatic source-to-owner mapping. Settings take
+effect on the next analysis configuration; in-flight host settings/device behavior require validation.
+No physiological formula or historical input changes. Analysis migration required: no.

@@ -35,7 +35,7 @@ object CoreWorkoutRows {
             fun n(k: String) = if (o.has(k) && !o.isNull(k)) o.getInt(k) else null
             fun s(k: String) = if (o.has(k) && !o.isNull(k)) o.getString(k) else null
             WorkoutRow(
-                deviceId = o.getString("source"), startTs = o.getLong("startTs"), endTs = o.getLong("endTs"),
+                deviceId = o.getString("source").removePrefix("woop-auto:"), startTs = o.getLong("startTs"), endTs = o.getLong("endTs"),
                 sport = o.getString("sport"), source = o.getString("source"), durationS = d("durationS"),
                 energyKcal = d("energyKcal"), avgHr = n("avgHr"), maxHr = n("maxHr"), strain = d("strain"),
                 distanceM = d("distanceM"), zonesJSON = s("zonesJSON"), notes = s("notes"), steps = n("steps"),

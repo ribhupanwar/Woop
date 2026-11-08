@@ -28,7 +28,8 @@ internal fun WoopTonightSleep(vm: AppViewModel, onAlarm: () -> Unit) {
     val context = LocalContext.current
     val wakeMinute by vm.smartAlarmMinutes.collectAsState()
     val day by vm.today.collectAsState()
-    val ledger by produceState<CoreSleepDebt.Ledger?>(null, day) {
+    val revision by com.noop.core.CoreShadow.dataRevision.collectAsState()
+    val ledger by produceState<CoreSleepDebt.Ledger?>(null, day, revision) {
         value = withContext(Dispatchers.IO) { CoreRead.open(context); CoreSleepDebt.read() }
     }
     val target = woopSleepTargetMinutes(ledger?.nightCount ?: 0, ledger?.needMin, ledger?.balanceMin)

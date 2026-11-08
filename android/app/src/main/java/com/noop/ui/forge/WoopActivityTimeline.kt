@@ -23,7 +23,9 @@ private data class TimelineEntry(val start: Long, val end: Long, val title: Stri
 internal fun WoopActivityTimeline(date: LocalDate, vm: AppViewModel, onActivities: () -> Unit, onStart: () -> Unit) {
     val workouts by vm.workouts.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
-    val nights by produceState(emptyList<CoreRead.Night>(), date, workouts.size) {
+    val revision by com.noop.core.CoreShadow.dataRevision.collectAsState()
+    LaunchedEffect(revision) { vm.loadWorkouts() }
+    val nights by produceState(emptyList<CoreRead.Night>(), date, revision) {
         value = withContext(Dispatchers.IO) {
             CoreRead.open(context)
             val zone = ZoneId.systemDefault()
