@@ -81,3 +81,10 @@ hosted positive health states use the reference teal. The Android ECG surface is
 not a live capture port; the iPhone's existing capture implementation does not automatically provide
 Android Bluetooth capture. Clinical equivalence to the official WHOOP ECG app is not established.
 Analysis migration required: no.
+
+Local Android UI compilation succeeded with the optional JNI build disabled only for the Kotlin compile
+check (full-core APK packaging still requires native libraries in CI). The local check used the pinned
+Gradle 8.7 checksum, an isolated Android SDK/cache, inherited proxy settings and TLS verification.
+Tonight's Sleep now resolves planned wake time through the existing weekday/per-day override resolver
+used for the strap alarm, rather than assuming the base time fires daily. No alarm is armed by the card.
+Analysis migration required: no.

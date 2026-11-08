@@ -13,7 +13,6 @@ import com.noop.core.CoreSleepDebt
 import com.noop.ui.AppViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
@@ -27,6 +26,8 @@ internal fun woopSleepTargetMinutes(nights: Int, need: Double?, balance: Double?
 internal fun WoopTonightSleep(vm: AppViewModel, onAlarm: () -> Unit) {
     val context = LocalContext.current
     val wakeMinute by vm.smartAlarmMinutes.collectAsState()
+    val wakeWeekdays by vm.smartAlarmWeekdays.collectAsState()
+    val wakeOverrides by vm.smartAlarmDayOverrides.collectAsState()
     val day by vm.today.collectAsState()
     val revision by com.noop.core.CoreShadow.dataRevision.collectAsState()
     val ledger by produceState<CoreSleepDebt.Ledger?>(null, day, revision) {
@@ -34,10 +35,9 @@ internal fun WoopTonightSleep(vm: AppViewModel, onAlarm: () -> Unit) {
     }
     val target = woopSleepTargetMinutes(ledger?.nightCount ?: 0, ledger?.needMin, ledger?.balanceMin)
     var planner by remember { mutableStateOf(false) }
-    val now = ZonedDateTime.now()
-    val todayWake = now.withHour(wakeMinute / 60).withMinute(wakeMinute % 60).withSecond(0).withNano(0)
-    val wake = if (todayWake.isAfter(now)) todayWake else todayWake.plusDays(1)
-    val bedtime = target?.let { wake.minusMinutes(it.toLong()) }
+    val wake = com.noop.ui.nextSmartAlarmEpochSec(wakeMinute, wakeWeekdays, dayOverrides = wakeOverrides)
+        ?.let { java.time.Instant.ofEpochSecond(it).atZone(java.time.ZoneId.systemDefault()) }
+    val bedtime = target?.let { wake?.minusMinutes(it.toLong()) }
     val formatter = DateTimeFormatter.ofPattern("h:mm a")
     ForgeCard(Modifier.fillMaxWidth().clickable { planner = true }, radius = 13.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -48,7 +48,7 @@ internal fun WoopTonightSleep(vm: AppViewModel, onAlarm: () -> Unit) {
                     Text("RECOMMENDED BEDTIME", style = Forge.type.caption, color = Forge.colors.textSecondary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(wake.format(formatter), style = Forge.type.title2, color = Forge.colors.text)
+                    Text(wake?.format(formatter) ?: "—", style = Forge.type.title2, color = Forge.colors.text)
                     Text("CONFIGURED WAKE TIME", style = Forge.type.caption, color = Forge.colors.textSecondary)
                 }
             }
