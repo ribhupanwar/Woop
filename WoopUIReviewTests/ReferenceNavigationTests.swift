@@ -28,7 +28,7 @@ final class ReferenceNavigationTests: XCTestCase {
             expectation(for: selected, evaluatedWith: button)
             waitForExpectations(timeout: 5)
         }
-        app.buttons["woop.home.quickActions"].tap()
+        reveal("woop.home.quickActions").tap()
         XCTAssertTrue(app.staticTexts["Start workout"].waitForExistence(timeout: 5),
                       "the floating action must reach the existing recording entry point")
         app.staticTexts["Start workout"].tap()
@@ -39,26 +39,53 @@ final class ReferenceNavigationTests: XCTestCase {
 
     func testHomeStartActivityOpensRecorder() {
         launch()
-        let start = app.buttons["woop.home.startActivity"]
-        XCTAssertTrue(start.waitForExistence(timeout: 10))
-        for _ in 0..<3 where !start.isHittable { app.swipeUp() }
-        XCTAssertTrue(start.isHittable)
+        let start = reveal("woop.home.startActivity")
         capture("home-start-activity-contrast")
         start.tap()
         XCTAssertTrue(app.staticTexts["Start a workout"].waitForExistence(timeout: 10))
     }
 
     func testCaptureEmptyReferenceScreens() {
-        for tab in ["home", "activity", "healthspan", "more"] {
+        for tab in ["home", "health", "activity", "more"] {
             launch(tab: tab)
             capture("empty-\(tab)")
         }
-        for screen in ["recovery", "sleep", "strain"] {
+        for screen in ["recovery", "sleep", "strain", "health", "stress"] {
             app.terminate()
             app.launchArguments = ["--ui-preview", "--demo-screen", screen]
             app.launch()
             capture("empty-\(screen)")
         }
+    }
+
+    func testHomeMonitorRoutes() {
+        launch()
+        reveal("woop.home.healthMonitor").tap()
+        XCTAssertTrue(app.navigationBars["HEALTH MONITOR"].waitForExistence(timeout: 10))
+        capture("health-monitor-grid")
+        launch()
+        reveal("woop.home.stressMonitor").tap()
+        XCTAssertTrue(app.navigationBars["STRESS MONITOR"].waitForExistence(timeout: 10))
+        capture("stress-monitor-gauge")
+    }
+
+    func testCaptureHomeScrollSections() {
+        launch()
+        capture("home-top")
+        for index in 1...4 {
+            app.swipeUp()
+            capture("home-scroll-\(index)")
+        }
+    }
+
+    private func reveal(_ identifier: String) -> XCUIElement {
+        let button = app.buttons[identifier]
+        for _ in 0..<8 {
+            if button.exists && button.isHittable { return button }
+            app.swipeUp()
+        }
+        XCTAssertTrue(button.exists && button.isHittable, "Missing reachable control: \(identifier)")
+        return button
     }
 
     private func capture(_ name: String) {

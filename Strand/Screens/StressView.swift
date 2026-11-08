@@ -38,6 +38,7 @@ func stressActivityMaskedHoursCaption(_ count: Int) -> String? {
 // is fully inspectable — see the "How this is computed" card at the bottom.
 
 struct StressView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -77,6 +78,22 @@ struct StressView: View {
     @State private var modelSignature: StressInputs?
 
     var body: some View {
+        screen
+            .onAppear { rebuildModelIfNeeded() }
+            .onChangeCompat(of: repo.days) { _ in rebuildModelIfNeeded() }
+            .task(id: repo.refreshSeq) { await load() }
+    }
+
+    @ViewBuilder private var screen: some View {
+        if referenceUI {
+            ScreenScaffold(title: nil, onRefresh: { await repo.refresh() }, lazy: true) {
+                referenceContent
+            }
+            .navigationTitle("STRESS MONITOR")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+        } else {
         ScreenScaffold(title: "Stress", subtitle: "Autonomic load across your waking day",
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header). The content is one inner eager VStack, so the staggered
@@ -97,9 +114,53 @@ struct StressView: View {
                 emptyState
             }
         }
-        .onAppear { rebuildModelIfNeeded() }
-        .onChangeCompat(of: repo.days) { _ in rebuildModelIfNeeded() }
-        .task(id: repo.refreshSeq) { await load() }
+        }
+    }
+
+    private var referenceContent: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
+            Text(Date().formatted(.dateTime.weekday(.wide).month(.abbreviated).day()).uppercased())
+                .font(WhoopReferenceFont.label(12))
+                .frame(maxWidth: .infinity)
+            ReferenceStressGauge(score: model?.score, caption: String(localized: "Daily score"))
+                .frame(maxWidth: .infinity)
+            if let daytime, !daytime.scored.isEmpty {
+                DaytimeLoadLine(hours: daytime.timeline)
+                    .frame(height: 190)
+                Text(daytimeTimelineCaption)
+                    .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                ReferenceStressSplit(title: "NON ACTIVITY", hours: daytime.hours)
+            } else if daytime == nil && !loaded {
+                ProgressView("Reading your heart data")
+            } else {
+                Text("No intraday stress data yet today.")
+                    .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                    .referenceMonitorCard()
+            }
+            if let model {
+                DisclosureGroup("Daily trend and score details") {
+                    trendSection(model)
+                    methodologyCard(model)
+                    if hasAdvancedReadouts { advancedReadoutsCard() }
+                }
+                .font(StrandFont.subhead)
+            } else if loaded {
+                emptyState
+            }
+            VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                Text("SLEEP").whoopReferenceOverline()
+                Text("The current stress timeline scores waking hours. Sleep stress durations are not available.")
+                    .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+            }
+            .referenceMonitorCard()
+            Text("SESSIONS").whoopReferenceOverline()
+            NavigationLink { BreathingView() } label: {
+                Label("Guided breathing", systemImage: "wind")
+                    .font(StrandFont.headline).foregroundStyle(StrandPalette.onDarkPrimary)
+                    .referenceMonitorCard()
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     /// The card's own context for the coach (#P11): today's 0–3 stress and band, RHR/HRV against the

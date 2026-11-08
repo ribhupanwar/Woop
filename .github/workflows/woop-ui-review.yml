@@ -2,7 +2,7 @@ name: Woop reference UI review
 
 on:
   push:
-    branches: [codex/consolidated-release]
+    branches: [codex/consolidated-release, codex/home-reference-layout]
     paths:
       - .github/workflows/woop-ui-review.yml
       - WoopUIReviewTests/**

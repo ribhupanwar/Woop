@@ -102,7 +102,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "health": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -153,7 +153,7 @@ struct RootTabView: View {
     /// horizontal swipe to change days, so neither participates in this ancestor gesture.
     /// Both thresholds are unchanged
     /// from the original gesture.
-    private static let visibleTabTags = [0, 2, 3, 4]
+    private static let visibleTabTags = [0, 3, 2, 4]
 
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
@@ -178,8 +178,8 @@ struct RootTabView: View {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(ReferenceHealthHome(), "Health", "heart", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
             // White active navigation follows the supplied dark reference; score colors stay local.
@@ -522,8 +522,8 @@ struct RootTabView: View {
     private var referenceTabBar: some View {
         HStack(spacing: 0) {
             referenceTabItem(0, "Home", "house")
+            referenceTabItem(3, "Health", "heart")
             referenceTabItem(2, "Activity", "figure.run")
-            referenceTabItem(3, "Healthspan", "heart.text.square")
             referenceTabItem(4, "More", "line.3.horizontal")
         }
         .padding(.horizontal, 8)

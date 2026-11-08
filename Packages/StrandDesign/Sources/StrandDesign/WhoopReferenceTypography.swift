@@ -105,6 +105,9 @@ public struct WoopReferenceCanvas: View {
 /// Dark Home surfaces and metric accents matched to the owner's supplied activity-dashboard reference.
 /// These are independent color tokens; no third-party artwork or font files are bundled.
 public enum WoopHomePalette {
+    public static let outlookStart = Color(red: 0.50, green: 0.47, blue: 0.41)
+    public static let outlookEnd = Color(red: 0.20, green: 0.29, blue: 0.35)
+    public static let avatar = Color(red: 0.25, green: 0.82, blue: 0.78)
     public static let canvasTop = Color(red: 0.157, green: 0.192, blue: 0.216)
     public static let canvasBottom = Color(red: 0.059, green: 0.071, blue: 0.082)
     public static let activityCard = Color(red: 0.184, green: 0.208, blue: 0.224)
@@ -119,7 +122,7 @@ public enum WoopHomePalette {
 /// leaving the app's existing StrandFont roles unchanged.
 public enum WhoopReferenceFont {
     public static func score(_ size: CGFloat = 48) -> Font {
-        .system(size: size, weight: .semibold, design: .default).monospacedDigit()
+        .system(size: size, weight: .semibold, design: .default).width(.condensed).monospacedDigit()
     }
 
     /// Tight tracking for large WHOOP-reference score numerals.
@@ -133,7 +136,7 @@ public enum WhoopReferenceFont {
         .system(size: size, weight: .semibold, design: .default)
     }
     public static func metric(_ size: CGFloat = 14) -> Font {
-        .system(size: size, weight: .medium, design: .default).monospacedDigit()
+        .system(size: size, weight: .semibold, design: .default).width(.condensed).monospacedDigit()
     }
     public static func body(_ size: CGFloat = 12) -> Font {
         .system(size: size, weight: .regular, design: .default)

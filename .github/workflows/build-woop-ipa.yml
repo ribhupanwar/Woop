@@ -2,7 +2,7 @@ name: Woop iOS unsigned IPA
 
 on:
   push:
-    branches: [main, feature/whoop-575-ui-parity, feature/today-activities-feed, codex/consolidated-release]
+    branches: [main, feature/whoop-575-ui-parity, feature/today-activities-feed, codex/consolidated-release, codex/home-reference-layout]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
       - "Strand/**"

@@ -268,7 +268,7 @@ enum DashboardCardPrefs {
 /// Overview owns its health-list selection independently from Today’s "Your cards" preference.
 enum OverviewHealthCardsPrefs {
     static let selectionKey = "overview.healthCards"
-    static let defaultSelection: [DashboardCard] = [.restingHr, .hrv, .respiratory, .fitnessAge, .calories, .weight]
+    static let defaultSelection: [DashboardCard] = [.hrv, .restingHr, .steps, .vo2max, .calories]
     static let available = DashboardCard.canonicalOrder.filter { $0 != .coupled }
     static func decode(_ raw: String) -> [DashboardCard] {
         let ids = (try? JSONDecoder().decode([String].self, from: Data(raw.utf8))) ?? raw.split(separator: ",").map(String.init)
