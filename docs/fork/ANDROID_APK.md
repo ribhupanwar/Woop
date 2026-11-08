@@ -75,3 +75,9 @@ never renders a cached different day's row beneath a new date. High-frequency BL
 isolated to the header leaf so HR ticks do not request the full dashboard again. Disconnected/non-WHOOP
 battery readings are not presented as a current WHOOP percentage. Device frame timing remains unmeasured.
 Analysis migration required: no.
+
+Hosted Android stress screens also use the reference LOW/MEDIUM/HIGH label swatches and a static vessel;
+hosted positive health states use the reference teal. The Android ECG surface is a saved-reading viewer,
+not a live capture port; the iPhone's existing capture implementation does not automatically provide
+Android Bluetooth capture. Clinical equivalence to the official WHOOP ECG app is not established.
+Analysis migration required: no.

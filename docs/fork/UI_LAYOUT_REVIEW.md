@@ -107,3 +107,17 @@ color. Curves retain their level gradient. Tests pin stress label bands and the 
 These are independently selected reference approximations; raw pixel identity is not certified by source
 inspection, especially for app-switcher screenshots. Existing scores/classification/math are unchanged.
 Analysis migration required: no.
+
+## ECG request: verified implementation boundary
+
+The existing iPhone capture controller is already an independent OpenStrap-derived protocol client:
+PREPARE/START, live R17 reducer, wrist selection, contact-loss handling, terminal band result, accepted
+window storage and cleanup. Whoop5Ecg documents on-band result codes learned from static-client facts;
+this is not the official app's implementation or a validated clinical-equivalence claim. No ECG source
+implementation was found in the checked-out DSTA file inventory. The live trace is 100 Hz; the 800-sample
+UI buffer is eight seconds, not an 800 Hz sample rate. Existing packet/completion/storage tests remain
+relevant. The display now names signal grades, band provenance, and inconclusive uncertainty, and raw
+consent copy uses Woop branding. No capture duration, clinical algorithm, protocol bytes or saved result
+was changed. Android's existing ECG surface displays saved readings; on-device Android ECG capture is
+not implemented by this port. Physical MG recording/comparison remains required.
+Analysis migration required: no.
