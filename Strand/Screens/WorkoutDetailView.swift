@@ -29,7 +29,6 @@ import MapKit
 // MetricDetailView, StressView opening Breathe).
 
 struct WorkoutDetailView: View {
-    @Environment(\.woopReferenceUI) private var referenceUI
     let row: WorkoutRow
 
     @EnvironmentObject private var repo: Repository
