@@ -40,3 +40,14 @@ On-foot workout details expose average pace alongside distance even when no rout
 It requires a finite positive recorded distance and recorded active duration, and reuses the existing
 unit-aware pace formatter. No pace, distance, cadence or GPS points are generated for missing data.
 Analysis migration required: no. Device frame timing and populated-screen validation remain open.
+
+## Owner-supplied metric-card reference
+
+Replaces the compact Your Health table with independently drawn full-width metric cards: outline icons,
+uppercase labels, large trailing numbers and optional previous-reading comparison. HRV, RHR and steps
+comparisons require two finite stored daily readings; arrows indicate direction only, and the comparison
+date is explicit. No arbitrary Optimal label, baseline, weekly zone time or strength duration is invented.
+Reference defaults include HRV, RHR, steps and VO2; an existing custom metric selection is retained.
+Customize opens the existing dashboard editor, and each metric retains its existing detail route.
+Cards are static and reuse already-loaded values, with no animation timer or additional queries.
+Analysis migration required: no. Fresh screenshot review and app compilation remain required.

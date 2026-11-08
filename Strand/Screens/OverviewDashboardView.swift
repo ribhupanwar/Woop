@@ -155,7 +155,12 @@ struct OverviewDashboardView: View {
     /// Scroll-to-top target for an at-root Today re-tap, the same zero-height anchor Liquid Today uses.
     private static let topAnchorID = "overviewDashboardTop"
 
-    private var healthCards: [DashboardCard] { OverviewHealthCardsPrefs.decode(healthCardsRaw) }
+    private var healthCards: [DashboardCard] {
+        if referenceUI && healthCardsRaw.isEmpty {
+            return [.hrv, .restingHr, .steps, .vo2max, .calories, .respiratory, .fitnessAge, .weight]
+        }
+        return OverviewHealthCardsPrefs.decode(healthCardsRaw)
+    }
     private var focusItems: [OverviewFocusItem] {
         [focusSlot1Raw, focusSlot2Raw, focusSlot3Raw].enumerated().map { index, raw in
             OverviewFocusItem(rawValue: raw) ?? OverviewFocusPrefs.defaults[index]
@@ -1095,30 +1100,49 @@ struct OverviewDashboardView: View {
     // MARK: - Deine Gesundheit
 
     private var healthList: some View {
-        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            Text("Your health").whoopReferenceOverline()
-            NoopCard(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(healthCards.enumerated()), id: \.element) { index, card in
-                        if index > 0 { Divider().overlay(StrandPalette.hairline).padding(.leading, 40) }
-                        OverviewHealthRow(card: card, valueText: healthValueText(card),
-                                          day: displayDay, recentDays: recentDays)
-                    }
-                    Divider().overlay(StrandPalette.hairline)
-                    NavigationLink(value: TabRoute.metricExplorer) {
-                        HStack {
-                            Spacer()
-                            Text("Show all metrics")
-                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
-                            Spacer()
-                        }
-                        .font(StrandFont.footnote.weight(.semibold))
-                        .foregroundStyle(StrandPalette.accent)
-                        .padding(.vertical, 10)
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("My Dashboard").font(WhoopReferenceFont.heading(22))
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Spacer()
+                Button { showExtraSections = true } label: {
+                    Label("Customize", systemImage: "pencil")
+                        .font(WhoopReferenceFont.label(10)).textCase(.uppercase)
                 }
+                .buttonStyle(.plain).foregroundStyle(StrandPalette.textSecondary)
             }
+            .padding(.vertical, 8)
+            ForEach(healthCards) { card in
+                NavigationLink(value: card.detailRoute(day: displayDay, appleDay: nil)) {
+                    ReferenceDashboardMetricCard(card: card, value: healthValueText(card),
+                        comparison: comparisonReading(card))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("woop.dashboard.metric.\(card.rawValue)")
+            }
+            NavigationLink(value: TabRoute.metricExplorer) {
+                Text("Show all metrics").font(WhoopReferenceFont.label(12))
+                    .foregroundStyle(StrandPalette.accent).frame(maxWidth: .infinity, minHeight: 44)
+            }.buttonStyle(.plain)
         }
+    }
+
+    /// Only the same resolved daily fields are compared. Derived estimates, carried readings and
+    /// energy totals have separate provenance and must not acquire an invented comparison.
+    private func comparisonReading(_ card: DashboardCard) -> ReferenceDashboardMetricCard.Comparison? {
+        guard let current = displayDay,
+              let previous = recentDays.last(where: { $0.day < current.day }) else { return nil }
+        let now: Double?
+        let before: Double?
+        switch card {
+        case .hrv: now = current.avgHrv; before = previous.avgHrv
+        case .restingHr: now = current.restingHr.map(Double.init); before = previous.restingHr.map(Double.init)
+        case .steps: now = current.steps.map(Double.init); before = previous.steps.map(Double.init)
+        default: return nil
+        }
+        guard let now, let before, now.isFinite, before.isFinite else { return nil }
+        return .init(value: TrendsMetricStrip.valueText(card, day: previous, appleDay: nil),
+                     day: previous.day, direction: now == before ? 0 : (now > before ? 1 : -1))
     }
 
     // MARK: - Goals (opt-in, DashboardExtraSection.goals)
