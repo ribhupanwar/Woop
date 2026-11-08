@@ -108,7 +108,8 @@ fun ForgeTodayScreen(padding: PaddingValues, width: ForgeWidth, viewModel: AppVi
     val context = LocalContext.current
     var date by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
     var model by remember { mutableStateOf<TodayModel?>(null) }
-    LaunchedEffect(date) {
+    val coreRevision by com.noop.core.CoreShadow.dataRevision.collectAsState()
+    LaunchedEffect(date, coreRevision) {
         val d = LocalDate.ofEpochDay(date)
         model = withContext(Dispatchers.IO) {
             CoreRead.open(context)
@@ -252,18 +253,12 @@ fun ForgeTodayScreen(padding: PaddingValues, width: ForgeWidth, viewModel: AppVi
         val style = "overview"
         if (style != "liquid") {
             // The Trends and Overview styles (Settings › Dashboard) draw their own header and blocks.
-            val live by viewModel.live.collectAsState()
-            val updateStore = remember { com.noop.ui.UpdateStore.from(context) }
-            val coachOn = com.noop.ui.NoopPrefs.coachEnabled(context) && com.noop.ui.CoachTodayPrefs.shown(context)
-            DashboardHeader(shown, isToday = shown == today,
-                            battery = live.batteryPct?.let { stringResource(R.string.forge_percent, kotlin.math.round(it).toInt()) },
-                            unread = updateStore.unreadCount, onBattery = { selectTab(ForgeTab.More) },
-                            onQuickActions = { quickActions = true }, onUpdates = { updatesOpen = true },
-                            onCoach = if (coachOn) ({ more.push(MoreRoute.Dest(MoreDest.Coach)) }) else null,
-                            onArrange = { arranging = style }, onPickDay = { dayPicker = true })
+            WoopLiveDashboardHeader(viewModel, shown, shown == today,
+                onBattery = { selectTab(ForgeTab.More) }, onQuickActions = { quickActions = true },
+                onUpdates = { updatesOpen = true }, onArrange = { arranging = style }, onPickDay = { dayPicker = true })
             if (shown == today) ForgeActivityPrompt()
             if (shown == today) ForgeMorningSuggestion()
-            ForgeStyledDashboard(style, layoutRevision, shown, model?.day, viewModel,
+            ForgeStyledDashboard(style, layoutRevision, shown, model?.takeIf { it.date == shown }?.day, viewModel,
                 onSection = { drawSection(it) },
                 onHealth = { more.push(MoreRoute.Dest(MoreDest.Health)) },
                 onSleep = { selectTab(ForgeTab.Sleep) },
@@ -284,6 +279,20 @@ fun ForgeTodayScreen(padding: PaddingValues, width: ForgeWidth, viewModel: AppVi
         }
         Spacer(Modifier.height(ForgeMetrics.space2))
     }
+}
+
+@Composable
+private fun WoopLiveDashboardHeader(vm: AppViewModel, date: LocalDate, today: Boolean,
+                                    onBattery: () -> Unit, onQuickActions: () -> Unit,
+                                    onUpdates: () -> Unit, onArrange: () -> Unit, onPickDay: () -> Unit) {
+    val live by vm.live.collectAsState()
+    val context = LocalContext.current
+    val updates = remember { com.noop.ui.UpdateStore.from(context) }
+    DashboardHeader(date, today,
+        battery = live.batteryPct?.takeIf { live.connected && !live.streamingLiveHR }?.let {
+            stringResource(R.string.forge_percent, kotlin.math.round(it).toInt())
+        }, unread = updates.unreadCount, onBattery = onBattery, onQuickActions = onQuickActions,
+        onUpdates = onUpdates, onCoach = null, onArrange = onArrange, onPickDay = onPickDay)
 }
 
 @Composable

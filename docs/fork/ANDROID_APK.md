@@ -69,3 +69,9 @@ choices; timeline strain uses the same formatter as the hero. The healthspan det
 independent particle orb over the existing calculated age. Android translated display strings replace
 legacy NOOP branding without renaming resource keys, package identities or preference keys.
 Analysis migration required: no.
+
+Android Home reloads its scored-day snapshot on committed core revision, not only date selection, and
+never renders a cached different day's row beneath a new date. High-frequency BLE state observation is
+isolated to the header leaf so HR ticks do not request the full dashboard again. Disconnected/non-WHOOP
+battery readings are not presented as a current WHOOP percentage. Device frame timing remains unmeasured.
+Analysis migration required: no.
