@@ -54,3 +54,25 @@ requested as a later optional connection: official upload/auth documentation was
 export is available, but direct OAuth/upload is not shipped. An initial request-builder draft is preserved
 outside the app checkout at `/workspace/work/strava-draft/StravaRequests.swift` and is not compiled or
 advertised as working. No user credentials were requested or external workout uploads performed.
+
+## Monitor and navigation correction batch
+
+Analysis migration required: no. Adds Home Health/Stress Monitor links, flat vital tiles and a local
+health-report share action. Health coverage counts only finite, verified readings on the selected day;
+partial coverage cannot show 5/5. Stress remains explicitly a daily estimate, not WHOOP live stress.
+Healthspan now links to the existing WHOOP MG ECG capture sheet with its consent and experimental
+feature gates preserved; no measurement starts automatically. Hardware capture remains unverified.
+
+Simulator review of commit 0e12a20 exposed a light Today palette, an obstructing arrangement hint and
+a floating action button overlapping navigation. The correction forces reference dark appearance,
+retains customization without the automatic hint, and reserves physical space for bottom navigation
+and the active-session accessory. Start Activity has explicit readable foreground/background colors.
+The full-tab animation and reference vital-tile entrance animations were removed; physical-device frame
+timing remains to be measured. Added monitor coverage tests and navigation/ECG UI checks.
+
+The owner corrected the detection settings report: both switches had been off and are now enabled.
+Future eligible activities need on-band data, sync and analysis; this is not evidence that all activity
+types are classified automatically. No physiological formula or historical score was changed.
+
+The f147ac4 build failed on LocalizedStringKey.uppercased in SleepView; use Text.textCase instead.
+The current batch requires fresh macOS/iOS compilation and screenshot review before release acceptance.

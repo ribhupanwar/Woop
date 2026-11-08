@@ -38,6 +38,7 @@ func stressActivityMaskedHoursCaption(_ count: Int) -> String? {
 // is fully inspectable — see the "How this is computed" card at the bottom.
 
 struct StressView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -77,7 +78,7 @@ struct StressView: View {
     @State private var modelSignature: StressInputs?
 
     var body: some View {
-        ScreenScaffold(title: "Stress", subtitle: "Autonomic load across your waking day",
+        ScreenScaffold(title: referenceUI ? nil : "Stress", subtitle: referenceUI ? nil : "Autonomic load across your waking day",
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header). The content is one inner eager VStack, so the staggered
                        // section reveal is unchanged; this only defers building that stack until it scrolls in.
@@ -95,6 +96,17 @@ struct StressView: View {
                 ComingSoon.loading("Reading your heart-rate variability and resting heart rate…", title: "Reading your heart data")
             } else {
                 emptyState
+            }
+        }
+        .navigationTitle("Stress Monitor")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar {
+            if referenceUI {
+                ToolbarItem(placement: .principal) {
+                    Text("STRESS MONITOR").font(WhoopReferenceFont.label(14)).tracking(1.2)
+                }
             }
         }
         .onAppear { rebuildModelIfNeeded() }
@@ -462,7 +474,10 @@ struct StressView: View {
     // "of 3" over it (the Today HeroScoreCell / Live BPM-gauge idiom). The band pill sits top-trailing and
     // one plain-English line explains the number below. Frosted card, liquid finish.
 
-    private func heroCard(_ model: StressModel) -> some View {
+    @ViewBuilder private func heroCard(_ model: StressModel) -> some View {
+        if referenceUI {
+            ReferenceStressGauge(score: model.score, asOf: model.fullTrend.last?.date)
+        } else {
         NoopCard(tint: StressRamp.calm) {
             VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 HStack {
@@ -490,6 +505,7 @@ struct StressView: View {
                     Spacer(minLength: 0)
                 }
             }
+        }
         }
     }
 

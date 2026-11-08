@@ -36,12 +36,14 @@ enum HealthspanEmptyReason: Equatable {
 
 struct HealthspanSection: View {
     @Environment(\.woopReferenceUI) private var referenceUI
+    @Environment(\.dashboardAppModel) private var appModel
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var profile: ProfileStore
     @State private var snapshot: HealthspanSnapshot?
     @State private var emptyReason = HealthspanEmptyReason.unknown
     @State private var loaded = false
     @State private var showsDetail = false
+    @State private var showsECG = false
 
     private var sex: HealthspanEngine.Sex? { HealthspanEngine.Sex(profileValue: profile.sex) }
 
@@ -60,8 +62,22 @@ struct HealthspanSection: View {
             } else {
                 ComingSoon.loading("Reading your healthspan age…", title: "Healthspan", symbol: "hourglass")
             }
+            if referenceUI {
+                NoopButton("Measure ECG", systemImage: "waveform.path.ecg", kind: .secondary, fullWidth: true) {
+                    showsECG = true
+                }
+                .disabled(appModel == nil)
+                .accessibilityIdentifier("woop.healthspan.measureECG")
+                Text("WHOOP MG · Requires a connected band and the ECG experiment enabled.")
+                    .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+            }
         }
         .task(id: repo.refreshSeq) { await load() }
+        .sheet(isPresented: $showsECG) {
+            if let appModel {
+                EcgReadingSheet(controller: appModel.ecgReading, onClose: { showsECG = false })
+            }
+        }
         .sheet(isPresented: $showsDetail) {
             if let snapshot {
                 NavigationStack { HealthspanDetailView(snapshot: snapshot) }

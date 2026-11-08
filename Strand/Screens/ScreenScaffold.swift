@@ -56,7 +56,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
             #if os(iOS)
             // One shared page gutter keeps every screen aligned with Today and the grouped lists.
             .padding(.horizontal, NoopMetrics.screenHPadding)
-            .padding(.top, 24)
+            .padding(.top, referenceUI ? 16 : 24)
             // No tab-bar reserve here any more. The iOS shell uses the PLATFORM tab bar, which is part
             // of the safe area, so the scroll view already ends above it. The old
             // `NoopMetrics.tabBarClearance` compensated for a custom bar drawn OVER the content; keeping

@@ -18,6 +18,7 @@ struct OverviewDashboardView: View {
     @EnvironmentObject private var updateStore: UpdateStore
     @EnvironmentObject private var router: NavRouter
     @Environment(\.dashboardAppModel) private var model
+    @Environment(\.woopReferenceUI) private var referenceUI
     // Deliberately NO `@EnvironmentObject live: LiveState` here — see the leaf-isolation note in
     // TodayView: a connected strap publishes `LiveState` ~1 Hz, and observing it at this level would
     // re-evaluate the WHOLE dashboard body on every heart-rate tick. The one thing on this screen that
@@ -170,13 +171,16 @@ struct OverviewDashboardView: View {
             // inset + `NoopMetrics.screenPadding` (16pt) allows. Ignoring the top safe area and adding
             // back a SMALLER fixed inset (rather than the device's full notch/Dynamic-Island height)
             // gets the ~25–30pt reduction the reference wants without drawing under the status bar.
-            let topInset = max(NoopMetrics.screenPadding, proxy.safeAreaInsets.top + 16)
+            let topInset = max(NoopMetrics.screenPadding, proxy.safeAreaInsets.top + 8)
             ScrollViewReader { scrollProxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
-                    Color.clear.frame(height: 0).id(Self.topAnchorID)
-                    header
+                    header.id(Self.topAnchorID)
                     overviewCard
+                    HStack(alignment: .top, spacing: 10) {
+                        HomeHealthMonitorCard(dayKey: selectedDayKey)
+                        HomeStressMonitorCard(value: stressToday)
+                    }
                     // Pinned ABOVE the reorderable block, exactly where Classic and Liquid Today pin
                     // them: a raised health alert or a running workout must not be reorderable below the
                     // fold. Every card here renders NOTHING when it has nothing to report, so the
@@ -267,7 +271,7 @@ struct OverviewDashboardView: View {
         // Told once, on the screen the gesture belongs to. The flag is written as the sheet is raised, so
         // swiping it away still counts as having been told.
         .onAppear {
-            guard !arrangeHintSeen else { return }
+            guard !referenceUI, !arrangeHintSeen else { return }
             arrangeHintSeen = true
             showArrangeHint = true
         }
@@ -1345,13 +1349,19 @@ struct OverviewDashboardView: View {
                         .font(StrandFont.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.white)
+                .padding(.vertical, 6)
+                .background(WoopHomePalette.activityRow, in: Capsule())
                 DashboardStartActivityButton {
                     Label("Start Activity", systemImage: "stopwatch")
                         .font(StrandFont.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.white)
+                .padding(.vertical, 6)
+                .background(WoopHomePalette.activityRow, in: Capsule())
             }
         }
     }

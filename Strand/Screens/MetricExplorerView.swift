@@ -1234,7 +1234,7 @@ struct MetricDetailView: View {
             }
             .ignoresSafeArea()
         }
-        .navigationTitle(metric.title)
+        .navigationTitle(referenceUI && metric.key == "strain" ? String(localized: "Strain") : metric.title)
         .task(id: loadTaskID) { await load() }
         // Range changes the window, hence the correlation inputs — recompute the
         // cached scan rather than letting `correlationCard` run it inside body.

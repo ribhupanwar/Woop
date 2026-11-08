@@ -27,10 +27,15 @@ final class ReferenceNavigationTests: XCTestCase {
             expectation(for: selected, evaluatedWith: button)
             waitForExpectations(timeout: 5)
         }
-        app.buttons["woop.home.quickActions"].tap()
-        XCTAssertTrue(app.staticTexts["Start workout"].waitForExistence(timeout: 5),
+        let quickActions = app.buttons["woop.home.quickActions"]
+        XCTAssertTrue(quickActions.isHittable)
+        XCTAssertLessThanOrEqual(quickActions.frame.maxY, app.buttons["woop.tab.0"].frame.minY - 8,
+                                 "the floating button must stay above navigation and remain tappable")
+        quickActions.tap()
+        let startWorkout = app.buttons["woop.quickActions.startWorkout"]
+        XCTAssertTrue(startWorkout.waitForExistence(timeout: 5),
                       "the floating action must reach the existing recording entry point")
-        app.staticTexts["Start workout"].tap()
+        startWorkout.tap()
         XCTAssertTrue(app.staticTexts["Start a workout"].waitForExistence(timeout: 10),
                       "starting an activity must open the recorder picker, not Silent Guardian")
         capture("empty-start-activity")
@@ -41,12 +46,32 @@ final class ReferenceNavigationTests: XCTestCase {
             launch(tab: tab)
             capture("empty-\(tab)")
         }
-        for screen in ["recovery", "sleep", "strain"] {
+        for screen in ["recovery", "sleep", "strain", "health", "stress"] {
             app.terminate()
             app.launchArguments = ["--ui-preview", "--demo-screen", screen]
             app.launch()
             capture("empty-\(screen)")
         }
+    }
+
+    func testHealthspanECGEntryOpensExistingCaptureWithoutStartingAReading() {
+        launch(tab: "healthspan")
+        let ecg = app.buttons["woop.healthspan.measureECG"]
+        XCTAssertTrue(ecg.waitForExistence(timeout: 10))
+        ecg.tap()
+        XCTAssertTrue(app.navigationBars["ECG reading"].waitForExistence(timeout: 10))
+        capture("ecg-entry-no-measurement")
+    }
+
+    func testHomeMonitorsOpenTheirDetailScreens() {
+        launch()
+        let health = app.buttons["woop.home.healthMonitor"]
+        XCTAssertTrue(health.waitForExistence(timeout: 10))
+        health.tap()
+        XCTAssertTrue(app.navigationBars["Health Monitor"].waitForExistence(timeout: 10))
+        launch()
+        app.buttons["woop.home.stressMonitor"].tap()
+        XCTAssertTrue(app.navigationBars["Stress Monitor"].waitForExistence(timeout: 10))
     }
 
     private func capture(_ name: String) {

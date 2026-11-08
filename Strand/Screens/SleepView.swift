@@ -751,7 +751,7 @@ struct SleepView: View {
             return "\(Int(value.rounded()))%"
         }
         return VStack(spacing: 14) {
-            Text(nightRelativeLabel.uppercased())
+            Text(nightRelativeLabel).textCase(.uppercase)
                 .font(WhoopReferenceFont.label(12)).tracking(1.2)
                 .foregroundStyle(StrandPalette.textPrimary)
             WoopMetricHero(title: "SLEEP PERFORMANCE", value: score.map { "\(Int($0.rounded()))" } ?? "—",

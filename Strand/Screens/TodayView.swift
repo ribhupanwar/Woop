@@ -244,6 +244,7 @@ struct TodayView: View {
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var router: NavRouter
     @Environment(\.dashboardAppModel) private var appModel
+    @Environment(\.woopReferenceUI) private var referenceUI
     /// The "update ringer", the bell in the top bar opens this inbox; dismissed Today cards post into it.
     @EnvironmentObject var updateStore: UpdateStore
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -1356,6 +1357,73 @@ struct TodayView: View {
     /// Apple-style large-title header: a tappable "Today ⌄" + full date on the left (taps to change day),
     /// then updates / quick-add / and an OBVIOUS menu avatar (opens Settings) on the right.
     @ViewBuilder private var todayTopBar: some View {
+        if referenceUI { referenceTodayTopBar }
+        else { legacyTodayTopBar }
+    }
+
+    private var referenceTodayTopBar: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Button("Profile and settings") { showSettings = true }
+                Button("Updates") { showUpdatesInbox = true }
+                Button("Customize Today") { customizationDestination = .today }
+                Button("Quick actions") { router.requestQuickActions() }
+                Button("Devices") { router.openDevices() }
+            } label: {
+                ProfileAvatarView(imageData: profile.avatarImageData, size: 34)
+                    .frame(width: 44, height: 44)
+                    .overlay(alignment: .topTrailing) {
+                        if updateStore.unreadCount > 0 {
+                            Circle().fill(StrandPalette.statusCritical).frame(width: 7, height: 7)
+                        }
+                    }
+            }
+            .accessibilityLabel("Menu and settings")
+            Spacer(minLength: 0)
+            HStack(spacing: 0) {
+                Button { changeReferenceDay(by: 1) } label: {
+                    Image(systemName: "chevron.left").frame(width: 28, height: 40)
+                }
+                .disabled(selectedDayOffset >= earliestDayOffset)
+                .accessibilityLabel("Previous day")
+                Button { showDayPicker = true } label: {
+                    Text((Self.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay)
+                        .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()).uppercased())
+                        .font(WhoopReferenceFont.label(10)).tracking(0.7)
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                        .frame(minWidth: 96, minHeight: 30)
+                        .background(Capsule().fill(Color.white.opacity(0.06)))
+                }
+                .accessibilityLabel("Choose dashboard day")
+                .popover(isPresented: $showDayPicker) {
+                    DatePicker("", selection: dayPickerBinding, in: ...Repository.logicalDay(Date()), displayedComponents: [.date])
+                        .datePickerStyle(.graphical).labelsHidden().padding(12)
+                        .frame(minWidth: 320, minHeight: 360)
+                }
+                Button { changeReferenceDay(by: -1) } label: {
+                    Image(systemName: "chevron.right").frame(width: 28, height: 40)
+                }
+                .disabled(selectedDayOffset == 0)
+                .accessibilityLabel("Next day")
+            }
+            .font(.system(size: 14, weight: .bold))
+            .buttonStyle(.plain)
+            .foregroundStyle(StrandPalette.textPrimary)
+            .background(Capsule().fill(WoopHomePalette.activityCard))
+            Spacer(minLength: 0)
+            DashboardBatteryButton(size: 28)
+        }
+        .frame(height: 46)
+    }
+
+    private func changeReferenceDay(by delta: Int) {
+        let next = Self.clampedDayOffset(current: selectedDayOffset, delta: delta, maxOffset: earliestDayOffset)
+        guard next != selectedDayOffset else { return }
+        StrandHaptic.selection.play()
+        withAnimation(StrandMotion.interactive) { selectedDayOffset = next }
+    }
+
+    @ViewBuilder private var legacyTodayTopBar: some View {
         HStack(alignment: .center, spacing: 10) {
             Button { showDayPicker = true } label: {
                 // Just the date, small (locale numeric), no relative word and no prev/next arrows. Every ~10s
@@ -3443,35 +3511,28 @@ struct TodayView: View {
         // than its peers. Sized off the measured width so they stay equal on any phone; the row stays
         // self-sizing (#762).
         let ring = Self.heroRingDiameter(rowWidth: measured)
+        let effort = heroRingColumn(section: .effort, domain: .effort,
+                                    detailRoute: .metric(HeroRingMetric.effort)) {
+            effortRing(d: d, diameter: ring)
+        }
+        let charge = heroRingColumn(section: .charge, domain: .charge, provenanceKey: "recovery",
+                                    onOpenBreakdown: { showChargeBreakdown = true }) {
+            chargeRing(score: score, d: d, diameter: ring)
+        }
+        let rest = heroRingColumn(section: .rest, domain: .rest, provenanceKey: "sleep_performance",
+                                  detailRoute: referenceUI ? .sleep : .metric(HeroRingMetric.rest),
+                                  caption: restIsPendingSync ? "Pending sync" : nil, captionWidth: ring) {
+            restRing(diameter: ring)
+        }
         HStack(alignment: .top, spacing: 22) {
-            // Component 4: Charge/Rest badge their real per-day merge winner; Effort has no badge.
-            // A1 (#514/#706): the Charge ring is TAPPABLE (a small chevron cue overlays the ring's bottom
-            // edge, INSIDE the ring frame so it adds no stacked height, keeping the #762 self-sizing row
-            // untouched). It opens the Charge breakdown sheet (the existing ChargeBreakdownSection), built
-            // lazily on tap. No new badge/dot/tier sits under the ring (that would re-load the #762 stack).
-            // A ring opens the RICHEST explanation this shell has for its score, which is the rule
-            // Android states outright: "Charge keeps its breakdown sheet, which is richer than a trend and
-            // has no twin on the iOS liquid Today". That clause is why the three surfaces differ, and it
-            // is not an oversight. The Liquid Today sends Charge to the trend because it has no breakdown
-            // to offer; THIS shell has one, so its Charge ring keeps it and matches Android.
-            //
-            // Effort and Rest have no breakdown on any platform, so the trend is the richest thing they
-            // have and both rings open it, exactly as Android's do. The keys are the ones
-            // `HeroRingDetailRouteTests` pins against `MetricCatalog`; `TabRoute.metric` falls back to the
-            // Health screen on an unknown key rather than failing, which is why they are pinned.
-            heroRingColumn(section: .effort, domain: .effort,
-                           detailRoute: .metric(HeroRingMetric.effort)) { effortRing(d: d, diameter: ring) }
-            heroRingColumn(section: .charge, domain: .charge, provenanceKey: "recovery",
-                           onOpenBreakdown: { showChargeBreakdown = true }) {
-                chargeRing(score: score, d: d, diameter: ring)
-            }
-            // #1164: while the strap still holds un-offloaded history, Rest says so under the ring
-            // instead of standing there as a finished number that is merely stale.
-            heroRingColumn(section: .rest, domain: .rest, provenanceKey: "sleep_performance",
-                           detailRoute: .metric(HeroRingMetric.rest),
-                           caption: restIsPendingSync ? "Pending sync" : nil,
-                           captionWidth: ring) {
-                restRing(diameter: ring)
+            if referenceUI {
+                rest
+                charge
+                effort
+            } else {
+                effort
+                charge
+                rest
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -3520,6 +3581,16 @@ struct TodayView: View {
         case .effort: return "Open your Effort detail"
         case .rest:   return "Open your Rest detail"
         case .stress: return "Open your Stress detail"
+        }
+    }
+
+    private func displayedDomainName(_ domain: DomainTheme) -> String {
+        guard referenceUI else { return domain.productName }
+        switch domain {
+        case .charge: return String(localized: "Recovery")
+        case .effort: return String(localized: "Strain")
+        case .rest: return String(localized: "Sleep")
+        case .stress: return String(localized: "Stress")
         }
     }
 
@@ -3578,7 +3649,7 @@ struct TodayView: View {
                     ring().contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text(verbatim: domain.productName))
+                .accessibilityLabel(Text(verbatim: displayedDomainName(domain)))
                 .accessibilityHint("See what shaped your Charge")
                 .accessibilityAddTraits(.isButton)
             } else {
@@ -3603,7 +3674,7 @@ struct TodayView: View {
                     // The CHARGE/EFFORT/REST hero label stays English — see `DomainTheme.productName`. It is a
                     // product name, not a description, so `verbatim` keeps it out of the catalog;
                     // `.textCase(.uppercase)` still does the uppercasing in the current locale.
-                    Text(verbatim: domain.productName)
+                    Text(verbatim: displayedDomainName(domain))
                         .textCase(.uppercase)
                         .font(StrandFont.overline)
                         .tracking(StrandFont.overlineTracking)
@@ -3680,7 +3751,7 @@ struct TodayView: View {
             // ramp. Both come from the one canonical band (`ChargeBand`, behind these two helpers).
             GlowRing(fraction: s / 100, value: s, format: { "\(Int($0.rounded()))" },
                      color: StrandPalette.chargeRingColor(s), diameter: diameter,
-                     lineWidth: diameter * 0.10, caption: StrandPalette.recoveryState(s))
+                     lineWidth: diameter * (referenceUI ? 0.065 : 0.10), caption: StrandPalette.recoveryState(s))
         } else if recoveryCalibration == nil, let carried = lastScoredCharge {
             // #802: a CARRIED last-night Charge draws as a real (dimmed) ring, matching the Rest ring, rather
             // than a bare number on a faint track, which read as broken next to Rest's filled ring. Same
@@ -3688,7 +3759,7 @@ struct TodayView: View {
             // caption already beneath the rings mark it as carried, not today's fresh score.
             GlowRing(fraction: carried.value / 100, value: carried.value, format: { "\(Int($0.rounded()))" },
                      color: StrandPalette.chargeRingColor(carried.value), diameter: diameter,
-                     lineWidth: diameter * 0.10, caption: StrandPalette.recoveryState(carried.value))
+                     lineWidth: diameter * (referenceUI ? 0.065 : 0.10), caption: StrandPalette.recoveryState(carried.value))
                 .opacity(0.8)
         } else {
             emptyHeroRing(diameter: diameter) { ringEmptyOverlay(d: d, diameter: diameter) }
@@ -3702,7 +3773,7 @@ struct TodayView: View {
         if effortStrain(d) != nil, let gv = effortGaugeValue(d) {
             GlowRing(fraction: gv / effortGaugeMax, value: gv,
                      format: { effortScale == .whoop ? String(format: "%.1f", locale: AppLanguage.activeLocale, $0) : "\(Int($0.rounded()))" },
-                     color: StrandPalette.effortColor, diameter: diameter, lineWidth: diameter * 0.10)
+                     color: referenceUI ? WoopHomePalette.strain : StrandPalette.effortColor, diameter: diameter, lineWidth: diameter * (referenceUI ? 0.065 : 0.10))
         } else {
             emptyHeroRing(diameter: diameter) { ringNoData(diameter: diameter) }
         }
@@ -3725,7 +3796,7 @@ struct TodayView: View {
         // the column's caption, rather than shown by withholding the number. Past days are final.
         if let s = restScore {
             GlowRing(fraction: s / 100, value: s, format: { "\(Int($0.rounded()))" },
-                     color: StrandPalette.restColor, diameter: diameter, lineWidth: diameter * 0.10)
+                     color: referenceUI ? WoopHomePalette.sleep : StrandPalette.restColor, diameter: diameter, lineWidth: diameter * (referenceUI ? 0.065 : 0.10))
         } else if displayDay?.recovery != nil {
             // #898: an aggregate-import user (a daily HRV/RHR import, no in-bed session) gets a Charge from
             // WatchRecovery but NO sleep_performance, so Rest read a bare "No data" next to a lit Charge ,

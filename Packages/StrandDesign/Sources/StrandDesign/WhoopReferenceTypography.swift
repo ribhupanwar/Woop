@@ -119,7 +119,7 @@ public enum WoopHomePalette {
 /// leaving the app's existing StrandFont roles unchanged.
 public enum WhoopReferenceFont {
     public static func score(_ size: CGFloat = 48) -> Font {
-        .system(size: size, weight: .semibold, design: .default).monospacedDigit()
+        .system(size: size, weight: .bold, design: .default).width(.condensed).italic().monospacedDigit()
     }
 
     /// Tight tracking for large WHOOP-reference score numerals.
@@ -127,10 +127,10 @@ public enum WhoopReferenceFont {
         -size * 0.02
     }
     public static func heading(_ size: CGFloat = 18) -> Font {
-        .system(size: size, weight: .semibold, design: .default)
+        .system(size: size, weight: .semibold, design: .default).width(.condensed)
     }
     public static func label(_ size: CGFloat = 10) -> Font {
-        .system(size: size, weight: .semibold, design: .default)
+        .system(size: size, weight: .bold, design: .default).width(.condensed)
     }
     public static func metric(_ size: CGFloat = 14) -> Font {
         .system(size: size, weight: .medium, design: .default).monospacedDigit()

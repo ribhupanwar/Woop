@@ -171,6 +171,7 @@ struct RootTabView: View {
     var body: some View {
         // TabView retains all five navigation stacks. The reference bar only drives its existing
         // selection binding, so re-tap, pop-to-root and scroll restoration keep one owner.
+        VStack(spacing: 0) {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
@@ -180,15 +181,14 @@ struct RootTabView: View {
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
             // White active navigation follows the supplied dark reference; score colors stay local.
-            .tint(StrandPalette.textPrimary)
+            .tint(StrandPalette.accent)
             .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
             // #1841: the same "Hide bar when scrolling" preference the macOS settings screen exposes.
             // Here the system owns the behaviour — iOS 26's tab bar MINIMISES to a pill on scroll down
             // rather than sliding away entirely, so this is the platform's read of the same intent.
             .noopTabBarAutoHide(bottomBarAutoHide)
-            // Tab crossfade — README §Motion: ~240ms opacity swap between tab roots, global calm
-            // easing cubic-bezier(0.22,1,0.36,1).
-            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24), value: selectedTab)
+            // Tab changes do not animate the entire retained dashboard hierarchy. Individual charts
+            // and presentations keep their own animations without making a large tab switch expensive.
             // Swipe left/right anywhere to move between tabs (2026-07-02), but ONLY while the current
             // tab is at its root. Attaching this ancestor drag gesture unconditionally defeated the
             // edge-restriction of a pushed NavigationStack screen's native interactive-pop gesture —
@@ -213,11 +213,7 @@ struct RootTabView: View {
                 including: selectedTab > 1 && tabPaths[selectedTab].isEmpty ? .all : .subviews
             )
             // The minimized running workout, above the tab bar on every tab.
-            .activeSessionMiniBar()
-            // Outside the mini-bar inset so an active workout remains ABOVE the navigation bar.
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !bottomBarAutoHide { referenceTabBar }
-            }
+            .activeSessionMiniBar(enabled: bottomBarAutoHide)
 
             // Draggable floating Coach button — an alternative entry to the Today banner, honouring the
             // user's Coach-entry preference. Floats over every tab; a tap opens the chat.
@@ -225,7 +221,17 @@ struct RootTabView: View {
                 CoachFloatingButton(isPresented: $showCoach)
             }
         }
+        if !bottomBarAutoHide {
+            // Physical layout space prevents TabView children and floating controls from extending
+            // underneath the reference navigation, even when a child ignores inherited safe insets.
+            SessionBottomAccessory()
+                .padding(.horizontal, NoopMetrics.screenPadding)
+                .background(NoopChromeSurface())
+            referenceTabBar
+        }
+        }
         .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
         .environment(\.woopReferenceUI, true)
         .coachCover(isPresented: $showCoach, coach: coach)
         .activeSessionPresentation()
@@ -1031,6 +1037,7 @@ private struct QuickActionSheet: View {
                     VStack(spacing: 8) {
                         row("Live HR", icon: "waveform.path.ecg", tint: StrandPalette.metricRose) { onPick(.live) }
                         row("Start workout", icon: "figure.run", tint: StrandPalette.effortColor) { onPick(.workout) }
+                            .accessibilityIdentifier("woop.quickActions.startWorkout")
                         row("Log journal", icon: "square.and.pencil",
                             tint: AppleInspiredColors.color(for: "journal", enabled: appleInspiredColors)) { onPick(.journal) }
                         row("Breathe", icon: "wind", tint: StrandPalette.restColor) { onPick(.breathe) }
