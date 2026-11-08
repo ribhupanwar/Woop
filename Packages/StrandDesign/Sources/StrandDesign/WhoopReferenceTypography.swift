@@ -119,7 +119,7 @@ public enum WoopHomePalette {
 /// leaving the app's existing StrandFont roles unchanged.
 public enum WhoopReferenceFont {
     public static func score(_ size: CGFloat = 48) -> Font {
-        .system(size: size, weight: .bold, design: .default).width(.condensed).italic().monospacedDigit()
+        .system(size: size, weight: .semibold, design: .default).monospacedDigit()
     }
 
     /// Tight tracking for large WHOOP-reference score numerals.
@@ -127,10 +127,10 @@ public enum WhoopReferenceFont {
         -size * 0.02
     }
     public static func heading(_ size: CGFloat = 18) -> Font {
-        .system(size: size, weight: .semibold, design: .default).width(.condensed)
+        .system(size: size, weight: .semibold, design: .default)
     }
     public static func label(_ size: CGFloat = 10) -> Font {
-        .system(size: size, weight: .bold, design: .default).width(.condensed)
+        .system(size: size, weight: .semibold, design: .default)
     }
     public static func metric(_ size: CGFloat = 14) -> Font {
         .system(size: size, weight: .medium, design: .default).monospacedDigit()
@@ -149,4 +149,19 @@ public extension Text {
             .textCase(.uppercase)
             .foregroundStyle(StrandPalette.textSecondary)
     }
+}
+
+// Compact dashboard proportions from the supplied iPhone comparison. Dynamic Type
+// may grow a row beyond the minimum; these are presentation tokens only.
+public enum WoopDashboardMetrics {
+    public static let rowMinHeight: CGFloat = 56
+    public static let horizontalPadding: CGFloat = 14
+    public static let verticalPadding: CGFloat = 8
+    public static let iconSize: CGFloat = 20
+    public static let iconColumn: CGFloat = 24
+    public static let rowGap: CGFloat = 12
+    public static let valueSize: CGFloat = 22
+    public static let comparisonSize: CGFloat = 10
+    public static let labelSize: CGFloat = 11
+    public static let cornerRadius: CGFloat = 12
 }

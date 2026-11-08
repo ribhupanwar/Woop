@@ -1164,16 +1164,9 @@ struct LiquidTodayView: View {
         if nextPullY != pull.pullY { pull.pullY = nextPullY }
         let pullY = pull.pullY
         guard !refreshing else { return }
-        // #1748 twin: gate the ARM, not the release. `syncNow()`'s own gate checks connected + bonded, and
-        // `bonded` is set by the live-HR path for a 5/MG that has never completed a handshake — so the pull
-        // was accepted and then declined in silence. `historyReady` is the client's OWN precondition, so
-        // this cannot withhold a sync that would have run.
-        //
-        // On the ARM specifically: gating the RELEASE below would leave `refreshArmed` stuck true for the
-        // rest of the gesture, since that branch is the only thing that clears it — a worse failure than
-        // the silent one being fixed. Not arming also withholds the haptic, which is the honest signal
-        // that the gesture is unavailable rather than unresponsive.
-        if pullY >= pullThreshold, !refreshArmed, ble.state.historyReady {
+        // A pull always refreshes local data. HomePullSync gates the strap request
+        // independently, so offline pulls remain useful without claiming a device sync.
+        if pullY >= pullThreshold, !refreshArmed {
             refreshArmed = true
             pullHaptic &+= 1
         }
@@ -1181,14 +1174,8 @@ struct LiquidTodayView: View {
             refreshArmed = false
             refreshing = true
             Task {
-                // #334 (iOS twin of Android #426): a pull requests a fresh strap history offload, not just
-                // a UI reload. syncNow() is internally gated (connected + bonded + not-already-backfilling),
-                // so a pull while disconnected or mid-offload safely no-ops. The sync status chip owns the
-                // ongoing offload progress; the pull spinner stays short (the reload below).
-                ble.syncNow()
-                await repo.refresh()
+                await HomePullSync.refresh(ble: ble, repo: repo)
                 await load()
-                try? await Task.sleep(nanoseconds: 350_000_000)   // let the fill read as "done"
                 withAnimation(.easeOut(duration: 0.25)) { refreshing = false }
             }
         }
@@ -3896,49 +3883,30 @@ private struct HeroScoreCell: View {
 
 // MARK: - Scene controls (LiveState-isolated leaves)
 
-/// The liquid pull-to-refresh vessel + a "Syncing…" label. A pure gesture affordance: it answers "did my
-/// pull do anything", and nothing else.
-///
-/// It used to ALSO hold itself up for the whole of `live.backfilling`, because `ble.syncNow()` kicks off a
-/// BLE history offload that far outlives the local `refreshing` flag (which flips false ~350ms after the
-/// pull releases), and at the time the only other feedback was the easy-to-miss header `SyncStatusChip`.
-/// `LiquidSyncLine` under the wordmark is now that feedback — an ambient, always-on-screen signal whose
-/// VoiceOver label carries a live chunk count — so the long tail belongs there and the vessel hands off to
-/// it instead of shadowing it.
-/// Two surfaces reporting one signal is what this replaces: a 64pt banner AND a morphing header, both
-/// running their own 60Hz clock (`LiquidVessel` has one too) for the same multi-hour offload.
-///
-/// No longer reads LiveState at all, so it is no longer an isolated leaf — there is nothing left to
-/// isolate it from.
+// Home pull affordance. The status line retains the actual long-running sync outcome.
 private struct LiquidRefreshIndicator: View {
     @ObservedObject var pull: LiquidPullModel
     let pullThreshold: CGFloat
     let refreshing: Bool
     let liquidHeart: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var pullY: CGFloat { pull.pullY }
-    private var progress: CGFloat { min(1, max(0, pullY / pullThreshold)) }
+    private var progress: CGFloat { min(1, max(0, pull.pullY / pullThreshold)) }
 
     var body: some View {
-        ZStack {
-            if refreshing {
-                VStack(spacing: NoopMetrics.space2) {
-                    LiquidVessel(value: 0.6, tint: liquidHeart, animated: true)
-                        .frame(width: 34, height: 34)
-                    Text("Syncing…")
-                        .font(StrandFont.caption)
-                        .foregroundStyle(StrandPalette.textSecondary)
-                }
-            } else if pullY > 2 {
-                LiquidVessel(value: progress, tint: liquidHeart, animated: false)
-                    .frame(width: 30, height: 30)
-                    .opacity(progress)
-                    .scaleEffect(0.7 + 0.3 * progress)
+        Group {
+            if refreshing || pull.pullY > 2 {
+                WoopPullWordmark(refreshing: refreshing)
+                    .opacity(refreshing ? 1 : progress)
+                    .scaleEffect(refreshing || reduceMotion ? 1 : 0.7 + 0.3 * progress)
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: refreshing ? 64 : min(pullY, pullThreshold * 1.15))
-        .animation(.easeOut(duration: 0.22), value: refreshing)
+        .frame(height: refreshing ? NoopMetrics.controlHeight + NoopMetrics.space5
+                                  : min(pull.pullY, pullThreshold * 1.15))
+        .clipped()
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: refreshing)
+        .accessibilityLabel(refreshing ? "Refreshing data" : "Pull to sync")
     }
 }
 

@@ -2,6 +2,7 @@ import SwiftUI
 import StrandDesign
 import StrandAnalytics
 import StrandTraining
+import StrandCore
 import WhoopStore
 import UniformTypeIdentifiers
 #if os(iOS)
@@ -14,7 +15,10 @@ struct TrainingHubView: View {
     // Deliberately not `AppModel`: it republishes on every heart-rate tick, and this screen's body is the
     // most expensive in the app. The session controller changes only when a session starts or ends.
     @EnvironmentObject private var session: ActiveSessionController
+    @EnvironmentObject private var profile: ProfileStore
+    @AppStorage(ActivitySuggestions.enabledKey) private var detectActivities = false
     @EnvironmentObject private var repo: Repository
+    @AppStorage(UnitPrefs.systemKey) private var distanceUnitsRaw = UnitSystem.metric.rawValue
     @StateObject private var model = TrainingHubModel()
     @State private var showingStarterPlans = false
     @State private var showingStart = false
@@ -42,6 +46,9 @@ struct TrainingHubView: View {
                     } else {
                         // Starting first, then planning, then looking back: the order the tab is used in.
                         startCard
+                        runningProgressCard
+                        automaticTrackingCard
+                        ActivitySuggestionPrompt()
                         GoalsContextCard(context: .training)
                         weekCard
                         routinesCard
@@ -199,6 +206,10 @@ struct TrainingHubView: View {
         HStack(alignment: .firstTextBaseline) {
             SectionHeader("Training", overline: "Plan and log")
             Spacer()
+            NavigationLink(value: TabRoute.workouts) {
+                Label("History", systemImage: "clock.arrow.circlepath")
+                    .font(StrandFont.footnote)
+            }
             if let coachContext {
                 CoachCardButton(context: coachContext)
             }
@@ -225,6 +236,69 @@ struct TrainingHubView: View {
             }
         } else {
             TrainingQuickStartCard(strength: strengthEntry, onStartStrength: start, onShowAll: openStart)
+        }
+    }
+
+    private var runningProgressCard: some View {
+        let summary = model.runningSummary
+        let units = UnitSystem(rawValue: distanceUnitsRaw) ?? .metric
+        return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            SectionHeader("Running", overline: "Last 7 days")
+            NoopCard {
+                VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                    HStack(alignment: .top, spacing: NoopMetrics.space3) {
+                        runningStat("Runs", value: summary.count.formatted())
+                        runningStat("Distance", value: summary.distanceM.map {
+                            UnitFormatter.distanceFromMeters($0, system: units)
+                        } ?? "—")
+                        runningStat("Pace", value: UnitFormatter.paceFromSecPerKm(summary.paceSecPerKm, system: units))
+                    }
+                    if let last = summary.latest {
+                        Divider()
+                        NavigationLink(value: TabRoute.workoutDetail(startTs: last.startTs, sport: last.sport)) {
+                            HStack {
+                                Text(Date(timeIntervalSince1970: TimeInterval(last.startTs)), style: .date)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                            }
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.accent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func runningStat(_ title: LocalizedStringKey, value: String) -> some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+            Text(title).font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+            Text(verbatim: value).font(StrandFont.subhead.weight(.semibold))
+                .foregroundStyle(StrandPalette.textPrimary).lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var automaticTrackingCard: some View {
+        NoopCard {
+            VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                Toggle("Detect activities after sync", isOn: $detectActivities)
+                    .font(StrandFont.subhead)
+                    .tint(StrandPalette.effortColor)
+                    .onChange(of: detectActivities) { enabled in
+                        guard enabled else { return }
+                        Task {
+                            await repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm)
+                            await ActivitySuggestionCenter.shared.reload()
+                        }
+                    }
+                Text("Confirm detected activities. Enter exercise names, reps and weights manually.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text("Start Running with GPS for distance, pace and route.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
         }
     }
 

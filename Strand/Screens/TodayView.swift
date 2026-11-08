@@ -1616,10 +1616,9 @@ struct TodayView: View {
     }
 
     var body: some View {
-        ScreenScaffold(title: scaffoldTitle, onRefresh: {
-            if let app = appModel { await app.refreshDashboard() }
-            else { await repo.refresh() }
-        },
+        ScreenScaffold(title: scaffoldTitle, onRefresh: { if let app = appModel { await HomePullSync.refresh(ble: app.ble, repo: repo, model: app) }
+                else { await repo.refresh() } },
+                       brandedRefresh: true,
                        // PERF (scroll): lazy column so the scaffold materialises Today's content on demand.
                        // Today supplies its own inner eager VStack (below), so the staggered section reveal is
                        // unchanged, this only defers building the single inner stack until it scrolls in.

@@ -9,6 +9,8 @@ RESOURCE_DIR="$VENDOR_DIR/Resources"
 LLAMA_TAG="b9623"
 LLAMA_ARCHIVE="llama-${LLAMA_TAG}-xcframework.zip"
 LLAMA_URL="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_TAG}/${LLAMA_ARCHIVE}"
+# The immutable API asset is the same b9623 archive; both paths use the checksum below.
+LLAMA_API_URL="https://api.github.com/repos/ggml-org/llama.cpp/releases/assets/446645389"
 LLAMA_SHA256="8857832e4699bc8483f038d0c8ac6927de11ce8c6772f79b2a99db8a48ab2d83"
 LLAMA_FRAMEWORK="$VENDOR_DIR/llama.xcframework"
 
@@ -17,6 +19,19 @@ NOMIC_FILE="nomic-embed-text-v2-moe.Q4_K_M.gguf"
 NOMIC_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v2-moe-GGUF/resolve/${NOMIC_REVISION}/${NOMIC_FILE}"
 NOMIC_SHA256="b5fb2811647b8ef461519a68a3bf67014a84a66a130c8a2af9413ff9f06d3f22"
 NOMIC_MODEL="$RESOURCE_DIR/$NOMIC_FILE"
+
+# Authenticate API requests on shared CI runners; curl strips Authorization on
+# cross-host redirects. The response is still verified against the pinned SHA-256.
+download_github_asset() {
+    github_asset_destination=$1
+    set -- -H 'Accept: application/octet-stream' -H 'X-GitHub-Api-Version: 2022-11-28'
+    if [ -n "${GITHUB_TOKEN:-}" ]; then
+        set -- "$@" -H "Authorization: Bearer $GITHUB_TOKEN"
+    fi
+    curl -L --fail --show-error --progress-bar \
+        --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 \
+        "$@" "${LLAMA_API_URL}?download=1&request=$(date +%s)" -o "$github_asset_destination"
+}
 
 sha256_of() {
     shasum -a 256 "$1" | awk '{print $1}'
@@ -61,7 +76,11 @@ if ! verify_framework 2>/dev/null; then
     if [ ! -f "$archive_path" ] || [ "$(sha256_of "$archive_path")" != "$LLAMA_SHA256" ]; then
         temp_archive="$archive_path.download"
         rm -f "$temp_archive"
-        curl -L --fail --show-error --progress-bar "$LLAMA_URL" -o "$temp_archive"
+        if ! curl -L --fail --show-error --progress-bar \
+            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$LLAMA_URL" -o "$temp_archive"; then
+            echo "Release download unavailable; trying the same pinned GitHub API asset."
+            download_github_asset "$temp_archive"
+        fi
         verify_file "$temp_archive" "$LLAMA_SHA256" "llama.cpp XCFramework archive"
         mv "$temp_archive" "$archive_path"
     fi
@@ -89,7 +108,8 @@ fi
 if ! verify_file "$NOMIC_MODEL" "$NOMIC_SHA256" "Nomic model" 2>/dev/null; then
     temp_model="$NOMIC_MODEL.download"
     rm -f "$temp_model"
-    curl -L --fail --show-error --progress-bar "$NOMIC_URL" -o "$temp_model"
+    curl -L --fail --show-error --progress-bar \
+            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$NOMIC_URL" -o "$temp_model"
     verify_file "$temp_model" "$NOMIC_SHA256" "Nomic model"
     mv "$temp_model" "$NOMIC_MODEL"
 fi

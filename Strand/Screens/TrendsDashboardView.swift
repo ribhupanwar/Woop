@@ -155,7 +155,8 @@ struct TrendsDashboardView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-        ScrollView {
+        WoopRefreshScrollView(onRefresh: { if let app = model { await HomePullSync.refresh(ble: app.ble, repo: repo, model: app) }
+                else { await repo.refresh() } }) {
             LazyVStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
                 Color.clear.frame(height: 0).id(Self.topAnchorID)
                 header
@@ -183,7 +184,6 @@ struct TrendsDashboardView: View {
         }
         // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
         // this screen was the one Today style with no way to pull for fresh data.
-        .refreshable { await repo.refresh() }
         #if os(iOS)
         // Scroll-to-top on an at-root Today re-tap; iOS-only — the tab shell is the only driver.
         .onChange(of: scrollToTopSignal) { _, _ in

@@ -11,6 +11,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
     /// (the standard iPhone gesture for a data dashboard). Defaults to nil so callers that
     /// don't opt in are unaffected — and on macOS `.refreshable` surfaces no affordance.
     var onRefresh: (() async -> Void)? = nil
+    var brandedRefresh = false
     /// Lazily materialise the content column. When `true` the inner stack is a `LazyVStack`,
     /// so a screen whose content ends in a long `ForEach` only builds the cards on screen
     /// rather than all of them up-front — the fix for Intelligence "ALL" freezing on an
@@ -48,7 +49,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-        ScrollView {
+        ScaffoldScrollSurface(onRefresh: onRefresh, branded: brandedRefresh) {
             // Scroll-to-top anchor (#198 follow-up): a zero-height marker pinned above the content so an
             // at-root tab re-tap can bring the screen back to the very top. Layout-neutral.
             Color.clear.frame(height: 0).id(screenScaffoldTopAnchorID)
@@ -98,7 +99,6 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
             }
             .ignoresSafeArea()
         }
-        .modifier(RefreshableIfNeeded(onRefresh: onRefresh))
         .modifier(HardTopEdgeIfPinned(active: pinnedHeader != nil))
         #if DEBUG
         .task {
@@ -221,9 +221,9 @@ extension ScreenScaffold where Trailing == EmptyView {
     /// Convenience init for the common case with no header trailing element — keeps every existing
     /// call site (which never passed `trailing`) source-compatible.
     init(title: LocalizedStringKey?, subtitle: LocalizedStringKey? = nil,
-         onRefresh: (() async -> Void)? = nil, lazy: Bool = false, contentSpacing: CGFloat = 20, topBackground: AnyView? = nil,
+         onRefresh: (() async -> Void)? = nil, brandedRefresh: Bool = false, lazy: Bool = false, contentSpacing: CGFloat = 20, topBackground: AnyView? = nil,
          @ViewBuilder content: @escaping () -> Content) {
-        self.init(title: title, subtitle: subtitle, onRefresh: onRefresh, lazy: lazy, contentSpacing: contentSpacing,
+        self.init(title: title, subtitle: subtitle, onRefresh: onRefresh, brandedRefresh: brandedRefresh, lazy: lazy, contentSpacing: contentSpacing,
                   topBackground: topBackground, trailing: { EmptyView() }, content: content)
     }
 }
@@ -493,5 +493,159 @@ private struct HardTopEdgeIfPinned: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+// Analysis migration required: no. A user refresh requests the existing, gated history
+// path, then reads the same repository snapshots; no scoring or BLE payload changes.
+@MainActor
+enum HomePullSync {
+    static func refresh(ble: BLEManager, repo: Repository, model: AppModel? = nil) async {
+        if let model { await model.refreshDashboard() }
+        let live = ble.state
+        if live.connected && live.bonded && live.historyReady {
+            let previousSync = live.lastSyncedAt
+            if model == nil { ble.syncNow() }
+            // Bound the pull affordance. A large backlog continues in the existing sync
+            // status line after this window; finishing the pull never claims sync success.
+            let deadline = Date().addingTimeInterval(20)
+            let startupDeadline = Date().addingTimeInterval(2)
+            var sawBackfill = live.backfilling
+            var idleSince: Date?
+            while !Task.isCancelled && Date() < deadline {
+                guard live.connected, live.historyReady else { break }
+                if live.backfilling {
+                    sawBackfill = true
+                    idleSince = nil
+                } else if sawBackfill {
+                    // Chunk boundaries briefly fall idle. Wait for a quiet tail before
+                    // reading the newly stored data, just as the header signal does.
+                    if idleSince == nil { idleSince = Date() }
+                    if let idleSince, Date().timeIntervalSince(idleSince) >= 2 { break }
+                } else if live.lastSyncedAt != previousSync || Date() >= startupDeadline {
+                    break
+                }
+                do { try await Task.sleep(nanoseconds: 200_000_000) }
+                catch { return }
+            }
+        }
+        guard !Task.isCancelled else { return }
+        // Offline pulls still refresh locally imported data. Strap outcomes continue to
+        // come exclusively from LiveState.lastSyncedAt / lastSyncError.
+        await repo.refresh()
+    }
+}
+
+// A shared Home scroll surface: the wordmark appears in the revealed pull space,
+// and one refresh starts only when the gesture ends past the threshold.
+struct WoopRefreshScrollView<Content: View>: View {
+    let onRefresh: () async -> Void
+    @ViewBuilder let content: () -> Content
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var coordinateID = UUID()
+    @State private var pullY: CGFloat = 0
+    @State private var armed = false
+    @State private var refreshing = false
+    private let threshold = NoopMetrics.controlHeight + NoopMetrics.space6
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: WoopPullOffset.self,
+                        value: proxy.frame(in: .named(coordinateID)).minY)
+                }
+                .frame(height: 0)
+                Color.clear.frame(height: refreshing ? threshold : 0)
+                content()
+            }
+        }
+        .coordinateSpace(name: coordinateID)
+        .onPreferenceChange(WoopPullOffset.self) { y in
+            guard !refreshing else { return }
+            pullY = max(0, y)
+            let nextArmed = pullY >= threshold
+            if nextArmed && !armed { StrandHaptic.selection.play() }
+            armed = nextArmed
+        }
+        .simultaneousGesture(DragGesture().onEnded { _ in
+            guard armed, !refreshing else { return }
+            armed = false
+            refreshing = true
+        })
+        .overlay(alignment: .top) {
+            if refreshing || pullY > NoopMetrics.space1 {
+                WoopPullWordmark(refreshing: refreshing)
+                    .opacity(refreshing ? 1 : min(1, pullY / threshold))
+                    .frame(height: threshold)
+                    .allowsHitTesting(false)
+            }
+        }
+        .task(id: refreshing) {
+            guard refreshing else { return }
+            await onRefresh()
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) {
+                refreshing = false
+                pullY = 0
+            }
+        }
+        .accessibilityAction(named: Text("Refresh data")) { refreshing = true }
+    }
+}
+
+private struct WoopPullOffset: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+struct WoopPullWordmark: View {
+    let refreshing: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var motion = NoopMotionState.shared
+
+    var body: some View {
+        VStack(spacing: NoopMetrics.space2) {
+            if refreshing && scenePhase == .active && !motion.poseStill(reduceMotion) {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.2) / 1.2
+                    wordmark(angle: phase * 360)
+                }
+            } else {
+                wordmark(angle: 0)
+            }
+            if refreshing {
+                Text("Refreshing…")
+                    .font(StrandFont.caption)
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
+        }
+        .accessibilityLabel(refreshing ? "Refreshing data" : "Pull to sync")
+    }
+
+    private func wordmark(angle: Double) -> some View {
+        HStack(spacing: NoopMetrics.space2) {
+            ForgeMark(size: NoopMetrics.space6)
+                .rotationEffect(.degrees(angle))
+            Text(verbatim: "WOOP")
+                .font(StrandFont.headline)
+                .tracking(NoopMetrics.space1)
+                .foregroundStyle(StrandPalette.textPrimary)
+        }
+    }
+}
+
+private struct ScaffoldScrollSurface<Content: View>: View {
+    let onRefresh: (() async -> Void)?
+    let branded: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if branded, let onRefresh {
+            WoopRefreshScrollView(onRefresh: onRefresh, content: content)
+        } else {
+            ScrollView(content: content)
+                .modifier(RefreshableIfNeeded(onRefresh: onRefresh))
+        }
     }
 }
