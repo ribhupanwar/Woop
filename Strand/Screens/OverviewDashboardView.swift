@@ -751,7 +751,7 @@ struct OverviewDashboardView: View {
                 }
                 NavigationLink(value: TabRoute.metricSourced(key: "recovery", source: Repository.whoopSource)) {
                     referenceRing("RECOVERY", value: chargeDisplay.pct,
-                                  color: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
+                                  color: chargeDisplay.pct.map { WoopHomePalette.recovery($0) } ?? StrandPalette.textTertiary,
                                   format: { "\(Int($0.rounded()))%" })
                 }
                 NavigationLink(value: TabRoute.metricSourced(key: "strain", source: Repository.whoopSource)) {

@@ -96,3 +96,14 @@ Source: https://developers.strava.com/docs/getting-started/
 
 New batch still requires app compilation, fresh screenshots and real-band validation. A successful
 3eced46 UI/IPA workflow predates these changes and cannot certify them.
+
+## Reference semantic colors
+
+Central iPhone/Android reference swatches now distinguish recovery neon green, strain/activity blue,
+sleep blue-gray, healthy-status teal, low-stress blue, medium-stress teal and high-stress amber. Home,
+recovery detail, monitor tiles, stress gauge labels, chart legends/points and header connection dots use
+these roles. Stress words use a discrete band color, not a continuous gradient or a recovery-positive
+color. Curves retain their level gradient. Tests pin stress label bands and the 81% recovery swatch.
+These are independently selected reference approximations; raw pixel identity is not certified by source
+inspection, especially for app-switcher screenshots. Existing scores/classification/math are unchanged.
+Analysis migration required: no.

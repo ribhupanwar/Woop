@@ -75,7 +75,7 @@ struct HomeHealthMonitorCard: View {
 
     private var tint: Color {
         switch displayed.state {
-        case .withinRange: return StrandPalette.statusPositive
+        case .withinRange: return WoopHomePalette.healthGood
         case .outOfRange: return StrandPalette.statusWarning
         default: return StrandPalette.textSecondary
         }
@@ -96,7 +96,7 @@ struct HomeStressMonitorCard: View {
                             badge: validValue.map { String(format: "%.1f", $0) } ?? "—", symbol: nil,
                             state: validValue.map { StressBand(score: $0).title } ?? String(localized: "No reading"),
                             detail: validValue == nil ? String(localized: "Needs sensor data") : String(localized: "Daily estimate"),
-                            tint: validValue.map(StressRamp.color) ?? StrandPalette.textSecondary)
+                            tint: validValue.map(StressRamp.labelColor) ?? StrandPalette.textSecondary)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("woop.home.stressMonitor")

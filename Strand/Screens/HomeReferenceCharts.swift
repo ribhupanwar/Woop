@@ -42,7 +42,7 @@ struct HomeReferenceCharts: View {
                             .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
                         Spacer()
                         Text("\(StressBand(score: lastStress.level ?? 0).title) \(String(format: "%.1f", lastStress.level ?? 0))")
-                            .font(WhoopReferenceFont.label(13)).foregroundStyle(StressRamp.color(lastStress.level ?? 0))
+                            .font(WhoopReferenceFont.label(13)).foregroundStyle(StressRamp.labelColor(lastStress.level ?? 0))
                     } else {
                         Text("No recorded stress timeline for this day")
                             .font(WhoopReferenceFont.body(12)).foregroundStyle(StrandPalette.textSecondary)
@@ -82,7 +82,7 @@ struct HomeReferenceCharts: View {
                 weeklyChart
                 HStack(spacing: 16) {
                     Label("Strain · 0–21", systemImage: "circle").foregroundStyle(WoopHomePalette.strain)
-                    Label("Recovery · %", systemImage: "circle").foregroundStyle(StrandPalette.statusPositive)
+                    Label("Recovery · %", systemImage: "circle").foregroundStyle(WoopHomePalette.recoveryGood)
                 }.font(WhoopReferenceFont.body(10))
                 if weeklyPoints.isEmpty {
                     Text("Charts appear when recorded scores are available.")
@@ -112,7 +112,7 @@ struct HomeReferenceCharts: View {
         let segment: String
         var color: Color {
             if !recovery { return WoopHomePalette.strain }
-            return value < 34 ? StrandPalette.statusCritical : value < 67 ? StrandPalette.statusWarning : StrandPalette.statusPositive
+            return WoopHomePalette.recovery(value)
         }
     }
     private var anchor: Date {

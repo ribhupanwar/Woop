@@ -368,7 +368,7 @@ struct StressView: View {
                         if let peak = drawnPeak, let lvl = peak.level {
                             Text("peak \(StressTrace.formatLevel(lvl)) · \(hourLabel(peak.hour))")
                                 .font(StrandFont.captionNumber)
-                                .foregroundStyle(StressRamp.color(lvl))
+                                .foregroundStyle(StressRamp.labelColor(lvl))
                         }
                     }
 
@@ -495,7 +495,7 @@ struct StressView: View {
                         Text(model.band.title)
                             .font(StrandFont.overline)
                             .tracking(StrandFont.overlineTracking)
-                            .foregroundStyle(StressRamp.color(model.score))
+                            .foregroundStyle(StressRamp.labelColor(model.score))
                         // One plain-English line beside the gauge.
                         Text(model.explanation)
                             .font(StrandFont.subhead)
@@ -823,11 +823,19 @@ enum StressBand {
         }
     }
 
+    var color: Color {
+        switch self {
+        case .low: return WoopHomePalette.stressLow
+        case .medium: return WoopHomePalette.healthGood
+        case .high: return WoopHomePalette.stressHigh
+        }
+    }
+
     var tone: StrandTone {
         switch self {
-        case .low:    return .positive
-        case .medium: return .warning
-        case .high:   return .critical
+        case .low:    return .accent
+        case .medium: return .positive
+        case .high:   return .warning
         }
     }
 }
@@ -844,9 +852,11 @@ enum StressRamp {
     /// Band anchors, lifted from the shared palette (no hard-coded hex). These are the
     /// blue / green / amber the totals legend and band dots use, kept in lock-step with
     /// the gauge gradient below.
-    static let calm    = StrandPalette.accent         // #60A0E0 — calm WHOOP blue
-    static let steady  = StrandPalette.statusPositive // #03E095 — balanced WHOOP green
-    static let tense   = StrandPalette.statusWarning  // #F0A020 — high WHOOP amber
+    static let calm    = WoopHomePalette.stressLow         // Calm label/curve blue
+    static let steady  = WoopHomePalette.healthGood // Medium stress teal
+    static let tense   = WoopHomePalette.stressHigh  // High stress amber
+
+    static func labelColor(_ score: Double) -> Color { StressBand(score: score).color }
 
     /// The 3-stop gauge ramp, evenly spaced (blue → green → amber).
     static let stops: [Gradient.Stop] = [

@@ -28,7 +28,7 @@ struct HealthspanReferenceOrb: View {
     let actualAge: Double
 
     private var tint: Color {
-        age <= actualAge ? Color(red: 0.02, green: 0.85, blue: 0.65) : StrandPalette.agelessOld
+        age <= actualAge ? WoopHomePalette.healthGood : StrandPalette.agelessOld
     }
 
     var body: some View {

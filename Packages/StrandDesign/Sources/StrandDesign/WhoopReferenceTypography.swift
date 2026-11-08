@@ -109,8 +109,20 @@ public enum WoopHomePalette {
     public static let canvasBottom = Color(red: 0.059, green: 0.071, blue: 0.082)
     public static let activityCard = Color(red: 0.184, green: 0.208, blue: 0.224)
     public static let activityRow = Color(red: 0.259, green: 0.278, blue: 0.290)
-    public static let sleep = Color(red: 0.529, green: 0.651, blue: 0.725)
-    public static let strain = Color(red: 0.263, green: 0.565, blue: 0.878)
+    public static let sleep = Color(red: 123 / 255.0, green: 164 / 255.0, blue: 187 / 255.0)
+    public static let strain = Color(red: 0, green: 159 / 255.0, blue: 232 / 255.0)
+    public static let recoveryGood = Color(red: 32 / 255.0, green: 240 / 255.0, blue: 0)
+    public static let recoveryWarning = Color(red: 1, green: 222 / 255.0, blue: 0)
+    public static let recoveryLow = Color(red: 1, green: 51 / 255.0, blue: 77 / 255.0)
+    public static let healthGood = Color(red: 0, green: 214 / 255.0, blue: 162 / 255.0)
+    public static let stressLow = Color(red: 104 / 255.0, green: 180 / 255.0, blue: 232 / 255.0)
+    public static let stressHigh = Color(red: 1, green: 175 / 255.0, blue: 0)
+
+    /// Reference score bands affect presentation only; no scoring or baseline is changed.
+    public static func recovery(_ score: Double) -> Color {
+        guard score.isFinite, (0...100).contains(score) else { return StrandPalette.textTertiary }
+        return score < 34 ? recoveryLow : score < 67 ? recoveryWarning : recoveryGood
+    }
 }
 
 /// Clean-room typographic roles for reference-matched iPhone screens.

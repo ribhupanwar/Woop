@@ -37,8 +37,8 @@ internal fun WoopDashboardCharts(date: LocalDate, onStress: () -> Unit) {
         } else null
     }
     val blue = Forge.colors.effort
-    val green = Color(0xFF00DB9A)
-    val amber = Color(0xFFFFAD22)
+    val green = WoopReferenceColors.healthGood
+    val amber = WoopReferenceColors.stressHigh
     val gray = Forge.colors.textSecondary
     val grid = Forge.colors.divider
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -49,7 +49,7 @@ internal fun WoopDashboardCharts(date: LocalDate, onStress: () -> Unit) {
                 val latest = timeline.lastOrNull { it.level != null }
                 if (latest == null) Text("Needs recorded daytime sensor data", style = Forge.type.caption, color = gray)
                 else {
-                    Text("%.1f · Woop stress estimate".format(latest.level), style = Forge.type.headline, color = green)
+                    Text("%.1f · Woop stress estimate".format(latest.level), style = Forge.type.headline, color = WoopReferenceColors.stress(latest.level ?: 0.0))
                     Canvas(Modifier.fillMaxWidth().height(165.dp)) {
                         for (n in 0..3) drawLine(grid, Offset(0f, size.height * n / 3), Offset(size.width, size.height * n / 3))
                         val start = timeline.first().startTs
@@ -92,7 +92,7 @@ internal fun WoopDashboardCharts(date: LocalDate, onStress: () -> Unit) {
                                 else {
                                     val point = Offset(size.width * index / 6f, size.height * (1 - score / 100).toFloat())
                                     previous?.let { drawLine(if (recovery) gray else blue, it, point, strokeWidth = 2.dp.toPx()) }
-                                    val color = if (!recovery) blue else if (score < 34) Color.Red else if (score < 67) amber else green
+                                    val color = if (!recovery) blue else WoopReferenceColors.recovery(score)
                                     drawCircle(color, radius = 4.dp.toPx(), center = point)
                                     previous = point
                                 }

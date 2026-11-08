@@ -8,7 +8,7 @@ struct ReferenceStressGauge: View {
 
     private var fraction: Double { min(1, max(0, score / 3)) }
     private var ramp: AngularGradient {
-        AngularGradient(colors: [WoopHomePalette.strain, StrandPalette.statusPositive, StrandPalette.statusWarning],
+        AngularGradient(colors: [WoopHomePalette.stressLow, WoopHomePalette.healthGood, WoopHomePalette.stressHigh],
                         center: .center, startAngle: .degrees(0), endAngle: .degrees(270))
     }
 
@@ -28,7 +28,7 @@ struct ReferenceStressGauge: View {
                     Text(String(format: "%.1f", score)).font(WhoopReferenceFont.score(54))
                         .foregroundStyle(StrandPalette.textPrimary)
                     Text(StressBand(score: score).title).font(WhoopReferenceFont.label(14)).tracking(1.4)
-                        .foregroundStyle(StressRamp.color(score))
+                        .foregroundStyle(StressRamp.labelColor(score))
                     Text("Daily estimate").font(WhoopReferenceFont.body(11))
                         .foregroundStyle(StrandPalette.textSecondary)
                     if let asOf {

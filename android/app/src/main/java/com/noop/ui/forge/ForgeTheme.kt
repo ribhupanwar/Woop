@@ -63,7 +63,7 @@ fun forgeColors(dark: Boolean): ForgeColors = ForgeColors(
     onDarkTertiary = P.onDarkTertiary.pick(dark),
     heroFill = P.heroFill.pick(dark), heroBorder = P.heroBorder.pick(dark),
     accent = ForgeTokens.Color.systemBlue.pick(dark),
-    charge = Color(0xFF42E61C), effort = Color(0xFF438FE0), rest = Color(0xFF87A6B9),
+    charge = WoopReferenceColors.recoveryGood, effort = WoopReferenceColors.strain, rest = WoopReferenceColors.sleep,
     missing = P.organicMissing.pick(dark),
     // The Signature style's recovery ramp, the stops `StrandPalette.recoveryStops` gives the score ring.
     recoveryStops = listOf(

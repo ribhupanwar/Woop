@@ -18,7 +18,7 @@ struct ReferenceVitalTile: View {
     private var tint: Color {
         if reading.caveat != nil { return StrandPalette.statusWarning }
         switch reading.banding.band {
-        case .inRange: return StrandPalette.statusPositive
+        case .inRange: return WoopHomePalette.healthGood
         case .outOfRange: return StrandPalette.statusWarning
         case .noData: return StrandPalette.textSecondary
         }

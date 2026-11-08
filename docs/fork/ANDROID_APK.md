@@ -59,3 +59,7 @@ strain display conversion rather than dropping stored 0-100 readings above 21. N
 The iPhone validation workflow now retains its macOS xcresult and a summary even when quiet xcodebuild
 fails without a useful console failure; the 18678fd validation failure remains under diagnosis.
 Analysis migration required: no.
+
+Gradle's official distribution redirect returned HTTP 504 after the wrapper timeout repair. CI now
+bootstraps Gradle 8.7 with retry and an alternate mirror only when official download fails; both paths
+must match the repository's existing pinned SHA-256. Dependency verification/lockfiles remain enabled.

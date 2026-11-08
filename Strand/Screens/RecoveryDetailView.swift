@@ -98,7 +98,7 @@ struct RecoveryDetailView: View {
         if referenceUI, let score {
             VStack(spacing: 0) {
                 WoopMetricHero(title: "RECOVERY", value: "\(Int(score.rounded()))", suffix: "%",
-                               fraction: score / 100, tint: StrandPalette.recoveryColor(score))
+                               fraction: score / 100, tint: WoopHomePalette.recovery(score))
                 if let caption = display.carriedCaption {
                     Text(caption).font(WhoopReferenceFont.body(12))
                         .foregroundStyle(StrandPalette.textSecondary)

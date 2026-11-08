@@ -40,7 +40,7 @@ internal fun WoopActivityTimeline(date: LocalDate, vm: AppViewModel, onActivitie
         }
         val activity = workouts.filter { Instant.ofEpochSecond(it.startTs).atZone(zone).toLocalDate() == date }
             .distinctBy { Triple(it.startTs, it.endTs, it.sport.lowercase()) }.map {
-                TimelineEntry(it.startTs, it.endTs, it.sport.uppercase(), it.strain?.let { n -> "%.1f".format(n) } ?: "—", false)
+                TimelineEntry(it.startTs, it.endTs, (if (it.sport.equals("detected", true)) "ACTIVITY" else it.sport.uppercase()), it.strain?.let { n -> "%.1f".format(n) } ?: "—", false)
             }
         (sleep + activity).sortedBy { it.start }
     }

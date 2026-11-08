@@ -58,14 +58,24 @@ jobs:
           path: ~/.android/debug.keystore
           key: woop-android-preview-testing-key-v1
       - uses: gradle/actions/setup-gradle@v4
+      - name: Bootstrap checksum-verified Gradle distribution
+        shell: bash
+        run: |
+          distribution="$RUNNER_TEMP/gradle-8.7-bin.zip"
+          if ! curl -fL --retry 2 --retry-all-errors --connect-timeout 30 --max-time 180 https://services.gradle.org/distributions/gradle-8.7-bin.zip -o "$distribution"; then
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 30 --max-time 180 https://mirrors.huaweicloud.com/gradle/gradle-8.7-bin.zip -o "$distribution"
+          fi
+          echo "544c35d6bd849ae8a5ed0bcea39ba677dc40f49df7d1835561582da2009b961d  $distribution" | sha256sum -c -
+          unzip -q "$distribution" -d "$RUNNER_TEMP"
+          rm "$distribution"
       - name: Build full real-data preview
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:assembleFullDebug
+          "$RUNNER_TEMP/gradle-8.7/bin/gradle" --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:assembleFullDebug
       - name: Run Android JVM tests
         working-directory: android
-        run: ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:testFullDebugUnitTest
+        run: "$RUNNER_TEMP/gradle-8.7/bin/gradle" --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:testFullDebugUnitTest
       - name: Package APK and provenance
         if: ${{ !cancelled() && hashFiles('android/app/build/outputs/apk/full/debug/*.apk') != '' }}
         run: |

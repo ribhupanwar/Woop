@@ -444,7 +444,7 @@ internal fun DashboardGlanceCard(day: CoreRead.Day?, effortFormat: (Double) -> S
     val colors = Forge.colors
     Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         ReferenceRing("SLEEP", day?.rest, day?.rest?.roundToInt()?.let { "$it%" }, colors.rest) { onOpen(CoreRead.Metric.Rest) }
-        ReferenceRing("RECOVERY", day?.charge, day?.charge?.roundToInt()?.let { "$it%" }, colors.charge) { onOpen(CoreRead.Metric.Charge) }
+        ReferenceRing("RECOVERY", day?.charge, day?.charge?.roundToInt()?.let { "$it%" }, day?.charge?.let(WoopReferenceColors::recovery) ?: colors.missing) { onOpen(CoreRead.Metric.Charge) }
         ReferenceRing("STRAIN", day?.effort, day?.effort?.let(effortFormat), colors.effort) { onOpen(CoreRead.Metric.Effort) }
     }
 }
