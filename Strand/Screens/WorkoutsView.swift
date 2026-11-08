@@ -147,6 +147,7 @@ struct WorkoutsView: View {
     @State private var searchText = ""
     /// Analysis migration required: no. Advanced filters are merely disclosed on demand.
     @State private var showingFilters = false
+    @State private var showingTrainingAnalysis = false
 
     /// Multi-select + merge mode. `selectionMode` toggles the leading checkmarks + the toolbar strip;
     /// `selected` holds the natural keys ("startTs|sport") of the chosen rows. Only MANUAL / DETECTED rows
@@ -237,19 +238,36 @@ struct WorkoutsView: View {
                 let zonesSummary = WorkoutZones.summary(from: windowRows)
 
                 workoutActionRow
+                if referenceUI { quickSportFilters }
                 scopeBar
                 rangeBar(rows: windowRows, effectiveRange: resolved)
                 if let postLogNote { postLogBanner(postLogNote) }
                 effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
                 summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
                 if referenceUI { sessionsSection(rows: windowRows) }
-                analysisRow
-                heatmapSection()
-                breakdownSection(groups: groups, rows: windowRows)
-                if let z = zonesSummary {
-                    zonesSection(z, totalSessions: windowRows.count)
+                if referenceUI {
+                    DisclosureGroup(isExpanded: $showingTrainingAnalysis) {
+                        analysisRow
+                        heatmapSection()
+                        breakdownSection(groups: groups, rows: windowRows)
+                        if let z = zonesSummary { zonesSection(z, totalSessions: windowRows.count) }
+                        recoveryTrendSection
+                    } label: {
+                        Label("Training analysis", systemImage: "chart.xyaxis.line")
+                            .font(WhoopReferenceFont.label(13))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .frame(minHeight: 44)
+                    }
+                    .tint(WoopHomePalette.strain)
+                } else {
+                    analysisRow
+                    heatmapSection()
+                    breakdownSection(groups: groups, rows: windowRows)
+                    if let z = zonesSummary {
+                        zonesSection(z, totalSessions: windowRows.count)
+                    }
+                    recoveryTrendSection
                 }
-                recoveryTrendSection
                 if !referenceUI { sessionsSection(rows: windowRows) }
             }
         }
@@ -613,9 +631,31 @@ struct WorkoutsView: View {
         return count == 0 ? String(localized: "Filters") : String(localized: "Filters (\(count))")
     }
 
-    /// #64: filter controls beside the range pill — a Sport menu, a Source menu, and a search field, with
-    /// an "×" clear chip that appears only when a filter is active. Present on both size classes / both
-    /// platforms. The predicate is the pure `WorkoutFilter`; these controls only drive its state.
+    /// Frequently used, recorded sports feed the same filter as the advanced controls.
+    private var quickSportFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: NoopMetrics.space2) {
+                quickSportButton(String(localized: "All sports"), sport: nil)
+                // Actual stored names include user corrections; no guessed sport classification.
+                ForEach(Array(availableSports.prefix(5)), id: \.self) { sport in
+                    quickSportButton(sport, sport: sport)
+                }
+            }
+        }
+    }
+
+    private func quickSportButton(_ title: String, sport: String?) -> some View {
+        Button { sportFilter = sport } label: {
+            Text(verbatim: title).font(WhoopReferenceFont.body(12))
+                .foregroundStyle(sportFilter == sport ? StrandPalette.textPrimary : StrandPalette.textSecondary)
+                .padding(.horizontal, NoopMetrics.space3).frame(minHeight: 44)
+                .background(sportFilter == sport ? WoopHomePalette.strain.opacity(0.25) : WoopHomePalette.activityCard,
+                            in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(sportFilter == sport ? [.isSelected] : [])
+    }
+
     private var filterBar: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {

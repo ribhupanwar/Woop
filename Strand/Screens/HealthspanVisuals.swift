@@ -10,11 +10,21 @@ import StrandAnalytics
 // MARK: - Card
 
 extension View {
-    /// The white card every AgeLess block sits in, so nothing on the screen floats grey on the canvas.
-    func agelessCard() -> some View {
-        padding(NoopMetrics.space4)
+    func agelessCard() -> some View { modifier(HealthspanCardSurface()) }
+}
+
+private struct HealthspanCardSurface: ViewModifier {
+    @Environment(\.woopReferenceUI) private var referenceUI
+    func body(content: Content) -> some View {
+        content.padding(NoopMetrics.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background { FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius) }
+            .background {
+                if referenceUI {
+                    RoundedRectangle(cornerRadius: NoopMetrics.cardRadius).fill(WoopHomePalette.activityCard)
+                } else {
+                    FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 }
@@ -453,6 +463,7 @@ struct HealthspanLeverRow: View {
 /// says where the last 30 days are taking the measure, and a note says where the value came from or how to
 /// supply a missing one.
 struct HealthspanMeasureRow: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     let component: HealthspanEngine.Component
     let value: Double?
     let years: Double?
@@ -466,7 +477,8 @@ struct HealthspanMeasureRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             Text(HealthspanSection.componentName(component))
-                .font(StrandFont.subhead.weight(.medium))
+                .font(referenceUI ? WhoopReferenceFont.label(12) : StrandFont.subhead.weight(.medium))
+                .textCase(referenceUI ? .uppercase : nil)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(alignment: .center, spacing: NoopMetrics.space3) {
                 bar
@@ -475,12 +487,12 @@ struct HealthspanMeasureRow: View {
                         if let trend {
                             Image(systemName: trend.rising ? "arrow.up" : "arrow.down")
                                 .font(StrandFont.caption.weight(.bold))
-                                .foregroundStyle(trend.better ? StrandPalette.agelessYoungDeep.legibleText
-                                                 : StrandPalette.agelessOld.legibleText)
+                                .foregroundStyle(trend.better ? (referenceUI ? WoopHomePalette.healthGood : StrandPalette.agelessYoungDeep.legibleText)
+                                                 : (referenceUI ? WoopHomePalette.stressHigh : StrandPalette.agelessOld.legibleText))
                         }
                         Text(years.map { HealthspanSection.signedNumber($0) } ?? "—")
                             .font(StrandFont.number(20).monospacedDigit())
-                            .foregroundStyle(Self.textColour(years))
+                            .foregroundStyle(referenceUI ? referenceContributionColor : Self.textColour(years))
                     }
                     Text("years").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -494,6 +506,12 @@ struct HealthspanMeasureRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilitySummary))
+    }
+
+    private var referenceContributionColor: Color {
+        guard let years, years.isFinite else { return StrandPalette.textSecondary }
+        if abs(years) < 0.05 { return StrandPalette.textSecondary }
+        return years < 0 ? WoopHomePalette.healthGood : WoopHomePalette.stressHigh
     }
 
     /// The note in secondary ink, then "thin data" in coral when the basis is thin.
@@ -526,7 +544,11 @@ struct HealthspanMeasureRow: View {
                     let maxPos = max(0.3, scale.ticks.map(\.years).max() ?? 0)
                     let maxNeg = max(0.3, -(scale.ticks.map(\.years).min() ?? 0))
                     for (i, t) in scale.ticks.enumerated() {
-                        let colour = Self.colour(t.years, max: t.years > 0 ? maxPos : maxNeg)
+                        let colour = referenceUI
+                            ? (abs(t.years) < 0.05 ? StrandPalette.textTertiary.opacity(0.35)
+                               : (t.years < 0 ? WoopHomePalette.healthGood : WoopHomePalette.stressHigh)
+                                .opacity(0.4 + 0.6 * min(1, abs(t.years) / (t.years > 0 ? maxPos : maxNeg))))
+                            : Self.colour(t.years, max: t.years > 0 ? maxPos : maxNeg)
                         context.fill(Path(roundedRect: CGRect(x: CGFloat(i) * step + 1, y: 20, width: step - 2, height: 10),
                                           cornerRadius: 1.5), with: .color(colour))
                     }

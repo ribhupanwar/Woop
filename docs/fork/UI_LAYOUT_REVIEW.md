@@ -140,3 +140,18 @@ Validation before these edits: de97b7f iOS IPA and UI workflows succeeded; Andro
 42484216827 succeeded. Those results do not validate the changes described in this section. Fresh
 Apple builds and populated-device visual review are required; exact font/asset identity and zero lag
 are not established. Analysis migration required: no.
+
+## Healthspan and activity usability follow-up
+
+Healthspan detail cards now use the shared opaque reference surface, with teal for age-reducing
+contributions and amber for age-increasing contributions. Weekly dates, provisional coverage, missing
+inputs, actual age, pace, component values and trend history retain their existing resolver; no scoring
+formula or stored history changed. The proprietary WHOOP model is not reproduced or validated here.
+
+The iOS reference Activity tab exposes the five most frequent recorded sports as quick filters. They
+reuse the existing sport predicate and preserve source/search/range filters and corrected activity names.
+The editable session list stays above charts. Historical analysis is initially collapsed and only mounts
+when expanded; recording actions and summary remain visible. Legacy macOS and Android layouts are
+unchanged in this follow-up. Swift syntax parsing and whitespace checks pass; Xcode compilation,
+regression tests and populated-device scrolling still require fresh Apple CI/device validation.
+Analysis migration required: no.

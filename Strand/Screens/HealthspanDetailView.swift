@@ -33,7 +33,7 @@ struct HealthspanDetailView: View {
                 HealthspanTopRow(week: week, showsPace: false)
                 if let pace = week.pace {
                     VStack(alignment: .leading, spacing: NoopMetrics.space3) {
-                        Text("Aging speed").font(StrandFont.title2).foregroundStyle(StrandPalette.textPrimary)
+                        Text("Pace of aging").font(referenceUI ? WhoopReferenceFont.label(13) : StrandFont.title2).foregroundStyle(StrandPalette.textPrimary)
                         HealthspanPaceSlider(pace: pace)
                         Text("In 6 months: \(HealthspanSection.years(HealthspanEngine.projectedAge(currentAge: week.result.healthspanAge, pace: pace))) if the last 30 days continue")
                             .font(StrandFont.footnote)
@@ -84,7 +84,7 @@ struct HealthspanDetailView: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(verbatim: weekRange(week.day))
-                    .font(StrandFont.subhead.weight(.semibold))
+                    .font(referenceUI ? WhoopReferenceFont.label(13) : StrandFont.subhead.weight(.semibold))
                     .foregroundStyle(StrandPalette.textPrimary)
                 if week.isProvisional {
                     Text("Based on \(week.coveredDays) of 182 days so far")
