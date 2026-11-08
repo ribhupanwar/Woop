@@ -135,12 +135,13 @@ struct HomeReferenceCharts: View {
                 let key = formatter.string(from: date)
                 let row = days.last(where: { $0.day == key })
                 let raw = recovery ? row?.recovery : row?.strain
-                guard let value = raw, value.isFinite, (0...(recovery ? 100.0 : 21.0)).contains(value) else {
+                guard let value = raw, value.isFinite, (0...100.0).contains(value) else {
                     segment += 1
                     continue
                 }
-                points.append(Point(id: "\(recovery)-\(key)", date: date, value: value,
-                                    plotted: recovery ? value * 21 / 100 : value,
+                let shown = recovery ? value : UnitFormatter.effortValue(value, scale: .whoop)
+                points.append(Point(id: "\(recovery)-\(key)", date: date, value: shown,
+                                    plotted: recovery ? value * 21 / 100 : shown,
                                     recovery: recovery, segment: "\(recovery)-\(segment)"))
             }
         }

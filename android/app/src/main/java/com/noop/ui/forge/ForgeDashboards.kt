@@ -167,7 +167,7 @@ internal object OverviewPrefs {
     val FOCUS_KEYS = listOf("overview.focus.slot1", "overview.focus.slot2", "overview.focus.slot3")
     val FOCUS_DEFAULTS = listOf("hrv", "restingHr", "steps")
     const val HEALTH_KEY = "overview.healthCards"
-    val HEALTH_DEFAULTS = listOf(DashboardCard.RESTING_HR, DashboardCard.HRV, DashboardCard.RESPIRATORY,
+    val HEALTH_DEFAULTS = listOf(DashboardCard.HRV, DashboardCard.RESTING_HR, DashboardCard.STEPS, DashboardCard.VO2MAX, DashboardCard.RESPIRATORY,
                                  DashboardCard.FITNESS_AGE, DashboardCard.CALORIES, DashboardCard.WEIGHT)
     fun focus(c: Context) = FOCUS_KEYS.mapIndexed { i, k -> NoopPrefs.of(c).getString(k, null) ?: FOCUS_DEFAULTS[i] }
     fun health(c: Context): List<DashboardCard> {
@@ -653,7 +653,10 @@ internal fun ForgeStyledDashboard(
                 }
             }
             DashboardSection.FOCUS -> DashboardFocusRow(OverviewPrefs.focus(context), figures, stepGoal, ::open, onSleep, onCoach)
-            DashboardSection.HEALTH -> DashboardHealthList(OverviewPrefs.health(context), figures, history, ::open, onHealth)
+            DashboardSection.HEALTH -> {
+                DashboardHealthList(OverviewPrefs.health(context), figures, history, ::open, onHealth)
+                WoopDashboardCharts(date, onStress)
+            }
             DashboardSection.MOMENTUM -> if (isToday) onSection(TodaySection.SYNTHESIS)
             DashboardSection.GOALS -> if (isToday) onSection(TodaySection.GOALS)
             DashboardSection.KEY_METRICS -> onSection(TodaySection.KEY_METRICS)

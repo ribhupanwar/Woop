@@ -51,3 +51,11 @@ for edits/dismissal. Timeline/sleep reads observe committed core revisions, avoi
 workout-count change. Tests cover default-off extras and automatic source-to-owner mapping. Settings take
 effect on the next analysis configuration; in-flight host settings/device behavior require validation.
 No physiological formula or historical input changes. Analysis migration required: no.
+
+Android Home now includes real intraday stress and seven-day strain/recovery charts. They read committed
+core data off the main thread, redraw without animation, and break at missing samples/days. Normalized
+stored strain is presented on a 0-21 axis. The equivalent iPhone chart was corrected to apply its existing
+strain display conversion rather than dropping stored 0-100 readings above 21. No scores are rewritten.
+The iPhone validation workflow now retains its macOS xcresult and a summary even when quiet xcodebuild
+fails without a useful console failure; the 18678fd validation failure remains under diagnosis.
+Analysis migration required: no.
