@@ -249,7 +249,7 @@ fun ForgeTodayScreen(padding: PaddingValues, width: ForgeWidth, viewModel: AppVi
             .padding(horizontal = ForgeMetrics.screenPadding),
         verticalArrangement = Arrangement.spacedBy(ForgeMetrics.sectionGap),
     ) {
-        val style = remember(layoutRevision) { DashboardStylePrefs.style(context) }
+        val style = "overview"
         if (style != "liquid") {
             // The Trends and Overview styles (Settings › Dashboard) draw their own header and blocks.
             val live by viewModel.live.collectAsState()
@@ -269,7 +269,9 @@ fun ForgeTodayScreen(padding: PaddingValues, width: ForgeWidth, viewModel: AppVi
                 onSleep = { selectTab(ForgeTab.Sleep) },
                 onStress = { more.push(MoreRoute.Dest(MoreDest.Stress)) },
                 onCoach = { more.push(MoreRoute.Dest(MoreDest.Coach)) },
-                onActivity = { more.push(MoreRoute.Dest(MoreDest.Workouts)) })
+                onActivity = { more.push(MoreRoute.Dest(MoreDest.Workouts)) },
+                onStartActivity = { startWorkout = true },
+                onAlarm = { more.push(MoreRoute.Dest(MoreDest.Alarms)) })
         } else {
         Header(shown, isToday = shown == today, backfilling = viewModel.live.collectAsState().value.backfilling,
                onProfile = { settingsOpen = true }, onQuickActions = { quickActions = true })

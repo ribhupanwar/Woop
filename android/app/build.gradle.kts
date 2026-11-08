@@ -31,7 +31,7 @@ android {
     defaultConfig {
         // Fork (DX23876): its own id, so NOOP Forge installs beside ryanbr's com.noop.whoop (plan D11).
         applicationId = "io.github.dx23876.noop"
-        minSdk = 26
+        minSdk = (project.findProperty("woop.minSdk") as String?)?.toInt() ?: 26
         targetSdk = 34
         versionCode = 1
         versionName = forkMarketingVersion

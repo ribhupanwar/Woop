@@ -14,3 +14,28 @@ BLE, background permissions, recording and GPS need validation on a physical And
 
 The artifact contains the installable APK, SHA-256 checksum and source/variant provenance. Android JVM
 tests run in the same workflow; an uploaded diagnostic candidate does not imply a passing test suite.
+
+The owner clarified that the APK must use the Woop layout and shared features. The build now requires the
+Swift 6.4.1 Android SDK/NDK r30 and bundles the shared arm64 core; the Kotlin-only preview described above
+is superseded and is not the requested deliverable. The SDK setup action also names platform-tools
+explicitly, because its default obsolete tools package failed on the current Android repository.
+The Android presentation port remains incremental; successful packaging alone does not establish parity.
+Analysis migration required: no.
+
+## Android presentation port
+
+The initial port pins the reference Home, with Sleep/Recovery/Strain ring order, dark canvas, own wordmark,
+monitor navigation, selected-day ascending sleep/workout rows, Add/Start Activity entries, Tonight's Sleep
+and a debt-based planner. The tab bar is Home / Health / Activity / More; Health links existing age, vital,
+stress, measured-BP logbook and MG ECG surfaces, preserving their existing data/consent gates. Existing
+workout recording/editor flows remain reachable. Metric rows use independent full-width reference cards.
+The planner reads raw values already supplied by the shared sleep-debt API and uses the iPhone's bounded
+repayment heuristic; tests cover invalid inputs and bounds. It does not promise sleep consistency.
+
+This full-core APK targets Android 9+ arm64, matching the native library's Android 28 target. Packaging
+checks the native library and APK signature. The preview signing key is cached for consistent subsequent
+CI builds; it is not production signing. A local Swift test attempt failed because Swift is absent here;
+Android compilation and JVM tests run on CI. Pixel comparison, actual BLE/GPS and background permissions,
+Health Connect, complete automatic-save settings/provenance UI, reference charts and all secondary-screen
+parity remain unverified or incomplete. No Android release is certified by the iPhone workflow.
+Analysis migration required: no.

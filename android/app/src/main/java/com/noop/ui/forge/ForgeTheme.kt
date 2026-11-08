@@ -55,7 +55,7 @@ private fun ForgeColor.pick(dark: Boolean) = Color(if (dark) this.dark else this
 
 fun forgeColors(dark: Boolean): ForgeColors = ForgeColors(
     dark = dark,
-    canvas = Chrome.canvas.pick(dark), surface = Chrome.surface.pick(dark), surfaceTop = Chrome.surfaceTop.pick(dark),
+    canvas = Color(0xFF101215), surface = Color(0xFF2F3539), surfaceTop = Color(0xFF282F35),
     inset = Chrome.inset.pick(dark), border = Chrome.border.pick(dark), divider = Chrome.divider.pick(dark),
     text = Chrome.primaryText.pick(dark), textSecondary = Chrome.secondaryText.pick(dark),
     textTertiary = Chrome.tertiaryText.pick(dark),
@@ -63,7 +63,7 @@ fun forgeColors(dark: Boolean): ForgeColors = ForgeColors(
     onDarkTertiary = P.onDarkTertiary.pick(dark),
     heroFill = P.heroFill.pick(dark), heroBorder = P.heroBorder.pick(dark),
     accent = ForgeTokens.Color.systemBlue.pick(dark),
-    charge = P.chargeColor.pick(dark), effort = P.organicEffort.pick(dark), rest = P.organicRest.pick(dark),
+    charge = Color(0xFF42E61C), effort = Color(0xFF438FE0), rest = Color(0xFF87A6B9),
     missing = P.organicMissing.pick(dark),
     // The Signature style's recovery ramp, the stops `StrandPalette.recoveryStops` gives the score ring.
     recoveryStops = listOf(
@@ -165,7 +165,7 @@ fun forgeDark(): Boolean = when (AppearancePrefs.mode) {
 
 /** The Forge theme, light or dark by [forgeDark]; the whole screen darkens, not only the cards. */
 @Composable
-fun ForgeTheme(dark: Boolean = forgeDark(), content: @Composable () -> Unit) {
+fun ForgeTheme(dark: Boolean = true, content: @Composable () -> Unit) {
     val colors = forgeColors(dark)
     val material = if (dark) {
         darkColorScheme(primary = colors.accent, background = colors.canvas, surface = colors.surface,

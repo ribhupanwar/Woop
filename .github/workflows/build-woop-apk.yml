@@ -19,7 +19,7 @@ jobs:
   apk:
     name: Build real-data Android preview and run JVM tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -27,29 +27,59 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install pinned Android platforms
-        run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
+        run: sdkmanager "platforms;android-35" "build-tools;34.0.0" "ndk;30.0.16248370"
+      - name: Install matching Swift Android toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libz-dev libedit-dev libncurses-dev libsqlite3-dev libpython3-dev libicu-dev pkg-config
+          curl -fL --retry 3 https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz -o "$RUNNER_TEMP/swift.tar.gz"
+          mkdir -p "$RUNNER_TEMP/woop-swift"
+          tar -xzf "$RUNNER_TEMP/swift.tar.gz" -C "$RUNNER_TEMP/woop-swift" --strip-components=1
+          rm "$RUNNER_TEMP/swift.tar.gz"
+          echo "$RUNNER_TEMP/woop-swift/usr/bin" >> "$GITHUB_PATH"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+      - name: Install Swift SDK for Android
+        run: |
+          swift --version
+          curl -fL --retry 3 https://download.swift.org/swift-6.4.1-release/android-sdk/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE_android.artifactbundle.tar.gz -o "$RUNNER_TEMP/swift-android.tar.gz"
+          sha256sum "$RUNNER_TEMP/swift-android.tar.gz"
+          swift sdk install "$RUNNER_TEMP/swift-android.tar.gz"
+          rm "$RUNNER_TEMP/swift-android.tar.gz"
+          setup=$(find "$HOME/.swiftpm" "$HOME/.config/swiftpm" -name setup-android-sdk.sh -print -quit 2>/dev/null || true)
+          test -n "$setup"
+          bash "$setup"
+          swift sdk list
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: woop-android-preview-testing-key-v1
       - uses: gradle/actions/setup-gradle@v4
       - name: Build full real-data preview
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=false :app:assembleFullDebug
+          ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:assembleFullDebug
       - name: Run Android JVM tests
         working-directory: android
-        run: ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=false :app:testFullDebugUnitTest
+        run: ./gradlew --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:testFullDebugUnitTest
       - name: Package APK and provenance
         if: ${{ !cancelled() && hashFiles('android/app/build/outputs/apk/full/debug/*.apk') != '' }}
         run: |
           mkdir -p apk-artifact
           cp android/app/build/outputs/apk/full/debug/*.apk apk-artifact/Woop-Android-preview.apk
+          unzip -l apk-artifact/Woop-Android-preview.apk | grep -q 'lib/arm64-v8a/libNoopCore.so'
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose apk-artifact/Woop-Android-preview.apk
           sha256sum apk-artifact/Woop-Android-preview.apk > apk-artifact/SHA256SUMS.txt
           {
             echo "Source commit: $GITHUB_SHA"
-            echo "Variant: fullDebug; real data; demo disabled; Android 8.0+"
+            echo "Variant: fullDebug; real data; demo disabled; Android 9.0+ arm64"
             echo "Signing: debug/testing key; package io.github.dx23876.noop.debug"
-            echo "Engine: existing Kotlin implementation; optional Swift JNI core not bundled"
-            echo "The latest iPhone UI and Swift-only additions are not an Android feature-parity claim."
+            echo "Engine: Kotlin UI with shared Swift JNI core (arm64)"
+            echo "Android layout ports are incremental; inspect screenshots and hardware before claiming feature parity."
             echo "Physical phone/Bluetooth/GPS validation remains required."
           } > apk-artifact/BUILD-INFO.txt
       - uses: actions/upload-artifact@v4

@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.KingBed
 import com.noop.R
 
@@ -58,11 +61,12 @@ import com.noop.R
  * the backdrop each one draws on iOS.
  */
 enum class ForgeTab(val labelRes: Int, val icon: ImageVector, val backdrop: ForgeBackdrop) {
-    Today(R.string.nav_today, Icons.Rounded.GridView, ForgeBackdrop.Scene),
+    Today(R.string.woop_home, Icons.Rounded.Home, ForgeBackdrop.Canvas),
+    Health(R.string.nav_health, Icons.Rounded.MonitorHeart, ForgeBackdrop.Canvas),
     Trends(R.string.nav_trends, Icons.Rounded.ShowChart, ForgeBackdrop.Sky),
-    Training(R.string.forge_training, Icons.Rounded.FitnessCenter, ForgeBackdrop.Canvas),
+    Training(R.string.woop_activity, Icons.Rounded.DirectionsRun, ForgeBackdrop.Canvas),
     Sleep(R.string.nav_sleep, Icons.Rounded.KingBed, ForgeBackdrop.Night),
-    More(R.string.nav_more, Icons.Rounded.MoreHoriz, ForgeBackdrop.Sky),
+    More(R.string.nav_more, Icons.Rounded.MoreHoriz, ForgeBackdrop.Canvas),
 }
 
 /** How wide the window is, by the Compose window size class breakpoints (600 and 840 dp). */
@@ -134,7 +138,7 @@ private fun ForgeTabBar(current: ForgeTab, onSelect: (ForgeTab) -> Unit, modifie
               fill = Forge.colors.surface, contentPadding = 6.dp) {
         Row(Modifier.fillMaxWidth().height(58.dp), horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically) {
-            ForgeTab.entries.forEach { t -> TabItem(t, t == current, Modifier.weight(1f)) { onSelect(t) } }
+            listOf(ForgeTab.Today, ForgeTab.Health, ForgeTab.Training, ForgeTab.More).forEach { t -> TabItem(t, t == current, Modifier.weight(1f)) { onSelect(t) } }
         }
     }
 }
@@ -150,7 +154,7 @@ private fun ForgeRail(current: ForgeTab, onSelect: (ForgeTab) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ForgeTab.entries.forEach { t -> TabItem(t, t == current, Modifier.fillMaxWidth()) { onSelect(t) } }
+        listOf(ForgeTab.Today, ForgeTab.Health, ForgeTab.Training, ForgeTab.More).forEach { t -> TabItem(t, t == current, Modifier.fillMaxWidth()) { onSelect(t) } }
     }
 }
 
