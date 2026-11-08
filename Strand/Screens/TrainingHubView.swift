@@ -2,6 +2,7 @@ import SwiftUI
 import StrandDesign
 import StrandAnalytics
 import StrandTraining
+import StrandCore
 import WhoopStore
 import UniformTypeIdentifiers
 #if os(iOS)
@@ -14,6 +15,8 @@ struct TrainingHubView: View {
     // Deliberately not `AppModel`: it republishes on every heart-rate tick, and this screen's body is the
     // most expensive in the app. The session controller changes only when a session starts or ends.
     @EnvironmentObject private var session: ActiveSessionController
+    @EnvironmentObject private var profile: ProfileStore
+    @AppStorage(ActivitySuggestions.enabledKey) private var detectActivities = false
     @EnvironmentObject private var repo: Repository
     @StateObject private var model = TrainingHubModel()
     @State private var showingStarterPlans = false
@@ -42,6 +45,8 @@ struct TrainingHubView: View {
                     } else {
                         // Starting first, then planning, then looking back: the order the tab is used in.
                         startCard
+                        automaticTrackingCard
+                        ActivitySuggestionPrompt()
                         GoalsContextCard(context: .training)
                         weekCard
                         routinesCard
@@ -225,6 +230,29 @@ struct TrainingHubView: View {
             }
         } else {
             TrainingQuickStartCard(strength: strengthEntry, onStartStrength: start, onShowAll: openStart)
+        }
+    }
+
+    private var automaticTrackingCard: some View {
+        NoopCard {
+            VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                Toggle("Detect activities after sync", isOn: $detectActivities)
+                    .font(StrandFont.subhead)
+                    .tint(StrandPalette.effortColor)
+                    .onChange(of: detectActivities) { enabled in
+                        guard enabled else { return }
+                        Task {
+                            await repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm)
+                            await ActivitySuggestionCenter.shared.reload()
+                        }
+                    }
+                Text("Confirm detected activities. Enter exercise names, reps and weights manually.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text("Start Running with GPS for distance, pace and route.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
         }
     }
 

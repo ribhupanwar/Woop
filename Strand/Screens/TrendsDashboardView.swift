@@ -14,6 +14,7 @@ import StrandCore
 /// Deliberately screenshot-faithful over "improved": where a spacing or a choice looks unusual, it is
 /// reproducing the reference rather than a judgement call.
 struct TrendsDashboardView: View {
+    @EnvironmentObject private var pullSyncBLE: BLEManager
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var profile: ProfileStore
     @EnvironmentObject private var updateStore: UpdateStore
@@ -155,7 +156,7 @@ struct TrendsDashboardView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-        ScrollView {
+        WoopRefreshScrollView(onRefresh: { await HomePullSync.refresh(ble: pullSyncBLE, repo: repo, model: model) }) {
             LazyVStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
                 Color.clear.frame(height: 0).id(Self.topAnchorID)
                 header
@@ -183,7 +184,6 @@ struct TrendsDashboardView: View {
         }
         // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
         // this screen was the one Today style with no way to pull for fresh data.
-        .refreshable { await repo.refresh() }
         #if os(iOS)
         // Scroll-to-top on an at-root Today re-tap; iOS-only — the tab shell is the only driver.
         .onChange(of: scrollToTopSignal) { _, _ in

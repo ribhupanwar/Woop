@@ -12,6 +12,7 @@ import StrandCore
 /// Deliberately screenshot-faithful over "improved" — see `TrendsDashboardView`'s header comment for the
 /// same note; it applies here too.
 struct OverviewDashboardView: View {
+    @EnvironmentObject private var pullSyncBLE: BLEManager
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var intelligence: IntelligenceEngine
     @EnvironmentObject private var profile: ProfileStore
@@ -179,7 +180,7 @@ struct OverviewDashboardView: View {
             // gets the ~25–30pt reduction the reference wants without drawing under the status bar.
             let topInset = max(NoopMetrics.screenPadding, proxy.safeAreaInsets.top + 8)
             ScrollViewReader { scrollProxy in
-            ScrollView {
+            WoopRefreshScrollView(onRefresh: { await HomePullSync.refresh(ble: pullSyncBLE, repo: repo, model: model) }) {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
                     header.id(Self.topAnchorID)
                     overviewCard
@@ -214,10 +215,6 @@ struct OverviewDashboardView: View {
             }
             // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
             // this screen was one of two Today styles with no way to pull for fresh data.
-            .refreshable {
-                if let model { await model.refreshDashboard() }
-                else { await repo.refresh() }
-            }
             #if os(iOS)
             // Scroll-to-top on an at-root Today re-tap; iOS-only — the tab shell is the only driver.
             .onChange(of: scrollToTopSignal) { _, _ in

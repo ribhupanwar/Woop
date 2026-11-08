@@ -50,6 +50,7 @@ struct WearableConnectionStateCard: View {
 struct HealthView: View {
     @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
+    @EnvironmentObject var ble: BLEManager
     @EnvironmentObject var profile: ProfileStore
     // NOTE: HealthView itself deliberately does NOT observe `LiveState`/`AppModel` for live HR. A
     // connected strap publishes at ~1 Hz; observing here would re-evaluate this body (and re-diff the
@@ -66,7 +67,8 @@ struct HealthView: View {
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header); builds the trailing vitals/skin-temp/age sections on
                        // demand instead of all up-front.
-                       onRefresh: { await repo.refresh() },
+                       onRefresh: { await HomePullSync.refresh(ble: ble, repo: repo) },
+                       brandedRefresh: true,
                        lazy: true,
                        // The day-of-sky liquid backdrop, matching Today / Sleep / Trends: a fixed,
                        // full-bleed time-of-day sky behind the scroll content (does not scroll).
@@ -334,30 +336,11 @@ private struct HeartRateSection: View {
         return profile.hrZoneSet.zoneNumber(forBPM: Double(hr))
     }
 
-    /// A short, time-stamped HR series for the hero chart (newest last).
-    /// Prefers the accumulated live-HR time-series — that's what a "live" graph should show, and it
-    /// keeps growing even when the strap streams HR but sparse R-R (#105). Falls back to R-R-derived
-    /// beats, then a flat line at the current HR. The R-R / flat fallbacks have no real per-sample
-    /// timestamps, so we synthesise a 1 Hz trailing window ending "now" — the x-axis still reads as
-    /// clock time and scrolls, matching the live buffer's behaviour (#198).
+    // Draw only the samples observed while this screen is open. R-R packets have no
+    // per-beat wall-clock timestamps here, so they cannot supply a historical trace.
     private func hrSeries(_ hr: Int?) -> [LiveHRSample] {
-        if hrHistory.count > 1 { return hrHistory }
-        let beats = live.rr.suffix(60).compactMap { rr -> Double? in
-            rr > 0 ? 60_000.0 / Double(rr) : nil
-        }
-        if beats.count > 1 { return Self.synthesiseSeries(beats) }
-        if let hr = hr { return Self.synthesiseSeries([Double(hr), Double(hr)]) }
-        return []
-    }
-
-    /// Wrap a bare value series in trailing 1 Hz timestamps ending at `Date()`, so the
-    /// fallbacks (R-R-derived beats, flat line) chart on the same time x-axis as the live buffer.
-    private static func synthesiseSeries(_ values: [Double]) -> [LiveHRSample] {
-        let now = Date()
-        let n = values.count
-        return values.enumerated().map { i, v in
-            LiveHRSample(date: now.addingTimeInterval(Double(i - (n - 1))), bpm: v)
-        }
+        if !hrHistory.isEmpty { return hrHistory }
+        return hr.map { [LiveHRSample(date: Date(), bpm: Double($0))] } ?? []
     }
 
     var body: some View {
@@ -372,26 +355,25 @@ private struct HeartRateSection: View {
         return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Heart Rate", overline: "Live", trailing: hrIsDerived ? String(localized: "from R-R") : nil)
 
-            // The live HR hero is a flat WHOOP card tinted rose — heart-rate's metric accent.
-            // No scenic starfield / bloom: fill contrast carries the edge (Apple-flat).
+            // Reference-style split: a persistent BPM readout beside the blue live trace.
             ChartCard(
                 title: "Heart Rate",
                 subtitle: hrIsDerived ? String(localized: "Estimated from R-R interval")
                     : (hasLiveHR ? String(localized: "Streaming live") : String(localized: "Awaiting strap")),
                 trailing: hasLiveHR ? "\(displayHR!) bpm" : "—",
-                tint: StrandPalette.metricRose
+                tint: StrandPalette.metricCyan
             ) {
-                heroChart(displayHR: displayHR, hasLiveHR: hasLiveHR,
-                          fraction: fraction, zone: zone, series: series)
+                heroChart(displayHR: displayHR, hasLiveHR: hasLiveHR, zone: zone, series: series)
             } footer: {
                 ChartFooter([
-                    ("Zone", hasLiveHR && zone >= 1 ? "Z\(zone)" : "—"),
+                    ("Zone", hasLiveHR ? "Z\(zone)" : "—"),
                     ("% Max", hasLiveHR ? "\(Int((fraction * 100).rounded()))%" : "—"),
                     ("Max HR", "\(profile.hrMax)"),
                     ("State", hasLiveHR ? String(localized: "STREAMING") : String(localized: "IDLE")),
                 ])
             }
         }
+        .onChange(of: live.connected) { _ in hrHistory.removeAll() }
         .onReceive(sampleTimer) { now in
             // Bank the CURRENT spike-filtered HR once a second, stamped with the tick's real wall-clock
             // time: this feeds the time x-axis (#198) and the #105 trace without the phantom ramp that
@@ -399,60 +381,49 @@ private struct HeartRateSection: View {
             // mirrors the Android chart's existing range check; nil banks nothing (disconnect clears the
             // median on both platforms), so a stale value never flat-lines a dead trace.
             guard let v = displayHR, (30...220).contains(v) else { return }
+            if let last = hrHistory.last, now.timeIntervalSince(last.date) > 5 {
+                hrHistory.removeAll()
+            }
             hrHistory.append(LiveHRSample(date: now, bpm: Double(v)))
             if hrHistory.count > 180 { hrHistory.removeFirst(hrHistory.count - 180) }
         }
     }
 
-    /// The hero chart body: a tall, time-aware HR line tinted to the current zone, with a
-    /// status pill floated top-trailing. Fixed to NoopMetrics.chartHeight via ChartCard.
+    /// A persistent BPM readout alongside the rolling, time-stamped live trace.
     private func heroChart(displayHR: Int?, hasLiveHR: Bool,
-                           fraction: Double, zone: Int, series: [LiveHRSample]) -> some View {
-        ZStack(alignment: .topTrailing) {
-            if series.count > 1 {
-                LiveTimeChart(
-                    samples: series,
-                    gradient: Gradient(colors: [
-                        StrandPalette.hrZoneColor(max(1, zone - 1)),
-                        StrandPalette.hrZoneColor(zone),
-                    ])
-                )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityLabel("Live heart rate over time")
-                .accessibilityValue(hasLiveHR ? "\(displayHR ?? 0) beats per minute, zone \(zone)" : "no data")
-            } else {
-                VStack(spacing: NoopMetrics.space2) {
-                    // The big fallback numeral ticks up to the live value (the hero number) — under
-                    // Reduce Motion it snaps. When there's no HR yet we show a crisp em-dash instead.
-                    if let hr = displayHR {
-                        CountUpText(value: Double(hr),
-                                    format: { "\(Int($0.rounded()))" },
-                                    font: WhoopReferenceFont.score(64),
-                                    color: hasLiveHR ? StrandPalette.hrZoneColor(zone) : StrandPalette.textTertiary)
-                            .tracking(WhoopReferenceFont.scoreTracking(72))
-                    } else {
-                        Text("—")
-                            .font(WhoopReferenceFont.score(64))
-                            .foregroundStyle(StrandPalette.textTertiary)
-                    }
-                    Text("bpm").font(WhoopReferenceFont.label(12)).foregroundStyle(StrandPalette.textTertiary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                           zone: Int, series: [LiveHRSample]) -> some View {
+        HStack(alignment: .center, spacing: NoopMetrics.space3) {
+            VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                Image(systemName: "heart.fill")
+                    .font(StrandFont.title1)
+                    .foregroundStyle(StrandPalette.metricCyan)
+                Text(displayHR.map { String($0) } ?? "—")
+                    .font(WhoopReferenceFont.score(56))
+                    .monospacedDigit()
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                Text("BPM")
+                    .font(StrandFont.subhead)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text(hasLiveHR ? "Zone \(zone)" : "Waiting for data")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textSecondary)
             }
-
-            StatePill("\(zoneLabel(hasLiveHR: hasLiveHR, zone: zone, fraction: fraction))",
-                      tone: hasLiveHR ? .accent : .neutral,
-                      showsDot: hasLiveHR,
-                      pulsing: hasLiveHR)
+            .frame(minWidth: NoopMetrics.controlHeight, alignment: .leading)
+            if !series.isEmpty {
+                LiveTimeChart(samples: series,
+                              gradient: Gradient(colors: [StrandPalette.metricCyan, StrandPalette.metricCyan]))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityLabel("Live heart rate over time")
+            } else {
+                Text("Connect your strap to see live heart rate.")
+                    .font(StrandFont.footnote)
+                    .foregroundStyle(StrandPalette.textTertiary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-    }
-
-    /// `zone == 0` means the reading sits below Zone 1 — a resting heart rate, not a training zone. The
-    /// percentage still tells the story there, so the pill drops the zone number rather than inventing one.
-    private func zoneLabel(hasLiveHR: Bool, zone: Int, fraction: Double) -> String {
-        guard hasLiveHR else { return String(localized: "Idle") }
-        guard zone >= 1 else { return String(localized: "Below Zone 1 · \(Int((fraction * 100).rounded()))%") }
-        return String(localized: "Zone \(zone) · \(Int((fraction * 100).rounded()))%")
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -524,7 +495,7 @@ private struct LiveTimeChart: View {
                 x: .value("Time", s.date),
                 y: .value("BPM", s.bpm)
             )
-            .interpolationMethod(.catmullRom)
+            .interpolationMethod(.linear)
             .foregroundStyle(
                 LinearGradient(
                     colors: [areaTint.opacity(0.24), Color.clear],
@@ -536,10 +507,19 @@ private struct LiveTimeChart: View {
                 x: .value("Time", s.date),
                 y: .value("BPM", s.bpm)
             )
-            .interpolationMethod(.catmullRom)
+            .interpolationMethod(.linear)
             .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
             .foregroundStyle(lineGradient)
+            if s.id == samples.last?.id {
+                RuleMark(x: .value("Latest", s.date))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .foregroundStyle(StrandPalette.textSecondary)
+                PointMark(x: .value("Time", s.date), y: .value("BPM", s.bpm))
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .symbolSize(60)
+            }
         }
+        .chartXScale(domain: (samples.last?.date ?? Date()).addingTimeInterval(-180)...(samples.last?.date ?? Date()))
         .chartYScale(domain: yDomain)
         // catmullRom overshoots on sharp HR turns and the area fill draws unclipped — clip the
         // plot so nothing bleeds below the card (mirrors TrendChart's fix for #104).
@@ -586,6 +566,9 @@ private struct LiveTimeChart: View {
                 .animation(StrandMotion.fade, value: hoverX)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                 .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0)
+                    .onChanged { hoverX = $0.location.x }
+                    .onEnded { _ in hoverX = nil })
                 .onContinuousHover(coordinateSpace: .local) { phase in
                     // Non-animating transaction: otherwise crossing the plot edge re-runs the line's
                     // draw-on animation and flickers the curve (mirrors TrendChart #104).

@@ -175,6 +175,7 @@ struct ActiveWorkoutIndicatorSection: View {
 
 #if os(macOS)
 private struct MacActiveSessionIndicator: View {
+    @EnvironmentObject private var pullSyncBLE: BLEManager
     @EnvironmentObject var app: AppModel
     @EnvironmentObject var session: ActiveSessionController
 
@@ -1616,10 +1617,8 @@ struct TodayView: View {
     }
 
     var body: some View {
-        ScreenScaffold(title: scaffoldTitle, onRefresh: {
-            if let app = appModel { await app.refreshDashboard() }
-            else { await repo.refresh() }
-        },
+        ScreenScaffold(title: scaffoldTitle, onRefresh: { await HomePullSync.refresh(ble: pullSyncBLE, repo: repo, model: appModel) },
+                       brandedRefresh: true,
                        // PERF (scroll): lazy column so the scaffold materialises Today's content on demand.
                        // Today supplies its own inner eager VStack (below), so the staggered section reveal is
                        // unchanged, this only defers building the single inner stack until it scrolls in.
