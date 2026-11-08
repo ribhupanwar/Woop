@@ -224,11 +224,15 @@ public enum ActivitySuggestions {
                                                 from: dayStart - 14 * 86_400, to: dayEnd)
         let resting = try await restingByDay(store: store, deviceId: deviceId, computedId: computedId,
                                              from: dayKey(dayStart - 43_200, calendar), to: dayKey(dayStart, calendar))
+        let dayMinutes = slice(minutes, dayStart, dayEnd)
         guard let rest = resting[dayKey(dayStart, calendar)] ?? resting[dayKey(dayStart - 43_200, calendar)]
-        else { return [] }
+        else {
+            // Match the background refresh: missing RHR cannot hide strap-only running.
+            return ActivityCandidates.walkCandidates(dayMinutes, hrMax: hrMax)
+        }
         let everyday = ActivityCandidates.everydayHRR(history: slice(minutes, dayStart - 14 * 86_400, dayStart),
                                                       restingHR: rest, hrMax: hrMax)
-        return ActivityCandidates.candidates(slice(minutes, dayStart, dayEnd), restingHR: rest, hrMax: hrMax,
+        return ActivityCandidates.candidates(dayMinutes, restingHR: rest, hrMax: hrMax,
                                              everydayHRR: everyday)
     }
 

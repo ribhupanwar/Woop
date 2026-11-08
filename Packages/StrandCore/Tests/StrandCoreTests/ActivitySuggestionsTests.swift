@@ -173,6 +173,19 @@ final class ActivitySuggestionsTests: XCTestCase {
         XCTAssertEqual(found.first?.durationMinutes, 50)
     }
 
+    func testDayCandidateRunWithoutRestingHR() async throws {
+        let store = try await WhoopStore.inMemory()
+        let start = 1_790_000_000
+        // This test covers the RHR-absent path. Raw step-minute fixtures are exercised
+        // in ActivityCandidatesTests; the day reader must not discard all candidates.
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(start)))
+        let lo = Int(day.timeIntervalSince1970)
+        let candidates = try await S.dayCandidates(store: store, deviceId: "my-whoop",
+                                                     computedId: "my-whoop-noop", hrMax: 185,
+                                                     dayStart: lo, dayEnd: lo + 86_400)
+        XCTAssertTrue(candidates.isEmpty)
+    }
+
     func testALegacyDismissedSpanStaysForgotten() {
         let all = S.resolve(candidates: [candidate(10_000)], answers: [], workouts: [],
                             legacyDismissed: [10_500 ..< 11_000], settings: .init())
