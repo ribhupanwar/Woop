@@ -28,3 +28,15 @@ layout parity. The owner's supplied screenshots guide Home and monitor compositi
 references are not available for every secondary screen. System typography approximates the supplied
 reference and does not establish zero pixel difference. Test scrolling with real history, live HR,
 sync in progress and active workout on the owner's device; no zero-lag guarantee is established here.
+
+## Visible-tab work and runner readout
+
+Home dashboard loads, energy/hydration queries and its Health Monitor query now include tab visibility
+in their task identity. Hidden Home instances do not start those reads; returning to Home restarts
+with the latest data revision, and cancelled requests cannot publish stale results. This reduces
+competition with Activity/Healthspan interaction without stopping sync or recording.
+
+On-foot workout details expose average pace alongside distance even when no route points were imported.
+It requires a finite positive recorded distance and recorded active duration, and reuses the existing
+unit-aware pace formatter. No pace, distance, cadence or GPS points are generated for missing data.
+Analysis migration required: no. Device frame timing and populated-screen validation remain open.

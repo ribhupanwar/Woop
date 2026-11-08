@@ -31,6 +31,7 @@ struct HealthMonitorSummary {
 struct HomeHealthMonitorCard: View {
     let dayKey: String
     @EnvironmentObject private var repo: Repository
+    @Environment(\.dashboardIsActive) private var dashboardIsActive
     @State private var summary = HealthMonitorSummary(readings: [], day: "")
     private var displayed: HealthMonitorSummary {
         summary.day == dayKey ? summary : HealthMonitorSummary(readings: [], day: dayKey)
@@ -43,7 +44,8 @@ struct HomeHealthMonitorCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("woop.home.healthMonitor")
-        .task(id: "\(repo.refreshSeq)|\(dayKey)") {
+        .task(id: "\(repo.refreshSeq)|\(dayKey)|\(dashboardIsActive)") {
+            guard dashboardIsActive else { return }
             let parser = DateFormatter()
             parser.dateFormat = "yyyy-MM-dd"
             parser.locale = Locale(identifier: "en_US_POSIX")

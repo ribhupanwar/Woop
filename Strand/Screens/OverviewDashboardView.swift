@@ -19,6 +19,7 @@ struct OverviewDashboardView: View {
     @EnvironmentObject private var router: NavRouter
     @Environment(\.dashboardAppModel) private var model
     @Environment(\.woopReferenceUI) private var referenceUI
+    @Environment(\.dashboardIsActive) private var dashboardIsActive
     // Deliberately NO `@EnvironmentObject live: LiveState` here — see the leaf-isolation note in
     // TodayView: a connected strap publishes `LiveState` ~1 Hz, and observing it at this level would
     // re-evaluate the WHOLE dashboard body on every heart-rate tick. The one thing on this screen that
@@ -245,14 +246,15 @@ struct OverviewDashboardView: View {
         // hidden section: showing one has to re-run the load that fills it, or it would render empty
         // until the next refresh.
         .task(id: loadKey) { await load() }
-        .task(id: repo.energyPresentationRevision) {
-            guard repo.energyPresentationRevision > 0 else { return }
+        .task(id: "\(repo.energyPresentationRevision)|\(dashboardIsActive)") {
+            guard dashboardIsActive, repo.energyPresentationRevision > 0 else { return }
             let revision = repo.energyPresentationRevision
             let value = await repo.todayEnergy(profile: Repository.analyticsProfile(profile))
-            guard revision == repo.energyPresentationRevision else { return }
+            guard !Task.isCancelled, dashboardIsActive, revision == repo.energyPresentationRevision else { return }
             todayEnergySummary = value
         }
-        .task(id: "\(repo.hydrationSeq)-\(selectedDayKey)") {
+        .task(id: "\(repo.hydrationSeq)-\(selectedDayKey)|\(dashboardIsActive)") {
+            guard dashboardIsActive else { return }
             let day = selectedDayKey
             let value = await repo.hydrationTotal(day: day)
             guard !Task.isCancelled, day == selectedDayKey else { return }
@@ -373,10 +375,11 @@ struct OverviewDashboardView: View {
     @State private var loadGeneration = 0
     private var loadKey: DashboardLoadKey {
         DashboardLoadKey(repo: repo, selection: selectedDayKey,
-            preferences: layoutSectionsKey, profile: profile)
+            preferences: "\(layoutSectionsKey)|active:\(dashboardIsActive)", profile: profile)
     }
 
     private func load() async {
+        guard dashboardIsActive else { return }
         let key = loadKey
         guard lastLoadedKey != key || (selectedDayOffset == 0 && Date().timeIntervalSince(lastLoadedAt) >= 120) else { return }
         loadGeneration &+= 1

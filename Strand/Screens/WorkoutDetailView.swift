@@ -423,6 +423,13 @@ struct WorkoutDetailView: View {
                          caption: String(localized: "covered"),
                          accent: StrandPalette.metricCyan)
             }
+            if WorkoutCatalog.isOnFoot(row.sport), let distance = row.distanceM,
+               distance.isFinite, distance > 0, let duration = row.durationS,
+               duration.isFinite, duration > 0 {
+                StatTile(label: "Avg pace", value: paceLabel,
+                         caption: String(localized: "Based on active time and recorded distance"),
+                         accent: WoopHomePalette.strain)
+            }
             // Steps for an on-foot sport (#398). Shown for the on-foot set even before the value lands, so
             // the tile doesn't pop in; "–" until a source has data. Caption is honest about the source.
             if WorkoutCatalog.isOnFoot(row.sport) {
