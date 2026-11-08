@@ -76,3 +76,11 @@ types are classified automatically. No physiological formula or historical score
 
 The f147ac4 build failed on LocalizedStringKey.uppercased in SleepView; use Text.textCase instead.
 The current batch requires fresh macOS/iOS compilation and screenshot review before release acceptance.
+
+## Automatic timeline publication
+
+Analysis migration required: no. After successful automatic activity writes, refresh repository view
+caches immediately, before the scoring follow-up. Previously the pass refreshed the dashboard before
+these writes and the new timeline row could wait for another pass. Detection thresholds, activation
+time, source provenance, deduplication and stored calculations are unchanged. This publishes completed
+saves sooner; it does not make hardware detection continuous or provide missing sport classifications.

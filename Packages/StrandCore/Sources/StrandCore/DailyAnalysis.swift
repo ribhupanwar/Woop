@@ -4200,6 +4200,10 @@ public final class DailyAnalysis {
                     do {
                         let written = try await store.upsertWorkouts(added, deviceId: computedId)
                         if written > 0 {
+                            // Publish saved activities immediately. The earlier dashboard refresh runs
+                            // before automatic saving; waiting for the scoring follow-up leaves the
+                            // timeline stale even though the workout is already safely stored.
+                            await repo.refresh(days: 120)
                             // Workout mutations do not change raw-sample fingerprints. Reuse must be off
                             // once so training load and workout windows include the newly saved input.
                             enqueueFollowup(maxDays: maxDays, reason: .semanticChange)
