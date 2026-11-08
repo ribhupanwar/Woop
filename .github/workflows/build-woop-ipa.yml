@@ -54,7 +54,8 @@ jobs:
       # Cache the large pinned runtime/model between clean GitHub-hosted runners.
       # bootstrap-nomic.sh still verifies both inputs against their hard-coded SHA-256 values.
       - name: Restore verified Nomic build-input cache
-        uses: actions/cache@v4
+        id: nomic-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             Vendor/Nomic/llama.xcframework
@@ -68,6 +69,15 @@ jobs:
           chmod +x Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh --check
+
+      - name: Cache verified model and runtime before compilation
+        if: steps.nomic-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            Vendor/Nomic/llama.xcframework
+            Vendor/Nomic/Resources/nomic-embed-text-v2-moe.Q4_K_M.gguf
+          key: macos-26-nomic-${{ hashFiles('Tools/bootstrap-nomic.sh') }}
 
       # Validate package logic and the macOS app. The Release device archive below is the iOS
       # compile gate; a separate simulator build here compiled the same app a second time.
