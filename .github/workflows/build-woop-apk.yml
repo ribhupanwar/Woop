@@ -75,7 +75,8 @@ jobs:
           "$RUNNER_TEMP/gradle-8.7/bin/gradle" --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:assembleFullDebug
       - name: Run Android JVM tests
         working-directory: android
-        run: "$RUNNER_TEMP/gradle-8.7/bin/gradle" --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:testFullDebugUnitTest
+        run: |
+          "$RUNNER_TEMP/gradle-8.7/bin/gradle" --no-daemon --max-workers=2 --console=plain -Pnoop.swiftCore=true -Pwoop.minSdk=28 :app:testFullDebugUnitTest
       - name: Package APK and provenance
         if: ${{ !cancelled() && hashFiles('android/app/build/outputs/apk/full/debug/*.apk') != '' }}
         run: |
