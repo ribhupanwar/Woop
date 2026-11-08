@@ -1356,12 +1356,14 @@ struct OverviewDashboardView: View {
                 DashboardStartActivityButton {
                     Label("Start Activity", systemImage: "stopwatch")
                         .font(StrandFont.footnote.weight(.semibold))
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.white)
                 .padding(.vertical, 6)
                 .background(WoopHomePalette.activityRow, in: Capsule())
+                .accessibilityIdentifier("woop.home.startActivity")
             }
         }
     }

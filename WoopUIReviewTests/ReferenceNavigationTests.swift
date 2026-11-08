@@ -19,7 +19,8 @@ final class ReferenceNavigationTests: XCTestCase {
     func testReferenceTabsSwitchAndHomeQuickActionsOpen() {
         launch()
         XCTAssertEqual(app.tabBars.buttons.count, 0, "the native bar must not duplicate the reference bar")
-        for tag in [2, 4, 1, 3, 0] {
+        XCTAssertFalse(app.buttons["woop.tab.1"].exists, "Today is consolidated into Home")
+        for tag in [2, 4, 3, 0] {
             let button = app.buttons["woop.tab.\(tag)"]
             XCTAssertTrue(button.exists)
             button.tap()
@@ -41,8 +42,19 @@ final class ReferenceNavigationTests: XCTestCase {
         capture("empty-start-activity")
     }
 
+    func testHomeStartActivityOpensRecorder() {
+        launch()
+        let start = app.buttons["woop.home.startActivity"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        for _ in 0..<3 where !start.isHittable { app.swipeUp() }
+        XCTAssertTrue(start.isHittable)
+        capture("home-start-activity-contrast")
+        start.tap()
+        XCTAssertTrue(app.staticTexts["Start a workout"].waitForExistence(timeout: 10))
+    }
+
     func testCaptureEmptyReferenceScreens() {
-        for tab in ["home", "today", "activity", "healthspan", "more"] {
+        for tab in ["home", "activity", "healthspan", "more"] {
             launch(tab: tab)
             capture("empty-\(tab)")
         }

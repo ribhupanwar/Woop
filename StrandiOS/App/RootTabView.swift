@@ -57,7 +57,7 @@ struct RootTabView: View {
     /// when a hub row deep-links to it via NavRouter. nil = closed.
     @State private var routedPillar: NavRouter.Destination?
     /// Selected tab — bound so tab switches can crossfade (README §Motion: ~240ms opacity swap
-    /// between tab roots, calm easing). Defaults to Today.
+    /// between tab roots, calm easing). Defaults to Home.
     @State private var selectedTab: Int = 0
     @State private var customizeTodayAfterDismissal = false
     /// One `NavigationPath` per tab, indexed by tab tag. Re-tapping the already-active tab pops
@@ -81,7 +81,7 @@ struct RootTabView: View {
     private var isSearchingMore: Bool { !SearchMatch.tokens(moreQuery).isEmpty }
 
     /// Home always opens the owner-approved reference dashboard, including on upgrades with a saved
-    /// legacy dashboard preference. Today has its own independent tab and navigation stack.
+    /// legacy dashboard preference. Home owns the daily dashboard and its detail routes.
     private var homeTabRoot: some View {
         OverviewDashboardView()
         .safeAreaInset(edge: .bottom, spacing: 0) { AnalysisUpdateBanner() }
@@ -102,7 +102,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["home": 0, "today": 1, "activity": 2, "healthspan": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -153,6 +153,8 @@ struct RootTabView: View {
     /// horizontal swipe to change days, so neither participates in this ancestor gesture.
     /// Both thresholds are unchanged
     /// from the original gesture.
+    private static let visibleTabTags = [0, 2, 3, 4]
+
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
             .onEnded { v in
@@ -161,7 +163,9 @@ struct RootTabView: View {
                 guard selectedTab > 1 else { return }
                 let dx = v.translation.width, dy = v.translation.height
                 guard abs(dx) > 60, abs(dx) > abs(dy) * 1.6 else { return }
-                let next = min(4, max(0, selectedTab + (dx < 0 ? 1 : -1)))
+                guard let index = Self.visibleTabTags.firstIndex(of: selectedTab) else { return }
+                let nextIndex = min(Self.visibleTabTags.count - 1, max(0, index + (dx < 0 ? 1 : -1)))
+                let next = Self.visibleTabTags[nextIndex]
                 if next != selectedTab {
                     withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = next }
                 }
@@ -169,13 +173,12 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        // TabView retains all five navigation stacks. The reference bar only drives its existing
+        // TabView retains the four visible navigation stacks with their stable route tags. The reference bar only drives its existing
         // selection binding, so re-tap, pop-to-root and scroll restoration keep one owner.
         VStack(spacing: 0) {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
-                tab(TodayView(), "Today", "calendar", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
                 tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
@@ -525,7 +528,6 @@ struct RootTabView: View {
     private var referenceTabBar: some View {
         HStack(spacing: 0) {
             referenceTabItem(0, "Home", "house")
-            referenceTabItem(1, "Today", "calendar")
             referenceTabItem(2, "Activity", "figure.run")
             referenceTabItem(3, "Healthspan", "heart.text.square")
             referenceTabItem(4, "More", "line.3.horizontal")
