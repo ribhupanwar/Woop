@@ -179,7 +179,7 @@ struct RootTabView: View {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
-                tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
+                tab(TrainingHubView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
                 tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }

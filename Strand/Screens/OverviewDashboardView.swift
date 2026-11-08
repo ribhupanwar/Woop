@@ -12,7 +12,6 @@ import StrandCore
 /// Deliberately screenshot-faithful over "improved" — see `TrendsDashboardView`'s header comment for the
 /// same note; it applies here too.
 struct OverviewDashboardView: View {
-    @EnvironmentObject private var pullSyncBLE: BLEManager
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var intelligence: IntelligenceEngine
     @EnvironmentObject private var profile: ProfileStore
@@ -180,7 +179,8 @@ struct OverviewDashboardView: View {
             // gets the ~25–30pt reduction the reference wants without drawing under the status bar.
             let topInset = max(NoopMetrics.screenPadding, proxy.safeAreaInsets.top + 8)
             ScrollViewReader { scrollProxy in
-            WoopRefreshScrollView(onRefresh: { await HomePullSync.refresh(ble: pullSyncBLE, repo: repo, model: model) }) {
+            WoopRefreshScrollView(onRefresh: { if let app = model { await HomePullSync.refresh(ble: app.ble, repo: repo, model: app) }
+                else { await repo.refresh() } }) {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
                     header.id(Self.topAnchorID)
                     overviewCard
@@ -1099,7 +1099,7 @@ struct OverviewDashboardView: View {
     private var healthList: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("My Dashboard").font(WhoopReferenceFont.heading(22))
+                Text("My Dashboard").font(WhoopReferenceFont.heading(20))
                     .foregroundStyle(StrandPalette.textSecondary)
                 Spacer()
                 Button { showExtraSections = true } label: {

@@ -14,7 +14,6 @@ import StrandCore
 /// Deliberately screenshot-faithful over "improved": where a spacing or a choice looks unusual, it is
 /// reproducing the reference rather than a judgement call.
 struct TrendsDashboardView: View {
-    @EnvironmentObject private var pullSyncBLE: BLEManager
     @EnvironmentObject private var repo: Repository
     @EnvironmentObject private var profile: ProfileStore
     @EnvironmentObject private var updateStore: UpdateStore
@@ -156,7 +155,8 @@ struct TrendsDashboardView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-        WoopRefreshScrollView(onRefresh: { await HomePullSync.refresh(ble: pullSyncBLE, repo: repo, model: model) }) {
+        WoopRefreshScrollView(onRefresh: { if let app = model { await HomePullSync.refresh(ble: app.ble, repo: repo, model: app) }
+                else { await repo.refresh() } }) {
             LazyVStack(alignment: .leading, spacing: NoopMetrics.sectionSpacing) {
                 Color.clear.frame(height: 0).id(Self.topAnchorID)
                 header

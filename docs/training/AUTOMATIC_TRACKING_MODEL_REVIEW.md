@@ -2,7 +2,7 @@
 
 Analysis migration required: no.
 
-This change is based on `feature/whoop-575-ui-parity` at `90297f3`. References are the user's Health Monitor screenshot and the metadata-only findings in [ribhupanwar/dsta](https://github.com/ribhupanwar/dsta/blob/main/docs/WHOOP-archive-findings.md). No proprietary implementation, font, artwork or model is included.
+This change is based on `codex/consolidated-release` at `3eced46`. References are the user's Health Monitor screenshot and the metadata-only findings in [ribhupanwar/dsta](https://github.com/ribhupanwar/dsta/blob/main/docs/WHOOP-archive-findings.md). No proprietary implementation, font, artwork or model is included.
 
 ## Implemented
 
@@ -10,7 +10,11 @@ This change is based on `feature/whoop-575-ui-parity` at `90297f3`. References a
 - Every Home style requests the existing gated strap history sync and then refreshes local data. The WOOP wordmark and the existing original Forge glyph appear during a pull. Reduced Motion keeps the glyph static. Offline pulls still reload local data.
 - The pull waits up to 20 seconds for history, with a two-second quiet tail to cover chunk boundaries. A longer transfer remains visible in the existing sync status; finishing the pull is not reported as successful strap sync. Actual outcomes retain the existing last-sync and error state.
 - Training retains its native OpenGym-style routines, progression, rest timers and running quick start. An accessible activity-detection switch and the existing shared suggestion prompt are now available there. Detection proposes sessions after sync and requires confirmation; it does not identify every gym movement or count reps.
-- The IPA workflow accepts PRs targeting the active UI branch and checks out the triggering SHA. Previously the workflow always built a fixed branch, which would not validate a PR's changes.
+- The IPA workflow now accepts PRs targeting the consolidated release branch. It retains the consolidated branch's current-SHA checkout, caches and build validation.
+
+- Activity opens the native Training hub, with a visible history link and Running pinned in quick start.
+- Reference fonts use normal-width system type; the dashboard has compact 56-point minimum rows with two value lines. Recorded comparison dates remain accessible without adding a third visible line.
+- Arrows show the actual direction. Higher HRV/steps and lower resting HR are favorable (green); the opposite is unfavorable (orange). Unchanged and context-dependent metrics remain neutral. This is presentation only, with no scoring change.
 
 ## Model selection
 
@@ -25,5 +29,5 @@ For running, the existing phone GPS distance, pace, route recording, heart-rate 
 ## Verification
 
 - `git diff --check` and `Tools/doc_comment_lint.py` pass.
-- All added UI strings have translations in the nine existing non-English catalog locales. The full i18n gate still reports 14 missing catalog entries already present on the base UI branch; none are introduced by this change.
-- Apple compilation and UI/device verification require macOS/Xcode and a connected strap. No on-device validation or exact pixel-match claim is made here. The PR workflow validates the triggering revision rather than an unrelated fixed branch.
+- All added UI strings have translations in the nine existing non-English catalog locales. The full i18n gate is compared against the consolidated base to distinguish pre-existing findings from new strings.
+- Apple compilation and UI/device verification require macOS/Xcode and a connected strap. No on-device validation or exact pixel-match claim is made here. The PR workflow validates the triggering revision.

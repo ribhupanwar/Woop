@@ -204,6 +204,10 @@ struct TrainingHubView: View {
         HStack(alignment: .firstTextBaseline) {
             SectionHeader("Training", overline: "Plan and log")
             Spacer()
+            NavigationLink(value: TabRoute.workouts) {
+                Label("History", systemImage: "clock.arrow.circlepath")
+                    .font(StrandFont.footnote)
+            }
             if let coachContext {
                 CoachCardButton(context: coachContext)
             }

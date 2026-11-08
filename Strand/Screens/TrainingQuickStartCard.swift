@@ -21,7 +21,7 @@ struct TrainingQuickStartCard: View {
     @State private var configuring: WorkoutCatalog.Sport?
 
     private var activities: [WorkoutCatalog.Sport] {
-        WorkoutQuickStart.activities(recent: RecentSportsPrefs.recent())
+        WorkoutQuickStart.activities(recent: ["Running"] + RecentSportsPrefs.recent())
     }
 
     var body: some View {

@@ -50,7 +50,7 @@ struct WearableConnectionStateCard: View {
 struct HealthView: View {
     @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
-    @EnvironmentObject var ble: BLEManager
+    @Environment(\.dashboardAppModel) private var syncModel
     @EnvironmentObject var profile: ProfileStore
     // NOTE: HealthView itself deliberately does NOT observe `LiveState`/`AppModel` for live HR. A
     // connected strap publishes at ~1 Hz; observing here would re-evaluate this body (and re-diff the
@@ -67,7 +67,10 @@ struct HealthView: View {
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header); builds the trailing vitals/skin-temp/age sections on
                        // demand instead of all up-front.
-                       onRefresh: { await HomePullSync.refresh(ble: ble, repo: repo) },
+                       onRefresh: {
+                           if let app = syncModel { await HomePullSync.refresh(ble: app.ble, repo: repo, model: app) }
+                           else { await repo.refresh() }
+                       },
                        brandedRefresh: true,
                        lazy: true,
                        // The day-of-sky liquid backdrop, matching Today / Sleep / Trends: a fixed,
