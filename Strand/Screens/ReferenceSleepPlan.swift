@@ -26,8 +26,10 @@ struct TonightSleepCard: View {
     @State private var plan: ReferenceSleepPlan?
     @State private var showsPlanner = false
     private var wake: Date? {
-        AppModel.nextSmartAlarmDate(minutes: behavior.smartAlarmMinutes,
-            weekdays: behavior.smartAlarmWeekdays.isEmpty ? Set(1...7) : behavior.smartAlarmWeekdays,
+        guard let appModel else { return nil }
+        return NextStrapAlarm.date(enabled: behavior.smartAlarmEnabled,
+            willArm: NextStrapAlarm.willArm(whoop5Detected: appModel.whoop5Detected),
+            minutes: behavior.smartAlarmMinutes, weekdays: behavior.smartAlarmWeekdays,
             overrides: WindDownNudge.perDayWakeOverrides, from: Date())
     }
     private var alarmOn: Bool {
