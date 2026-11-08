@@ -155,3 +155,14 @@ when expanded; recording actions and summary remain visible. Legacy macOS and An
 unchanged in this follow-up. Swift syntax parsing and whitespace checks pass; Xcode compilation,
 regression tests and populated-device scrolling still require fresh Apple CI/device validation.
 Analysis migration required: no.
+
+## Activity session readability
+
+The reference iPhone list orders newest sessions first. Each row separates its date/time from recorded
+duration, distance, average on-foot pace and average HR, and allows two metric lines. Pace requires
+finite positive recorded distance and active duration, respects km/mile preferences and is omitted
+otherwise. Existing detail, source badges, selection, relabel/edit menus and storage paths remain.
+An empty filtered/scope result offers a reset to Current / All time and clears sport/source/search;
+Current still means the existing ten most recent matching sessions, not the entire archive.
+Analysis migration required: no. Swift syntax and whitespace checks passed; Apple compilation and
+populated-device layout validation remain pending for this commit. Android rows are unchanged.

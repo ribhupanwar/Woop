@@ -1434,6 +1434,20 @@ struct WorkoutsView: View {
                 selectPill(rows: rows)
             }
             if selectionMode { selectionToolbar(rows: rows) }
+            if referenceUI && rows.isEmpty {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                    Text("No matching workouts").font(WhoopReferenceFont.heading(17))
+                    Text("Try another sport, date range or scope.")
+                        .font(WhoopReferenceFont.body(12)).foregroundStyle(StrandPalette.textSecondary)
+                    Button("Reset filters") {
+                        sportFilter = nil; sourceFilter = nil; searchText = ""
+                        scope = .current; range = .all
+                        selected.removeAll(); selectionMode = false
+                    }
+                    .frame(minHeight: 44)
+                }
+                .padding(NoopMetrics.cardPadding)
+            }
             NoopCard(padding: 0) {
                 if usesCompactSessions {
                     // #64: full-width native rows, no horizontal scroll — the iPhone list reads like the
@@ -1557,7 +1571,7 @@ struct WorkoutsView: View {
     @ViewBuilder
     private func compactSessionsList(rows: [WorkoutRow]) -> some View {
         LazyVStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+            ForEach(Array((referenceUI ? rows.sorted { $0.startTs > $1.startTs } : rows).enumerated()), id: \.offset) { idx, row in
                 compactSessionRow(row)
                     .background(idx % 2 == 1
                                 ? StrandPalette.surfaceInset.opacity(0.4)
@@ -1744,11 +1758,22 @@ struct WorkoutsView: View {
                             .font(StrandFont.number(15))
                             .foregroundStyle(row.strain != nil ? StrandPalette.effortColor : StrandPalette.textTertiary)
                     }
-                    Text(compactRowSubtitle(row))
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    if referenceUI {
+                        Text(verbatim: dateLabel(row.startTs) + " · " + timeRangeLabel(row.startTs, row.endTs))
+                            .font(WhoopReferenceFont.body(11))
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .lineLimit(1)
+                        Text(verbatim: referenceSessionMetrics(row))
+                            .font(WhoopReferenceFont.metric(12))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(compactRowSubtitle(row))
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                 }
                 sourceBadge(row.source)
                 // Reserve the ••• column width inside the label; the interactive Menu is overlaid on top
@@ -1758,7 +1783,8 @@ struct WorkoutsView: View {
                 }
             }
             .padding(.horizontal, NoopMetrics.cardPadding)
-            .frame(minHeight: 56)
+            .padding(.vertical, referenceUI ? NoopMetrics.space2 : 0)
+            .frame(minHeight: referenceUI ? 76 : 56)
             .contentShape(Rectangle())
         }
         .buttonStyle(LiquidPressStyle())
@@ -1813,6 +1839,21 @@ struct WorkoutsView: View {
         if let d = row.distanceM, d > 0 { parts.append(distanceLabel(row.distanceM)) }
         if let hr = row.avgHr { parts.append(String(localized: "\(hr) bpm")) }
         return parts.joined(separator: " · ")
+    }
+
+    /// Read only recorded session fields; missing distance/HR never become zero-valued metrics.
+    private func referenceSessionMetrics(_ row: WorkoutRow) -> String {
+        var parts: [String] = []
+        if let duration = durationLabelOrNil(row.durationS) { parts.append(duration) }
+        if let distance = row.distanceM, distance.isFinite, distance > 0 {
+            parts.append(distanceLabel(distance))
+            if WorkoutCatalog.isOnFoot(row.sport), let seconds = row.durationS,
+               seconds.isFinite, seconds > 0 {
+                parts.append(UnitFormatter.paceFromSecPerKm(seconds / (distance / 1000), system: distanceUnitSystem))
+            }
+        }
+        if let hr = row.avgHr, hr > 0 { parts.append(String(localized: "\(hr) bpm")) }
+        return parts.isEmpty ? String(localized: "No data yet") : parts.joined(separator: " · ")
     }
 
     /// A full-sentence a11y label for a compact row.
