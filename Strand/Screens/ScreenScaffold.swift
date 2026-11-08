@@ -601,19 +601,18 @@ private struct WoopPullOffset: PreferenceKey {
 struct WoopPullWordmark: View {
     let refreshing: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var motion = NoopMotionState.shared
 
     var body: some View {
         VStack(spacing: NoopMetrics.space2) {
-            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !refreshing || reduceMotion)) { context in
-                let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.2) / 1.2
-                HStack(spacing: NoopMetrics.space2) {
-                    ForgeMark(size: NoopMetrics.space6)
-                        .rotationEffect(.degrees(refreshing && !reduceMotion ? phase * 360 : 0))
-                    Text(verbatim: "WOOP")
-                        .font(StrandFont.headline)
-                        .tracking(NoopMetrics.space1)
-                        .foregroundStyle(StrandPalette.textPrimary)
+            if refreshing && scenePhase == .active && !motion.poseStill(reduceMotion) {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let phase = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.2) / 1.2
+                    wordmark(angle: phase * 360)
                 }
+            } else {
+                wordmark(angle: 0)
             }
             if refreshing {
                 Text("Refreshing…")
@@ -622,6 +621,17 @@ struct WoopPullWordmark: View {
             }
         }
         .accessibilityLabel(refreshing ? "Refreshing data" : "Pull to sync")
+    }
+
+    private func wordmark(angle: Double) -> some View {
+        HStack(spacing: NoopMetrics.space2) {
+            ForgeMark(size: NoopMetrics.space6)
+                .rotationEffect(.degrees(angle))
+            Text(verbatim: "WOOP")
+                .font(StrandFont.headline)
+                .tracking(NoopMetrics.space1)
+                .foregroundStyle(StrandPalette.textPrimary)
+        }
     }
 }
 
