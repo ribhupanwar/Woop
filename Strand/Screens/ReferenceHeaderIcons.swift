@@ -6,11 +6,18 @@ struct ReferenceBandGlyph: View {
     var connected: Bool
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(spacing: 1) {
-                RoundedRectangle(cornerRadius: 2).stroke(lineWidth: 1).frame(width: 10, height: 5)
-                RoundedRectangle(cornerRadius: 4).stroke(lineWidth: 1.5).frame(width: 15, height: 20)
-                RoundedRectangle(cornerRadius: 2).stroke(lineWidth: 1).frame(width: 10, height: 5)
-            }.rotationEffect(.degrees(8)).padding(3)
+            // A continuous curved strap outline, rather than a battery/ring symbol.
+            Path { path in
+                path.move(to: CGPoint(x: 15, y: 2))
+                path.addLine(to: CGPoint(x: 9, y: 2))
+                path.addCurve(to: CGPoint(x: 5, y: 30), control1: CGPoint(x: 3, y: 10), control2: CGPoint(x: 2, y: 22))
+                path.addLine(to: CGPoint(x: 12, y: 32))
+                path.addCurve(to: CGPoint(x: 19, y: 5), control1: CGPoint(x: 18, y: 25), control2: CGPoint(x: 20, y: 13))
+                path.move(to: CGPoint(x: 7, y: 26))
+                path.addLine(to: CGPoint(x: 12, y: 27))
+            }
+            .stroke(style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+            .frame(width: 23, height: 34)
             if connected { Circle().fill(WoopHomePalette.healthGood).frame(width: 6, height: 6) }
         }.frame(width: 25, height: 36).accessibilityHidden(true)
     }

@@ -4891,4 +4891,6 @@
     <string name="forge_data_update_body">Woop переносит вашу историю в новое хранилище. Это происходит один раз и может занять несколько минут. Не закрывайте приложение.</string>
     <string name="workout_export_title">Экспорт тренировки</string>
     <string name="workout_export_body">Сохрани эту тренировку с пульсом как FIT-файл для импорта в Strava, Garmin Connect или другое приложение. Файл создаётся на твоём телефоне и покидает его, только когда ты им поделишься.</string>
+    <string name="woop_home">Главная</string>
+    <string name="woop_activity">Активность</string>
 </resources>

@@ -4990,4 +4990,6 @@
     <string name="forge_data_update_body">Woop está trasladando tu historial a su nuevo almacenamiento. Ocurre una sola vez y puede tardar unos minutos. Mantén la app abierta.</string>
     <string name="workout_export_title">Exportar entrenamiento</string>
     <string name="workout_export_body">Guarda este entrenamiento con su frecuencia cardiaca como archivo FIT para importarlo en Strava, Garmin Connect u otra app. El archivo se crea en tu teléfono y solo sale de él cuando lo compartes.</string>
+    <string name="woop_home">Inicio</string>
+    <string name="woop_activity">Actividad</string>
 </resources>

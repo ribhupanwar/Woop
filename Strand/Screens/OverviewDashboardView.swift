@@ -574,6 +574,10 @@ struct OverviewDashboardView: View {
     /// strip, needs those three resolved rather than shown as "—".
     private func healthValueText(_ card: DashboardCard) -> String {
         switch card {
+        case .steps:
+            guard let reading = todayStepsReading else { return "—" }
+            let count = reading.steps.formatted(.number.locale(AppLanguage.activeLocale))
+            return reading.isEstimated ? "~" + count : count
         case .fitnessAge:
             return fitnessAgeToday.map { "\(Int($0.rounded()))" } ?? "—"
         case .calories:

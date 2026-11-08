@@ -121,3 +121,22 @@ consent copy uses Woop branding. No capture duration, clinical algorithm, protoc
 was changed. Android's existing ECG surface displays saved readings; on-device Android ECG capture is
 not implemented by this port. Physical MG recording/comparison remains required.
 Analysis migration required: no.
+
+## Compact metric rows and band indicator (2026-11-08)
+
+The shared metric row uses a 54-point minimum height, 22-point system value font and two-line
+value/comparison block. The comparison date remains in VoiceOver instead of adding a third visible
+line. Trend colors use one policy: higher HRV/step progress or lower RHR is teal; the inverse is amber;
+unchanged and metrics without a defined direction stay neutral. These comparisons describe the previous
+recorded day, not WHOOP's proprietary baseline or a medical verdict. Swift and Android policy tests
+cover opposite HRV/RHR directions and neutral calorie/weight changes.
+
+Both headers use independently drawn curved band outlines beside the real battery percentage.
+iOS retains its actual connection indicator. No proprietary asset is bundled. The Activity reference
+screen brings the editable session list above historical charts, after the summary and recording actions.
+This reduces scrolling to recent runs/gym sessions; the lazy stack and live-HR leaf isolation remain.
+
+Validation before these edits: de97b7f iOS IPA and UI workflows succeeded; Android APK workflow
+42484216827 succeeded. Those results do not validate the changes described in this section. Fresh
+Apple builds and populated-device visual review are required; exact font/asset identity and zero lag
+are not established. Analysis migration required: no.

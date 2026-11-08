@@ -28,7 +28,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.CheckCircleOutline
@@ -201,7 +200,7 @@ internal fun DashboardHeader(date: LocalDate, isToday: Boolean, battery: String?
                  modifier = Modifier.background(colors.inset, RoundedCornerShape(50)).clickable(onClick = onPickDay).padding(horizontal = 22.dp, vertical = 12.dp))
             Row(Modifier.clickable(onClick = onBattery), verticalAlignment = Alignment.CenterVertically) {
                 Text(battery ?: "—", style = Forge.type.captionNumber, color = colors.textSecondary)
-                Icon(Icons.Rounded.BatteryFull, null, tint = colors.textSecondary, modifier = Modifier.size(24.dp))
+                WoopBandOutline(colors.textSecondary)
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -554,14 +553,26 @@ internal fun DashboardHealthList(cards: List<DashboardCard>, d: DashboardDay, hi
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("My Dashboard", style = Forge.type.title2, color = colors.textSecondary)
         cards.forEach { card ->
-            ForgeCard(Modifier.fillMaxWidth().clickable { onOpen(card) }, radius = 13.dp) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically,
+            val previous = history.filter { it.day < d.date.toString() }.maxByOrNull { it.day }
+            val currentNumber = dashboardTrendValue(card, d.day)
+            val previousNumber = dashboardTrendValue(card, previous)
+            val direction = if (currentNumber != null && previousNumber != null)
+                currentNumber.compareTo(previousNumber) else null
+            ForgeCard(Modifier.fillMaxWidth().clickable { onOpen(card) }, radius = 13.dp, contentPadding = 8.dp) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(min = 38.dp), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(card.icon, null, tint = colors.textSecondary, modifier = Modifier.size(24.dp))
                     Text(stringResource(card.titleRes).uppercase(), style = Forge.type.overline, color = colors.text, modifier = Modifier.weight(1f))
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(cardValue(card, d), style = Forge.type.title2.copy(fontSize = 28.sp, fontWeight = FontWeight.Bold), color = colors.text)
-                        if (card.unit.isNotEmpty()) Text(card.unit, style = Forge.type.caption, color = colors.textSecondary)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text(cardValue(card, d), style = Forge.type.title2.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold), color = colors.text)
+                            if (direction != null) Text(if (direction > 0) "▲" else if (direction < 0) "▼" else "●",
+                                fontSize = 8.sp, color = dashboardTrendColor(card, direction) ?: colors.textSecondary)
+                        }
+                        if (direction != null && previousNumber != null) {
+                            Text(java.text.NumberFormat.getIntegerInstance().format(previousNumber.roundToInt()),
+                                style = Forge.type.caption.copy(fontSize = 11.sp), color = colors.textSecondary)
+                        } else if (card.unit.isNotEmpty()) Text(card.unit, style = Forge.type.caption.copy(fontSize = 11.sp), color = colors.textSecondary)
                     }
                 }
             }
@@ -831,4 +842,41 @@ internal fun ForgeDayPicker(selected: LocalDate, onPick: (LocalDate) -> Unit, on
             androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.forge_lay_cancel)) }
         },
     ) { androidx.compose.material3.DatePicker(state = state) }
+}
+
+/** Independent curved device outline. Battery percentage remains a real readout beside it. */
+@Composable
+private fun WoopBandOutline(tint: Color) {
+    Canvas(Modifier.size(25.dp, 36.dp)) {
+        val sx = size.width / 25f
+        val sy = size.height / 36f
+        val outline = androidx.compose.ui.graphics.Path().apply {
+            moveTo(15f * sx, 2f * sy)
+            lineTo(9f * sx, 2f * sy)
+            cubicTo(3f * sx, 10f * sy, 2f * sx, 22f * sy, 5f * sx, 30f * sy)
+            lineTo(12f * sx, 32f * sy)
+            cubicTo(18f * sx, 25f * sy, 20f * sx, 13f * sy, 19f * sx, 5f * sy)
+            moveTo(7f * sx, 26f * sy)
+            lineTo(12f * sx, 27f * sy)
+        }
+        drawPath(outline, tint, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2.dp.toPx()))
+    }
+}
+
+private fun dashboardTrendValue(card: DashboardCard, day: CoreRead.Day?): Double? = when (card) {
+    DashboardCard.HRV -> day?.hrv
+    DashboardCard.RESTING_HR -> day?.restingHr?.toDouble()
+    DashboardCard.STEPS -> day?.steps?.toDouble()
+    else -> null
+}?.takeIf { it.isFinite() }
+
+/** Trend relative to the previous recorded day; no health verdict for calories or weight. */
+internal fun dashboardTrendColor(card: DashboardCard, direction: Int): Color? {
+    if (direction == 0) return null
+    val favorable = when (card) {
+        DashboardCard.HRV, DashboardCard.STEPS -> direction > 0
+        DashboardCard.RESTING_HR -> direction < 0
+        else -> return null
+    }
+    return if (favorable) WoopReferenceColors.healthGood else WoopReferenceColors.stressHigh
 }

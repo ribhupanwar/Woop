@@ -162,3 +162,12 @@ public extension Text {
             .foregroundStyle(StrandPalette.textSecondary)
     }
 }
+
+/// One compact metric-card contract; large score typography must not leak into dashboard rows.
+public enum WoopDashboardMetricStyle {
+    public static let minimumHeight: CGFloat = 54
+    public static let verticalPadding: CGFloat = 8
+    public static let label = Font.system(size: 12, weight: .bold)
+    public static let value = Font.system(size: 22, weight: .bold).monospacedDigit()
+    public static let comparison = Font.system(size: 11, weight: .medium).monospacedDigit()
+}

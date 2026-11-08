@@ -26,6 +26,7 @@ private struct WorkoutRecoveryTrendPoint: Identifiable, Equatable {
 // No custom card heights, paddings, colours or surfaces — uniformity is the bar.
 
 struct WorkoutsView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -241,6 +242,7 @@ struct WorkoutsView: View {
                 if let postLogNote { postLogBanner(postLogNote) }
                 effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
                 summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
+                if referenceUI { sessionsSection(rows: windowRows) }
                 analysisRow
                 heatmapSection()
                 breakdownSection(groups: groups, rows: windowRows)
@@ -248,7 +250,7 @@ struct WorkoutsView: View {
                     zonesSection(z, totalSessions: windowRows.count)
                 }
                 recoveryTrendSection
-                sessionsSection(rows: windowRows)
+                if !referenceUI { sessionsSection(rows: windowRows) }
             }
         }
         // Keyed on the energy revision too: a correction of stored session energy (recipes AI-13 to AI-15)

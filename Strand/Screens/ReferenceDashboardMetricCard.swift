@@ -1,8 +1,29 @@
 import SwiftUI
 import StrandDesign
 
-/// A static, full-width dashboard row. The optional comparison names its recorded date rather than
-/// implying WHOOP's proprietary baseline or a health assessment.
+/// Compact dashboard presentation. Comparison dates remain available to VoiceOver.
+/// Arrows describe a trend relative to a recorded value, not a medical assessment.
+enum ReferenceMetricTrend: Equatable {
+    case favorable, unfavorable, unchanged
+
+    static func resolve(card: DashboardCard, direction: Int) -> Self {
+        guard direction != 0 else { return .unchanged }
+        switch card {
+        case .hrv, .steps: return direction > 0 ? .favorable : .unfavorable
+        case .restingHr: return direction < 0 ? .favorable : .unfavorable
+        default: return .unchanged
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .favorable: return WoopHomePalette.healthGood
+        case .unfavorable: return WoopHomePalette.stressHigh
+        case .unchanged: return StrandPalette.textSecondary
+        }
+    }
+}
+
 struct ReferenceDashboardMetricCard: View {
     struct Comparison {
         let value: String
@@ -35,24 +56,23 @@ struct ReferenceDashboardMetricCard: View {
         HStack(spacing: 12) {
             Image(systemName: icon).font(.system(size: 21, weight: .light))
                 .foregroundStyle(StrandPalette.textSecondary).frame(width: 25).accessibilityHidden(true)
-            Text(verbatim: title.uppercased()).font(WhoopReferenceFont.label(12)).tracking(1.1)
+            Text(verbatim: title.uppercased()).font(WoopDashboardMetricStyle.label).tracking(1.1)
                 .foregroundStyle(StrandPalette.textPrimary).lineLimit(2)
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
                 HStack(spacing: 7) {
-                    Text(verbatim: value).font(WhoopReferenceFont.heading(29).bold()).monospacedDigit()
+                    Text(verbatim: value).font(WoopDashboardMetricStyle.value).monospacedDigit()
                         .foregroundStyle(StrandPalette.textPrimary).lineLimit(1).minimumScaleFactor(0.65)
                     if let comparison {
                         Image(systemName: comparison.direction == 0 ? "circle.fill" :
                                 comparison.direction > 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                            .font(.system(size: 7)).foregroundStyle(StrandPalette.textSecondary)
+                            .font(.system(size: 7)).foregroundStyle(ReferenceMetricTrend.resolve(card: card, direction: comparison.direction).color)
                     }
                 }
                 if let comparison {
-                    Text(verbatim: comparison.value).font(WhoopReferenceFont.metric(12))
+                    Text(verbatim: comparison.value).font(WoopDashboardMetricStyle.comparison)
                         .foregroundStyle(StrandPalette.textSecondary)
-                    Text(verbatim: comparison.day).font(WhoopReferenceFont.body(8))
-                        .foregroundStyle(StrandPalette.textTertiary)
+                    .accessibilityLabel(Text(verbatim: "\(comparison.value), \(comparison.day)"))
                 } else if !card.unit.isEmpty && card != .calories {
                     Text(verbatim: card.unit).font(WhoopReferenceFont.body(10))
                         .foregroundStyle(StrandPalette.textSecondary)
@@ -60,9 +80,10 @@ struct ReferenceDashboardMetricCard: View {
             }
             .frame(minWidth: 54, maxWidth: 116, alignment: .trailing)
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .frame(maxWidth: .infinity, minHeight: 64)
+        .padding(.horizontal, 16).padding(.vertical, WoopDashboardMetricStyle.verticalPadding)
+        .frame(maxWidth: .infinity, minHeight: WoopDashboardMetricStyle.minimumHeight)
         .background(WoopHomePalette.activityCard, in: RoundedRectangle(cornerRadius: 13))
+        .accessibilityIdentifier("dashboard-metric-\(card.rawValue)")
         .accessibilityElement(children: .combine)
     }
 }
