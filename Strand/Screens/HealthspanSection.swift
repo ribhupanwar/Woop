@@ -47,6 +47,7 @@ struct HealthspanSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            if referenceUI && snapshot == nil { ReferenceCalibrationOrb() }
             SectionHeader("Healthspan", overline: "Weekly",
                           trailing: snapshot?.latest.isProvisional == true ? String(localized: "Provisional") : String(localized: "Beta"))
             if sex == nil {

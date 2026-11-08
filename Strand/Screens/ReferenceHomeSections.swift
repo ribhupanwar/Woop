@@ -68,6 +68,7 @@ struct ReferenceTonightSleepCard: View {
 struct ReferenceHomeStressChart: View {
     let curve: DaytimeStress.Result?
     let dailyScore: Double?
+    var isLoading = false
 
     private var latest: DaytimeStress.HourPoint? { curve?.scored.last }
     private var score: Double? { latest?.level ?? dailyScore }
@@ -93,6 +94,9 @@ struct ReferenceHomeStressChart: View {
                 }
                 if let curve, !curve.scored.isEmpty {
                     DaytimeLoadLine(hours: curve.timeline).frame(height: 170)
+                } else if isLoading {
+                    ProgressView("Reading your heart data")
+                        .frame(maxWidth: .infinity, minHeight: 100)
                 } else {
                     Text("No intraday stress data for this day.")
                         .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)

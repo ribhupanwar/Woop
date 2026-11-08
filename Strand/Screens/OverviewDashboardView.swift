@@ -142,8 +142,10 @@ struct OverviewDashboardView: View {
     @State private var activityEditIsCopy = false
     @State private var pendingActivityDelete: WorkoutRow?
     @State private var showActivityDeleteConfirmation = false
+    @State private var showCompactHeader = false
     @State private var showDailyOutlook = false
     @State private var stressCurve: DaytimeStress.Result?
+    @State private var stressCurveLoaded = false
     @State private var showPlan = false
     @State private var showLiveSession = false
     @AppStorage(DashboardArrangeHint.seenKey("overview")) private var arrangeHintSeen = false
@@ -186,6 +188,10 @@ struct OverviewDashboardView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
                     Color.clear.frame(height: 0).id(Self.topAnchorID)
+                        .background(GeometryReader { marker in
+                            Color.clear.preference(key: ReferenceHomeScrollOffset.self,
+                                value: marker.frame(in: .named("woop.home.scroll")).minY)
+                        })
                     header
                     overviewCard
                     ReferenceMonitorEntries(readings: selectedVitalReadings, stress: stressCurve?.scored.last?.level ?? stressToday,
@@ -204,7 +210,7 @@ struct OverviewDashboardView: View {
                     journalSection
                     referencePlanSection
                     healthList
-                    ReferenceHomeStressChart(curve: stressCurve, dailyScore: stressToday)
+                    ReferenceHomeStressChart(curve: stressCurve, dailyScore: stressToday, isLoading: !stressCurveLoaded)
                     ReferenceRecoveryStrainChart(days: recentDays, selectedDay: selectedDayKey, effortScale: effortScale)
                     referenceDiscoverSection
                     if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
@@ -223,6 +229,11 @@ struct OverviewDashboardView: View {
                 // Without this tail, the bar covers the last card and leaves what looks like a gap.
                 .padding(.bottom, 104)
             }
+            .coordinateSpace(name: "woop.home.scroll")
+            .onPreferenceChange(ReferenceHomeScrollOffset.self) { offset in
+                if offset < -140 { showCompactHeader = true }
+                else if offset > -60 { showCompactHeader = false }
+            }
             // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
             // this screen was one of two Today styles with no way to pull for fresh data.
             .refreshable {
@@ -238,6 +249,9 @@ struct OverviewDashboardView: View {
             .ignoresSafeArea(edges: .top)
             }
         }
+        .overlay(alignment: .top) {
+            if showCompactHeader { compactPillarStrip }
+        }
         .background(LinearGradient(colors: [WoopHomePalette.canvasTop, WoopHomePalette.canvasBottom],
                                    startPoint: .top, endPoint: .bottom).ignoresSafeArea())
         .environment(\.colorScheme, .dark)
@@ -248,12 +262,14 @@ struct OverviewDashboardView: View {
         .task(id: loadKey) { await load() }
         .task(id: "\(repo.refreshSeq)-\(selectedDayKey)") {
             stressCurve = nil
-            guard selectedDayOffset == 0 else { return }
+            stressCurveLoaded = false
+            guard selectedDayOffset == 0 else { stressCurveLoaded = true; return }
             let day = selectedDayKey
             let curve = await StressDayCurve.today(repo: repo,
                 personalBaseline: PuffinExperiment.stressPersonalBaselineEnabled)
             guard !Task.isCancelled, day == selectedDayKey else { return }
             stressCurve = curve?.result
+            stressCurveLoaded = true
         }
 
         .task(id: repo.energyPresentationRevision) {
@@ -640,6 +656,39 @@ struct OverviewDashboardView: View {
 
     // MARK: - Header
 
+    private var compactPillarStrip: some View {
+        HStack(spacing: NoopMetrics.space4) {
+            compactPillar("SLEEP", value: restScore, color: WoopHomePalette.sleep, route: .sleep)
+            compactPillar("RECOVERY", value: chargeDisplay.pct,
+                color: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
+                route: .metricSourced(key: "recovery", source: Repository.whoopSource))
+            compactPillar("STRAIN", value: effortValue, color: WoopHomePalette.strain,
+                route: .metricSourced(key: "strain", source: Repository.whoopSource))
+        }
+        .padding(NoopMetrics.space4)
+        .background(WoopHomePalette.canvasTop.ignoresSafeArea(edges: .top))
+    }
+
+    private func compactPillar(_ title: LocalizedStringKey, value: Double?, color: Color, route: TabRoute) -> some View {
+        NavigationLink(value: route) {
+            HStack(spacing: NoopMetrics.space2) {
+                ZStack {
+                    Circle().stroke(StrandPalette.hairline, lineWidth: 2)
+                    if let value {
+                        Circle().trim(from: 0, to: min(1, max(0, value / 100)))
+                            .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }
+                }
+                .frame(width: 20, height: 20)
+                Text(title).font(WhoopReferenceFont.label(9)).tracking(0.7)
+            }
+            .foregroundStyle(StrandPalette.onDarkPrimary)
+            .frame(maxWidth: .infinity, minHeight: 28)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var header: some View {
         VStack(spacing: NoopMetrics.space3) {
             HStack(spacing: 8) {
@@ -658,6 +707,16 @@ struct OverviewDashboardView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Profile")
+                let streak = StreakCalculator.streaks(dayKeys: repo.days.map(\.day),
+                    qualified: repo.days.map { $0.recovery != nil }, today: Repository.logicalDayKey(Date())).current
+                if streak > 0 {
+                    Label("\(streak)", systemImage: "flame.fill")
+                        .font(WhoopReferenceFont.metric(12))
+                        .foregroundStyle(StrandPalette.statusWarning)
+                        .padding(NoopMetrics.space2)
+                        .background(WoopHomePalette.activityCard, in: RoundedRectangle(cornerRadius: 8))
+                        .accessibilityLabel(Text("Scored-night streak: \(streak) days"))
+                }
                 Spacer(minLength: 0)
                 HStack(spacing: 0) {
                     Button { changeDashboardDay(by: 1) } label: {
@@ -674,7 +733,7 @@ struct OverviewDashboardView: View {
                             .tracking(0.8)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
-                            .frame(minWidth: 100, minHeight: 32)
+                            .frame(minWidth: 80, minHeight: 28)
                             .background(Capsule().fill(StrandPalette.surfaceOverlay))
                     }
                     .accessibilityLabel("Choose dashboard day")
@@ -1700,4 +1759,9 @@ private struct DashboardStepGoalSheet: View {
             }
         }
     }
+}
+
+private struct ReferenceHomeScrollOffset: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }

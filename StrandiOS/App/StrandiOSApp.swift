@@ -246,7 +246,10 @@ struct StrandiOSApp: App {
                 // v5 L3: the shared stress check-in nudge surface, so the Breathe screen's passive
                 // card observes the SAME instance the central detector (AppModel.evaluateStress) posts to.
                 .environment(\.stressNudgeCenter, model.stressNudgeCenter)
-                .preferredColorScheme(AppearanceMode.resolve(appearanceRaw).colorScheme)
+                // The iPhone reference canvas is permanently dark. Apply the preference at the
+                // scene boundary too: an outer System/light preference otherwise overrides the
+                // shell's dark request and resolves dynamic text tokens to black on that canvas.
+                .preferredColorScheme(.dark)
                 // Match SwiftUI format styles to the localization selected by the app's bundles. Language
                 // changes are process-wide on Apple and are applied after the documented reopen.
                 .environment(\.locale, AppLanguage.activeLocale)

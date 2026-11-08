@@ -224,7 +224,7 @@ struct RootTabView: View {
 
             // Draggable floating Coach button — an alternative entry to the Today banner, honouring the
             // user's Coach-entry preference. Floats over every tab; a tap opens the chat.
-            if coachFeatureEnabled, coachUIEnabled, coachFloatingButtonEnabled {
+            if coachFeatureEnabled, coachUIEnabled, coachFloatingButtonEnabled, bottomBarAutoHide {
                 CoachFloatingButton(isPresented: $showCoach)
             }
         }
@@ -520,19 +520,45 @@ struct RootTabView: View {
     private static let sheetEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
 
     private var referenceTabBar: some View {
-        HStack(spacing: 0) {
-            referenceTabItem(0, "Home", "house")
-            referenceTabItem(3, "Health", "heart")
-            referenceTabItem(2, "Activity", "figure.run")
-            referenceTabItem(4, "More", "line.3.horizontal")
+        HStack(spacing: NoopMetrics.space2) {
+            HStack(spacing: 0) {
+                referenceTabItem(0, "Home", "house")
+                referenceTabItem(3, "Health", "heart")
+                referenceTabItem(2, "Activity", "figure.run")
+                referenceTabItem(4, "More", "line.3.horizontal")
+            }
+            .padding(.horizontal, NoopMetrics.space2)
+            .padding(.vertical, NoopMetrics.space2)
+            .background(.ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: NoopMetrics.heroRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: NoopMetrics.heroRadius, style: .continuous)
+                    .stroke(StrandPalette.hairline, lineWidth: 0.5)
+            }
+            if coachUIEnabled && coachFloatingButtonEnabled {
+                Button {
+                    if coachFeatureEnabled { showCoach = true }
+                    else {
+                        selectedTab = 4
+                        tabPaths[4] = NavigationPath([MoreDestination.coachSettings])
+                    }
+                } label: {
+                    Text("W").font(WhoopReferenceFont.score(21))
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
+                        .frame(width: 34, height: 34)
+                        .background(StrandPalette.metricPurple.opacity(0.16), in: Circle())
+                        .overlay(Circle().stroke(StrandPalette.agelessYoungDeep, lineWidth: 1))
+                        .frame(width: 56, height: 60)
+                        .background(.ultraThinMaterial,
+                            in: RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(coachFeatureEnabled ? "Open Coach" : "Set up Coach")
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
-        .background(WoopHomePalette.canvasBottom.ignoresSafeArea(edges: .bottom))
-        .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
-        }
+        .padding(.horizontal, NoopMetrics.space3)
+        .padding(.top, NoopMetrics.space2)
+        .padding(.bottom, NoopMetrics.space1)
     }
 
     private func referenceTabItem(_ tag: Int, _ title: LocalizedStringKey, _ symbol: String) -> some View {

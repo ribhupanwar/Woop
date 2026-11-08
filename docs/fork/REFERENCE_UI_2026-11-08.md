@@ -45,6 +45,20 @@ platform's condensed system width. This is an approximation of reference typogra
   captions and a share action for the current readings. Extra existing health insights remain in a
   disclosure. Stress uses the existing 0–3 score and waking-hour timeline in an arc-and-chart layout.
 
+## Follow-up from simulator evidence
+
+The previous source's UI artifact (`42432058659`, artifact `13598399038`) showed the floating Home
+quick-action target at y=850...904 and the custom tab bar beginning at y=872. The new My Day header
+owns that action instead, so it cannot sit under the tab bar. The same simulator evidence showed
+light-resolved black text on the permanently dark reference canvas. The iPhone scene now requests
+dark appearance at the outer presentation boundary, rather than relying on a nested preference that
+can be overridden by the scene. This intentionally fixes the reference iPhone appearance to dark;
+macOS is unchanged.
+
+The reference navigation now uses a floating material bar with a separate Coach entry that opens
+setup when the feature is off. It does not activate the feature. Scrolled Home keeps a compact pillar
+strip. The Healthspan empty state uses an original decorative calibration sphere with no synthetic age.
+
 ## Validation and remaining comparison
 
 Local Swift grammar parsing, YAML parsing and `git diff --check` are source checks. They do not replace

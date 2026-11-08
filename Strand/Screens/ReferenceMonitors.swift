@@ -46,7 +46,7 @@ struct ReferenceMonitorEntries: View {
                                 .foregroundStyle(StrandPalette.textSecondary)
                         }
                     }
-                    .foregroundStyle(measured > 0 && inRange < measured ? StrandPalette.statusWarning : StrandPalette.statusPositive)
+                    .foregroundStyle(measured == 0 ? StrandPalette.textTertiary : inRange < measured ? StrandPalette.statusWarning : StrandPalette.statusPositive)
                 }
                 .referenceMonitorCard()
             }

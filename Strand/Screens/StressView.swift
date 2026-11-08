@@ -122,7 +122,9 @@ struct StressView: View {
             Text(Date().formatted(.dateTime.weekday(.wide).month(.abbreviated).day()).uppercased())
                 .font(WhoopReferenceFont.label(12))
                 .frame(maxWidth: .infinity)
-            ReferenceStressGauge(score: model?.score, caption: String(localized: "Daily score"))
+            ReferenceStressGauge(score: daytime?.scored.last?.level ?? model?.score,
+                caption: daytime?.scored.last.map { Date(timeIntervalSince1970: Double($0.startTs))
+                    .formatted(.dateTime.hour().minute()) } ?? String(localized: "Daily score"))
                 .frame(maxWidth: .infinity)
             if let daytime, !daytime.scored.isEmpty {
                 DaytimeLoadLine(hours: daytime.timeline)
@@ -130,7 +132,7 @@ struct StressView: View {
                 Text(daytimeTimelineCaption)
                     .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
                 ReferenceStressSplit(title: "NON ACTIVITY", hours: daytime.hours)
-            } else if daytime == nil && !loaded {
+            } else if daytime == nil {
                 ProgressView("Reading your heart data")
             } else {
                 Text("No intraday stress data yet today.")

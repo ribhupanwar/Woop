@@ -6,6 +6,7 @@ import StrandAnalytics
 struct ReferenceHealthHome: View {
     @EnvironmentObject private var repo: Repository
     @State private var curve: DaytimeStress.Result?
+    @State private var curveLoaded = false
 
     private var readings: [BodyVitalReading] {
         BodyVitalSigns.readings(sourceRows: repo.vitalMetricRows, temperatureUnit: .celsius)
@@ -44,7 +45,7 @@ struct ReferenceHealthHome: View {
                 .referenceMonitorCard()
             }
             .buttonStyle(.plain)
-            ReferenceHomeStressChart(curve: curve, dailyScore: nil)
+            ReferenceHomeStressChart(curve: curve, dailyScore: nil, isLoading: !curveLoaded)
             Text("Health and stress readings are informational and are not a medical diagnosis.")
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
         }
@@ -53,6 +54,7 @@ struct ReferenceHealthHome: View {
                 personalBaseline: PuffinExperiment.stressPersonalBaselineEnabled)
             guard !Task.isCancelled else { return }
             curve = result?.result
+            curveLoaded = true
         }
     }
 
@@ -64,5 +66,36 @@ struct ReferenceHealthHome: View {
         case "hrv": return "HRV"
         default: return "TEMP"
         }
+    }
+}
+
+/// Decorative calibration sphere; no age or progress is inferred while the engine has no result.
+struct ReferenceCalibrationOrb: View {
+    var body: some View {
+        ZStack {
+            Circle().fill(RadialGradient(colors: [StrandPalette.metricPurple.opacity(0.04),
+                                                   StrandPalette.metricPurple.opacity(0.24)],
+                                         center: .center, startRadius: 0, endRadius: 100))
+                .overlay(Circle().stroke(StrandPalette.metricPurple.opacity(0.65), lineWidth: 1))
+            Canvas { context, size in
+                let radius = min(size.width, size.height) / 2
+                for index in 0..<720 {
+                    let vertical = 1 - 2 * Double(index) / 719
+                    let angle = Double(index) * 2.399963229728653
+                    let crossSection = sqrt(max(0, 1 - vertical * vertical))
+                    let depth = sin(angle) * crossSection
+                    let x = size.width / 2 + CGFloat(cos(angle) * crossSection) * radius
+                    let y = size.height / 2 + CGFloat(vertical) * radius
+                    let diameter = CGFloat(1.2 + (depth + 1) * 0.8)
+                    context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: diameter, height: diameter)),
+                        with: .color(StrandPalette.metricPurple.opacity(0.2 + (depth + 1) * 0.3)))
+                }
+            }
+            .clipShape(Circle())
+        }
+        .frame(width: 180, height: 180)
+        .padding(.vertical, NoopMetrics.space5)
+        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
     }
 }
