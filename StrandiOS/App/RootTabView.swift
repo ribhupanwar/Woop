@@ -102,7 +102,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "health": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -153,7 +153,7 @@ struct RootTabView: View {
     /// horizontal swipe to change days, so neither participates in this ancestor gesture.
     /// Both thresholds are unchanged
     /// from the original gesture.
-    private static let visibleTabTags = [0, 2, 3, 4]
+    private static let visibleTabTags = [0, 3, 2, 4]
 
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
@@ -178,8 +178,8 @@ struct RootTabView: View {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
                 tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(ReferenceHealthHome(), "Health", "heart", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(ScreenScaffold(title: "Healthspan") { HealthspanSection() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
             // White active navigation follows the supplied dark reference; score colors stay local.
@@ -224,7 +224,7 @@ struct RootTabView: View {
 
             // Draggable floating Coach button — an alternative entry to the Today banner, honouring the
             // user's Coach-entry preference. Floats over every tab; a tap opens the chat.
-            if coachFeatureEnabled, coachUIEnabled, coachFloatingButtonEnabled {
+            if coachFeatureEnabled, coachUIEnabled, coachFloatingButtonEnabled, bottomBarAutoHide {
                 CoachFloatingButton(isPresented: $showCoach)
             }
         }
@@ -520,19 +520,45 @@ struct RootTabView: View {
     private static let sheetEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
 
     private var referenceTabBar: some View {
-        HStack(spacing: 0) {
-            referenceTabItem(0, "Home", "house")
-            referenceTabItem(2, "Activity", "figure.run")
-            referenceTabItem(3, "Healthspan", "heart.text.square")
-            referenceTabItem(4, "More", "line.3.horizontal")
+        HStack(spacing: NoopMetrics.space2) {
+            HStack(spacing: 0) {
+                referenceTabItem(0, "Home", "house")
+                referenceTabItem(3, "Health", "heart")
+                referenceTabItem(2, "Activity", "figure.run")
+                referenceTabItem(4, "More", "line.3.horizontal")
+            }
+            .padding(.horizontal, NoopMetrics.space2)
+            .padding(.vertical, NoopMetrics.space2)
+            .background(.ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: NoopMetrics.heroRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: NoopMetrics.heroRadius, style: .continuous)
+                    .stroke(StrandPalette.hairline, lineWidth: 0.5)
+            }
+            if coachUIEnabled && coachFloatingButtonEnabled {
+                Button {
+                    if coachFeatureEnabled { showCoach = true }
+                    else {
+                        selectedTab = 4
+                        tabPaths[4] = NavigationPath([MoreDestination.coachSettings])
+                    }
+                } label: {
+                    Text("W").font(WhoopReferenceFont.score(21))
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
+                        .frame(width: 34, height: 34)
+                        .background(StrandPalette.metricPurple.opacity(0.16), in: Circle())
+                        .overlay(Circle().stroke(StrandPalette.agelessYoungDeep, lineWidth: 1))
+                        .frame(width: 56, height: 60)
+                        .background(.ultraThinMaterial,
+                            in: RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(coachFeatureEnabled ? "Open Coach" : "Set up Coach")
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 6)
-        .background(WoopHomePalette.canvasBottom.ignoresSafeArea(edges: .bottom))
-        .overlay(alignment: .top) {
-            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
-        }
+        .padding(.horizontal, NoopMetrics.space3)
+        .padding(.top, NoopMetrics.space2)
+        .padding(.bottom, NoopMetrics.space1)
     }
 
     private func referenceTabItem(_ tag: Int, _ title: LocalizedStringKey, _ symbol: String) -> some View {

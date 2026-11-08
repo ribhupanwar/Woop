@@ -2,7 +2,7 @@ name: Woop iOS unsigned IPA
 
 on:
   push:
-    branches: [main, feature/whoop-575-ui-parity, feature/today-activities-feed, codex/consolidated-release]
+    branches: [main, feature/whoop-575-ui-parity, feature/today-activities-feed, codex/consolidated-release, codex/home-reference-layout]
     paths:
       - ".github/workflows/build-woop-ipa.yml"
       - "Strand/**"
@@ -23,7 +23,8 @@ permissions:
 
 concurrency:
   group: woop-ios-ipa-${{ github.ref }}
-  cancel-in-progress: false
+  # Replace superseded UI candidates during iteration; release-branch builds finish normally.
+  cancel-in-progress: ${{ github.ref_name == 'codex/home-reference-layout' }}
 
 jobs:
   build-unsigned-ipa:

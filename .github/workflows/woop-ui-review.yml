@@ -2,7 +2,7 @@ name: Woop reference UI review
 
 on:
   push:
-    branches: [codex/consolidated-release]
+    branches: [codex/consolidated-release, codex/home-reference-layout]
     paths:
       - .github/workflows/woop-ui-review.yml
       - WoopUIReviewTests/**
@@ -21,7 +21,8 @@ permissions:
 
 concurrency:
   group: woop-ui-review-${{ github.ref }}
-  cancel-in-progress: false
+  # Replace superseded UI candidates during iteration; release-branch builds finish normally.
+  cancel-in-progress: ${{ github.ref_name == 'codex/home-reference-layout' }}
 
 jobs:
   screenshots:

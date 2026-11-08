@@ -48,6 +48,7 @@ struct WearableConnectionStateCard: View {
 /// system: every surface is a NoopCard, every metric is a StatTile, every chart is
 /// a ChartCard — no ad-hoc card heights or paddings.
 struct HealthView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var profile: ProfileStore
     // NOTE: HealthView itself deliberately does NOT observe `LiveState`/`AppModel` for live HR. A
@@ -59,7 +60,19 @@ struct HealthView: View {
 
     // MARK: - Body
 
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if referenceUI {
+            ScreenScaffold(title: nil, onRefresh: { await repo.refresh() }, lazy: true) {
+                HeartRateSection(referenceStyle: true)
+                VitalsSection(referenceStyle: true)
+                DisclosureGroup("More health insights") { HealthSectionsStack() }
+                    .font(StrandFont.subhead)
+            }
+            .navigationTitle("HEALTH MONITOR")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+        } else {
         ScreenScaffold(title: "Health Monitor",
                        subtitle: "Live vitals, streamed from the strap.",
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
@@ -81,6 +94,7 @@ struct HealthView: View {
                 // full section stack directly without observing the HR stream.
                 HealthSectionsStack()
             }
+        }
         }
     }
 }
@@ -268,6 +282,7 @@ private struct SyncStatusSection: View {
 /// Live HR hero, split into its own view so the ~1Hz HR stream only re-renders this
 /// subtree — the static vitals grid does not. Depends on `live` and `profile` only.
 private struct HeartRateSection: View {
+    var referenceStyle = false
     @EnvironmentObject var live: LiveState
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var model: AppModel
@@ -358,6 +373,32 @@ private struct HeartRateSection: View {
         let series = hrSeries(displayHR)
 
         return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+            if referenceStyle {
+                VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                    Text("HEART RATE").whoopReferenceOverline()
+                    HStack(alignment: .center, spacing: NoopMetrics.space4) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Image(systemName: "heart.fill").foregroundStyle(WoopHomePalette.strain)
+                            Text(displayHR.map(String.init) ?? "—")
+                                .font(WhoopReferenceFont.score(38))
+                            Text("BPM").whoopReferenceOverline()
+                            Text(hasLiveHR ? String(localized: "Zone \(zone)") : String(localized: "Awaiting strap"))
+                                .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                        }
+                        if series.count > 1 {
+                            LiveTimeChart(samples: series, gradient: Gradient(colors: [WoopHomePalette.strain, WoopHomePalette.strain]))
+                                .frame(height: 120)
+                        } else {
+                            Rectangle().fill(StrandPalette.hairline).frame(height: 1)
+                        }
+                    }
+                    if hrIsDerived {
+                        Text("Estimated from R-R interval").font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textSecondary)
+                    }
+                }
+                .padding(.vertical, NoopMetrics.space4)
+            } else {
             SectionHeader("Heart Rate", overline: "Live", trailing: hrIsDerived ? String(localized: "from R-R") : nil)
 
             // The live HR hero is a flat WHOOP card tinted rose — heart-rate's metric accent.
@@ -378,6 +419,7 @@ private struct HeartRateSection: View {
                     ("Max HR", "\(profile.hrMax)"),
                     ("State", hasLiveHR ? String(localized: "STREAMING") : String(localized: "IDLE")),
                 ])
+            }
             }
         }
         .onReceive(sampleTimer) { now in
@@ -1410,6 +1452,7 @@ private struct VitalitySection: View {
 /// Static vitals grid, split into its own view so it depends only on `repo` and is
 /// not re-rendered by the ~1Hz live HR stream.
 private struct VitalsSection: View {
+    var referenceStyle = false
     @EnvironmentObject var repo: Repository
 
     // Temperature display preference (D#103). Skin temp is stored in °C (absolute or a ±deviation); the
@@ -1437,21 +1480,39 @@ private struct VitalsSection: View {
             skinTempPreferred: SkinTempDisplay.Kind(rawValue: skinTempDisplayRaw) ?? .absolute   // #1846
         )
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            SectionHeader("Vital Signs", overline: "Latest", trailing: BodyVitalSigns.latestDayLabel(readings))
+            if !referenceStyle {
+                SectionHeader("Vital Signs", overline: "Latest", trailing: BodyVitalSigns.latestDayLabel(readings))
+            }
             LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
+                columns: referenceStyle ? [GridItem(.flexible()), GridItem(.flexible())] : [GridItem(.adaptive(minimum: 168), spacing: NoopMetrics.gap)],
                 alignment: .leading,
                 spacing: NoopMetrics.gap
             ) {
-                ForEach(Array(readings.enumerated()), id: \.element.id) { idx, v in
+                ForEach(Array(readings.filter { !referenceStyle || $0.key != "spo2raw" }.enumerated()), id: \.element.id) { idx, v in
                     // Each headline vital is now a liquid tile: the signature LiquidVessel gauge tinted
                     // to the metric's colour world (rose RHR, purple HRV, cyan SpO₂, amber skin temp),
                     // filled to the metric's fraction, with the value counting up beside it and the same
                     // banding caption + sparkline the classic tile carried. Every binding + accessibility
                     // label is preserved — this is the liquid restyle of the flat StatTile.
-                    LiquidVitalTile(reading: v)
-                        .staggeredAppear(index: idx)
+                    if referenceStyle {
+                        ReferenceVitalTile(reading: v)
+                    } else {
+                        LiquidVitalTile(reading: v)
+                            .staggeredAppear(index: idx)
+                    }
                 }
+            }
+            if referenceStyle {
+                ShareLink(item: report(readings)) {
+                    Label("SHARE YOUR HEALTH REPORT", systemImage: "square.and.arrow.up")
+                        .font(WhoopReferenceFont.label(12))
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
+                        .referenceMonitorCard()
+                }
+                .buttonStyle(.plain)
+                .padding(.top, NoopMetrics.space5)
+                Text("Share your readings with your doctor, physician, trainer, or anyone of your choosing.")
+                    .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
             }
             Text("Once NOOP has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
                 .font(StrandFont.footnote)
@@ -1478,6 +1539,12 @@ private struct VitalsSection: View {
             let pts = await repo.exploreSeries(key: "spo2_candidate", source: "my-whoop", days: 14)
             spo2CandidateByDay = Dictionary(pts.map { ($0.day, $0.value) }, uniquingKeysWith: { a, _ in a })
         }
+    }
+
+    private func report(_ readings: [BodyVitalReading]) -> String {
+        (["Woop Health Report", Date().formatted(date: .abbreviated, time: .shortened)]
+         + readings.map { "\($0.label): \($0.formattedValue ?? "—") — \($0.stateCaption)" }
+         + ["Informational readings; not a medical diagnosis."]).joined(separator: "\n")
     }
 }
 

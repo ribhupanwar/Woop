@@ -171,7 +171,8 @@ private struct OverviewFocusEditor: View {
     }
 }
 
-private struct OverviewHealthCardsEditor: View {
+struct OverviewHealthCardsEditor: View {
+    var onDone: (() -> Void)? = nil
     @AppStorage(OverviewHealthCardsPrefs.selectionKey) private var raw = ""
     @State private var draft = EditableLayoutDraft(visible: OverviewHealthCardsPrefs.defaultSelection,
                                                    allItems: OverviewHealthCardsPrefs.available)
@@ -181,8 +182,8 @@ private struct OverviewHealthCardsEditor: View {
                            title: \.title, subtitle: { _ in nil }, icon: \.icon,
                            tint: { TrendsMetricStrip.tint($0) }, configurationLabel: { _ in nil },
                            onConfigure: { _ in }, onReset: reset, allowEmpty: false) { EmptyView() }
-            .navigationTitle("Health metrics")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", action: save) } }
+            .navigationTitle("My Dashboard")
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { save(); onDone?() } } }
             .onAppear { draft = EditableLayoutDraft(visible: OverviewHealthCardsPrefs.decode(raw), allItems: OverviewHealthCardsPrefs.available) }
             .onDisappear(perform: save)
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 import StrandDesign
 import StrandAnalytics
 import WhoopStore
@@ -36,6 +37,8 @@ struct OverviewDashboardView: View {
     // shows whichever scale the user picked in Settings (0…100 or WHOOP's 0…21), never an invented one.
     @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
     @AppStorage(OverviewHealthCardsPrefs.selectionKey) private var healthCardsRaw = ""
+    @AppStorage(UnitPrefs.skinTempDisplayKey) private var referenceSkinTempRaw = ""
+    @AppStorage(UnitPrefs.temperatureKey) private var referenceTemperatureRaw = ""
     @AppStorage(OverviewFocusPrefs.slotKeys[0]) private var focusSlot1Raw = OverviewFocusPrefs.defaults[0].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[1]) private var focusSlot2Raw = OverviewFocusPrefs.defaults[1].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[2]) private var focusSlot3Raw = OverviewFocusPrefs.defaults[2].rawValue
@@ -116,6 +119,7 @@ struct OverviewDashboardView: View {
     @State private var showUpdatesInbox = false
     @State private var showAllMetrics = false
     @State private var showExtraSections = false
+    @State private var showHealthCardsEditor = false
 
     private func consumeCustomizationRequest() {
         guard router.presentTodayCustomization else { return }
@@ -140,6 +144,10 @@ struct OverviewDashboardView: View {
     @State private var activityEditIsCopy = false
     @State private var pendingActivityDelete: WorkoutRow?
     @State private var showActivityDeleteConfirmation = false
+    @State private var showCompactHeader = false
+    @State private var showDailyOutlook = false
+    @State private var stressCurve: DaytimeStress.Result?
+    @State private var stressCurveLoaded = false
     @State private var showPlan = false
     @State private var showLiveSession = false
     @AppStorage(DashboardArrangeHint.seenKey("overview")) private var arrangeHintSeen = false
@@ -152,6 +160,15 @@ struct OverviewDashboardView: View {
 
     /// Scroll-to-top target for an at-root Today re-tap, the same zero-height anchor Liquid Today uses.
     private static let topAnchorID = "overviewDashboardTop"
+
+    private var selectedVitalReadings: [BodyVitalReading] {
+        let selectedDate = PeriodGoalTracker.date(selectedDayKey, calendar: .current) ?? selectedLogicalDay
+        return BodyVitalSigns.readings(
+            sourceRows: repo.vitalMetricRows.filter { $0.metric.day <= selectedDayKey },
+            temperatureUnit: UnitPrefs.resolveTemperature(system: unitSystem, override: referenceTemperatureRaw),
+            now: selectedDate, hrvOverCountByDay: snapshot.hrvOverCountByDay,
+            skinTempPreferred: SkinTempDisplay.Kind(rawValue: referenceSkinTempRaw) ?? .absolute)
+    }
 
     private var healthCards: [DashboardCard] { OverviewHealthCardsPrefs.decode(healthCardsRaw) }
     private var focusItems: [OverviewFocusItem] {
@@ -170,13 +187,19 @@ struct OverviewDashboardView: View {
             // inset + `NoopMetrics.screenPadding` (16pt) allows. Ignoring the top safe area and adding
             // back a SMALLER fixed inset (rather than the device's full notch/Dynamic-Island height)
             // gets the ~25–30pt reduction the reference wants without drawing under the status bar.
-            let topInset = max(NoopMetrics.screenPadding, proxy.safeAreaInsets.top + 16)
+            let topInset = max(NoopMetrics.space2, proxy.safeAreaInsets.top - NoopMetrics.space2)
             ScrollViewReader { scrollProxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
-                    Color.clear.frame(height: 0).id(Self.topAnchorID)
                     header
+                        .id(Self.topAnchorID)
+                        .background(GeometryReader { marker in
+                            Color.clear.preference(key: ReferenceHomeScrollOffset.self,
+                                value: marker.frame(in: .named("woop.home.scroll")).minY)
+                        })
                     overviewCard
+                    ReferenceMonitorEntries(readings: selectedVitalReadings, stress: stressCurve?.scored.last?.level ?? stressToday,
+                                            stressCaption: stressCurve?.scored.last.map { Date(timeIntervalSince1970: Double($0.startTs)).formatted(.dateTime.hour().minute()) } ?? String(localized: "Daily score"))
                     // Pinned ABOVE the reorderable block, exactly where Classic and Liquid Today pin
                     // them: a raised health alert or a running workout must not be reorderable below the
                     // fold. Every card here renders NOTHING when it has nothing to report, so the
@@ -186,21 +209,34 @@ struct OverviewDashboardView: View {
                     // rewrite and restored; these two dashboards then shipped without it. Same shared
                     // leaf, so all four Today screens cannot drift apart.
                     ActiveWorkoutIndicatorSection()
-                    todayActivitiesSection
+                    todayActivitiesSection.padding(.top, NoopMetrics.space3)
+                    if selectedDayOffset == 0 { ReferenceTonightSleepCard() }
+                    journalSection
+                    referencePlanSection
+                    healthList
+                    ReferenceHomeStressChart(curve: stressCurve, dailyScore: stressToday, isLoading: !stressCurveLoaded)
+                    ReferenceRecoveryStrainChart(days: recentDays, selectedDay: selectedDayKey, effortScale: effortScale)
+                    referenceDiscoverSection
                     if selectedDayOffset == 0 { ActivitySuggestionPrompt(dayKey: selectedDayKey) }
                     MorningSuggestionCard(showPlan: $showPlan)
-                    ForEach(layoutSections.filter { $0 != .overview && $0 != .activity }) {
-                        section in dashboardSection(section)
-                    }
-                    // Below the metric sections on purpose: once accepted, the committed session is an
-                    // ambient reminder rather than a demand for the top of the screen.
                     PlanTodayCard(showPlan: $showPlan)
+                    DisclosureGroup("More dashboard sections") {
+                        ForEach(layoutSections.filter { ![.overview, .activity, .journal, .health].contains($0) }) {
+                            section in dashboardSection(section)
+                        }
+                    }
+                    .font(StrandFont.subhead)
                 }
                 .padding(.horizontal, NoopMetrics.screenPadding)
                 .padding(.top, topInset)
                 // Keep the final optional section scrollable above the native floating tab bar.
                 // Without this tail, the bar covers the last card and leaves what looks like a gap.
                 .padding(.bottom, 104)
+            }
+            .coordinateSpace(name: "woop.home.scroll")
+            .onPreferenceChange(ReferenceHomeScrollOffset.self) { offset in
+                if offset < -140 { showCompactHeader = true }
+                else if offset > -60 { showCompactHeader = false }
             }
             // Parity with every other scrollable root (ScreenScaffold's `onRefresh`, Liquid's own pull):
             // this screen was one of two Today styles with no way to pull for fresh data.
@@ -217,30 +253,29 @@ struct OverviewDashboardView: View {
             .ignoresSafeArea(edges: .top)
             }
         }
+        .overlay(alignment: .top) {
+            if showCompactHeader { compactPillarStrip }
+        }
         .background(LinearGradient(colors: [WoopHomePalette.canvasTop, WoopHomePalette.canvasBottom],
                                    startPoint: .top, endPoint: .bottom).ignoresSafeArea())
         .environment(\.colorScheme, .dark)
-        .overlay(alignment: .bottomTrailing) {
-            Button { router.requestQuickActions() } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 26, weight: .regular))
-                    .foregroundStyle(.black)
-                    .frame(width: 54, height: 54)
-                    .background(Color.white, in: Circle())
-                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Quick actions")
-            .accessibilityHint("Start an activity, log your journal or open other actions")
-            .accessibilityIdentifier("woop.home.quickActions")
-            .padding(.trailing, NoopMetrics.screenPadding)
-            .padding(.bottom, 18)
-        }
         .simultaneousGesture(daySwipeGesture)
         // The visible-section set joins the id because `load()` now skips the reads that only feed a
         // hidden section: showing one has to re-run the load that fills it, or it would render empty
         // until the next refresh.
         .task(id: loadKey) { await load() }
+        .task(id: "\(repo.refreshSeq)-\(selectedDayKey)") {
+            stressCurve = nil
+            stressCurveLoaded = false
+            guard selectedDayOffset == 0 else { stressCurveLoaded = true; return }
+            let day = selectedDayKey
+            let curve = await StressDayCurve.today(repo: repo,
+                personalBaseline: PuffinExperiment.stressPersonalBaselineEnabled)
+            guard !Task.isCancelled, day == selectedDayKey else { return }
+            stressCurve = curve?.result
+            stressCurveLoaded = true
+        }
+
         .task(id: repo.energyPresentationRevision) {
             guard repo.energyPresentationRevision > 0 else { return }
             let revision = repo.energyPresentationRevision
@@ -278,7 +313,23 @@ struct OverviewDashboardView: View {
         .sheet(isPresented: $showExtraSections) {
             DashboardExtraSectionsSheet(dashboard: "overview", title: String(localized: "Dashboard sections"))
         }
+        .sheet(isPresented: $showHealthCardsEditor) {
+            NavigationStack { OverviewHealthCardsEditor(onDone: { showHealthCardsEditor = false }) }
+        }
         .sheet(isPresented: $showDayPicker) { dashboardDayPicker }
+        .sheet(isPresented: $showDailyOutlook) {
+            NavigationStack {
+                ScreenScaffold(title: "Daily Outlook") {
+                    Text(recoveryDetail()).font(StrandFont.headline)
+                    Text(sleepDetail(displayDay)).font(StrandFont.subhead)
+                    Text(strainDetail()).font(StrandFont.subhead)
+                    NavigationLink(value: TabRoute.goals) { Label("Your goals", systemImage: "target") }
+                }
+                .tabRouteDestinations()
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showDailyOutlook = false } } }
+            }
+        }
+
         .sheet(isPresented: $showProfile) {
             NavigationStack { SettingsView(initialPage: .profile) }
         }
@@ -362,6 +413,7 @@ struct OverviewDashboardView: View {
         var vitalCarry: DashboardVitalCarry = DashboardVitalCarry()
         var recentWorkouts: [WorkoutRow] = []
         var journalLoggedDays: Set<String>?
+        var hrvOverCountByDay: [String: Double] = [:]
     }
     @State private var snapshot = Snapshot()
     @State private var lastLoadedKey: DashboardLoadKey?
@@ -416,6 +468,8 @@ struct OverviewDashboardView: View {
         async let vo2maxSeriesA = repo.exploreSeries(key: "vo2max_est", source: Repository.whoopSource, days: 120)
         async let vitalitySeriesA = repo.exploreSeries(key: "vitality", source: Repository.whoopSource, days: 120)
         async let stressStoredA = repo.series(key: "stress", source: Repository.whoopSource, days: 120)
+        async let hrvOverCountA = repo.exploreSeries(key: "hrv_rr_overcount", source: Repository.whoopSource,
+                                                   days: selectedDayOffset + 14)
         // The computed "steps_est" metricSeries the IntelligenceEngine writes — the same series Today
         // reads. Consulted ONLY when the day has no real count, so it never overrides a measurement.
         async let stepsEstSeriesA = repo.exploreSeries(key: "steps_est", source: Repository.whoopSource, days: 120)
@@ -438,8 +492,10 @@ struct OverviewDashboardView: View {
         next.fitnessAgeToday = latestBanked(await fitnessAgeSeriesA, asOf: selectedDayKey)
         next.vo2maxToday = latestBanked(await vo2maxSeriesA, asOf: selectedDayKey)
         next.vitalityToday = latestBanked(await vitalitySeriesA, asOf: selectedDayKey)
+        next.hrvOverCountByDay = Dictionary((await hrvOverCountA).map { ($0.day, $0.value) },
+                                            uniquingKeysWith: { first, _ in first })
         let storedStress = await stressStoredA
-        next.stressToday = await runUnescalated { [stressCut = StressMath.Cut.current()] in StressModel(days: scopedDays, stored: storedStress, cut: stressCut)?.score }
+        next.stressToday = await runUnescalated { [stressCut = StressMath.Cut.current()] in StressModel(days: scopedDays, stored: storedStress.filter { $0.day <= selectedDayKey }, cut: stressCut)?.score }
         next.stepsEstToday = (await stepsEstSeriesA).last(where: { $0.day == selectedDayKey })
             .map { Int($0.value.rounded()) }
         next.hydrationTotalML = await hydrationA
@@ -467,12 +523,8 @@ struct OverviewDashboardView: View {
         } else {
             next.recentWorkouts = []
         }
-        if sections.contains(.journal) {
-            let journalKeys = Self.journalDayKeys(anchor: selectedLogicalDay)
-            next.journalLoggedDays = await repo.nativeJournalDays(from: journalKeys.first ?? "", to: journalKeys.last ?? "")
-        } else {
-            next.journalLoggedDays = nil
-        }
+        let journalKeys = PeriodCalendar.weekDays(containing: selectedDayKey, firstWeekday: 2)
+        next.journalLoggedDays = await repo.nativeJournalDays(from: journalKeys.first ?? "", to: journalKeys.last ?? "")
 
         // Publish the Momentum feed. Until now nothing on this screen did, so a wearer whose Today is a
         // dashboard had an empty MomentumStore forever — the section rendered its "open Momentum"
@@ -613,14 +665,67 @@ struct OverviewDashboardView: View {
 
     // MARK: - Header
 
+    private var compactPillarStrip: some View {
+        HStack(spacing: NoopMetrics.space4) {
+            compactPillar("SLEEP", value: restScore, color: WoopHomePalette.sleep, route: .sleep)
+            compactPillar("RECOVERY", value: chargeDisplay.pct,
+                color: chargeDisplay.pct.map { StrandPalette.chargeRingColor($0) } ?? StrandPalette.textTertiary,
+                route: .metricSourced(key: "recovery", source: Repository.whoopSource))
+            compactPillar("STRAIN", value: effortValue, color: WoopHomePalette.strain,
+                route: .metricSourced(key: "strain", source: Repository.whoopSource))
+        }
+        .padding(NoopMetrics.space4)
+        .background(WoopHomePalette.canvasTop.ignoresSafeArea(edges: .top))
+    }
+
+    private func compactPillar(_ title: LocalizedStringKey, value: Double?, color: Color, route: TabRoute) -> some View {
+        NavigationLink(value: route) {
+            HStack(spacing: NoopMetrics.space2) {
+                ZStack {
+                    Circle().stroke(StrandPalette.hairline, lineWidth: 2)
+                    if let value {
+                        Circle().trim(from: 0, to: min(1, max(0, value / 100)))
+                            .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                    }
+                }
+                .frame(width: 20, height: 20)
+                Text(title).font(WhoopReferenceFont.label(9)).tracking(0.7)
+            }
+            .foregroundStyle(StrandPalette.onDarkPrimary)
+            .frame(maxWidth: .infinity, minHeight: 28)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var header: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: NoopMetrics.space3) {
             HStack(spacing: 8) {
                 Button { showProfile = true } label: {
-                    ProfileAvatarView(imageData: profile.avatarImageData, size: 34)
+                    if profile.avatarImageData != nil {
+                        ProfileAvatarView(imageData: profile.avatarImageData, size: 30)
+                    } else {
+                        Text(profile.displayName.map { name in
+                            name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().uppercased()
+                        } ?? "W")
+                        .font(WhoopReferenceFont.label(12))
+                        .foregroundStyle(WoopHomePalette.canvasBottom)
+                        .frame(width: 30, height: 30)
+                        .background(WoopHomePalette.avatar, in: Circle())
+                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Profile")
+                let streak = StreakCalculator.streaks(dayKeys: repo.days.map(\.day),
+                    qualified: repo.days.map { $0.recovery != nil }, today: Repository.logicalDayKey(Date())).current
+                if streak > 0 {
+                    Label("\(streak)", systemImage: "flame.fill")
+                        .font(WhoopReferenceFont.metric(12))
+                        .foregroundStyle(StrandPalette.statusWarning)
+                        .padding(NoopMetrics.space2)
+                        .background(WoopHomePalette.activityCard, in: RoundedRectangle(cornerRadius: 8))
+                        .accessibilityLabel(Text("Scored-night streak: \(streak) days"))
+                }
                 Spacer(minLength: 0)
                 HStack(spacing: 0) {
                     Button { changeDashboardDay(by: 1) } label: {
@@ -631,13 +736,13 @@ struct OverviewDashboardView: View {
                     .disabled(selectedDayOffset >= earliestDayOffset)
                     .accessibilityLabel("Previous day")
                     Button { showDayPicker = true } label: {
-                        Text(Self.headerDateFormatter.string(
+                        Text(selectedDayOffset == 0 ? String(localized: "TODAY") : Self.headerDateFormatter.string(
                             from: TodayView.dayParser.date(from: selectedDayKey) ?? selectedLogicalDay).uppercased())
                             .font(WhoopReferenceFont.label(11))
                             .tracking(0.8)
                             .lineLimit(1)
                             .minimumScaleFactor(0.75)
-                            .frame(minWidth: 100, minHeight: 32)
+                            .frame(minWidth: 80, minHeight: 28)
                             .background(Capsule().fill(StrandPalette.surfaceOverlay))
                     }
                     .accessibilityLabel("Choose dashboard day")
@@ -776,7 +881,7 @@ struct OverviewDashboardView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .frame(width: 84, height: 84)
+            .frame(width: 72, height: 72)
             HStack(spacing: 3) {
                 Text(title).font(WhoopReferenceFont.label(10)).tracking(0.9)
                 Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold))
@@ -1088,28 +1193,37 @@ struct OverviewDashboardView: View {
     // MARK: - Deine Gesundheit
 
     private var healthList: some View {
-        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            Text("Your health").whoopReferenceOverline()
-            NoopCard(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(Array(healthCards.enumerated()), id: \.element) { index, card in
-                        if index > 0 { Divider().overlay(StrandPalette.hairline).padding(.leading, 40) }
-                        OverviewHealthRow(card: card, valueText: healthValueText(card),
-                                          day: displayDay, recentDays: recentDays)
-                    }
-                    Divider().overlay(StrandPalette.hairline)
-                    NavigationLink(value: TabRoute.metricExplorer) {
-                        HStack {
-                            Spacer()
-                            Text("Show all metrics")
-                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
-                            Spacer()
-                        }
-                        .font(StrandFont.footnote.weight(.semibold))
-                        .foregroundStyle(StrandPalette.accent)
-                        .padding(.vertical, 10)
-                    }
+        VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+            HStack {
+                Text("My Dashboard").font(WhoopReferenceFont.heading(22))
+                Spacer()
+                Button { showHealthCardsEditor = true } label: {
+                    Label("CUSTOMIZE", systemImage: "pencil")
+                        .font(WhoopReferenceFont.label(10))
                 }
+                .buttonStyle(.bordered)
+            }
+            ForEach(healthCards) { card in
+                NavigationLink(value: card.detailRoute(day: displayDay,
+                    appleDay: appleDays.last(where: { $0.day == selectedDayKey }))) {
+                    HStack(spacing: NoopMetrics.space3) {
+                        Image(systemName: card.icon).foregroundStyle(StrandPalette.textSecondary)
+                        Text(card.title.uppercased())
+                            .font(WhoopReferenceFont.label(11)).tracking(0.7)
+                        Spacer(minLength: NoopMetrics.space2)
+                        Text(healthValueText(card)).font(WhoopReferenceFont.metric(23))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                    .foregroundStyle(StrandPalette.onDarkPrimary)
+                    .referenceMonitorCard()
+                }
+                .buttonStyle(.plain)
+                if card == .steps { ReferenceWeeklyTrainingRows(dayKey: selectedDayKey) }
+            }
+            if !healthCards.contains(.steps) { ReferenceWeeklyTrainingRows(dayKey: selectedDayKey) }
+            NavigationLink(value: TabRoute.metricExplorer) {
+                Label("Show all metrics", systemImage: "chevron.right")
+                    .font(StrandFont.footnote)
             }
         }
     }
@@ -1305,57 +1419,118 @@ struct OverviewDashboardView: View {
 
     private var todayActivitiesSection: some View {
         let items = overviewActivityItems
-        return VStack(alignment: .leading, spacing: 16) {
-            Text("My Day")
-                .font(WhoopReferenceFont.heading(22))
-                .foregroundStyle(StrandPalette.textPrimary)
-            VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("ACTIVITIES").whoopReferenceOverline()
-                        Spacer()
-                        NavigationLink(value: TabRoute.workouts) {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .frame(width: 28, height: 28)
-                        }
-                        .accessibilityLabel("See all activities")
+        return VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+            HStack {
+                Text("My Day").font(WhoopReferenceFont.heading(22))
+                Spacer()
+                Button { router.requestQuickActions() } label: {
+                    Image(systemName: "plus")
+                        .font(WhoopReferenceFont.heading(24))
+                        .foregroundStyle(WoopHomePalette.canvasBottom)
+                        .frame(width: 36, height: 36)
+                        .background(StrandPalette.onDarkPrimary,
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Quick actions")
+                .accessibilityIdentifier("woop.home.quickActions")
+            }
+            Button { showDailyOutlook = true } label: {
+                HStack(spacing: NoopMetrics.space2) {
+                    Image(systemName: "sun.max")
+                    Text(profile.displayName.map { String(localized: "\($0)'s Daily Outlook") }
+                         ?? String(localized: "Your Daily Outlook"))
+                        .font(WhoopReferenceFont.heading(14))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .foregroundStyle(StrandPalette.onDarkPrimary)
+                .padding(NoopMetrics.space3)
+                .background(LinearGradient(colors: [WoopHomePalette.outlookStart, WoopHomePalette.outlookEnd],
+                    startPoint: .leading, endPoint: .trailing),
+                    in: RoundedRectangle(cornerRadius: NoopMetrics.groupedRadius, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("woop.home.outlook")
+            VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+                HStack {
+                    Text(selectedDayOffset == 0 ? "TODAY'S ACTIVITIES" : "ACTIVITIES")
+                        .whoopReferenceOverline()
+                    Spacer()
+                    NavigationLink(value: TabRoute.workouts) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .frame(width: 28, height: 28)
                     }
+                    .accessibilityLabel("See all activities")
+                }
                 if items.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "figure.walk").foregroundStyle(StrandPalette.textTertiary)
-                        Text("Your sleep and workouts will appear here when synced.")
-                            .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 3)
+                    Label("Your sleep and workouts will appear here when synced.", systemImage: "figure.walk")
+                        .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    VStack(spacing: 12) {
+                    VStack(spacing: NoopMetrics.space2) {
                         ForEach(items) { item in activityRow(item) }
                     }
                 }
-            }
-            .padding(12)
-            .background(WoopHomePalette.activityCard, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            HStack(spacing: 8) {
-                Button {
-                    activityEditingWorkout = nil
-                    activityEditIsCopy = false
-                    showActivityEditor = true
-                } label: {
-                    Label("Add Activity", systemImage: "plus")
-                        .font(StrandFont.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
+                HStack(spacing: NoopMetrics.space3) {
+                    Button {
+                        activityEditingWorkout = nil
+                        activityEditIsCopy = false
+                        showActivityEditor = true
+                    } label: {
+                        Label("ADD ACTIVITY", systemImage: "plus")
+                            .font(WhoopReferenceFont.label(11)).tracking(0.5)
+                            .foregroundStyle(StrandPalette.onDarkPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(WoopHomePalette.activityRow, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    DashboardStartActivityButton {
+                        Label("START ACTIVITY", systemImage: "stopwatch")
+                            .font(WhoopReferenceFont.label(11)).tracking(0.5)
+                            .foregroundStyle(StrandPalette.onDarkPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(WoopHomePalette.activityRow, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .accessibilityIdentifier("woop.home.startActivity")
                 }
-                .buttonStyle(.bordered)
-                DashboardStartActivityButton {
-                    Label("Start Activity", systemImage: "stopwatch")
-                        .font(StrandFont.footnote.weight(.semibold))
-                        .foregroundStyle(StrandPalette.onDarkPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(WoopHomePalette.activityRow)
-                .accessibilityIdentifier("woop.home.startActivity")
+                .buttonStyle(.plain)
             }
+            .referenceMonitorCard()
+        }
+    }
+
+    private var referencePlanSection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+            Text("My Plan").font(WhoopReferenceFont.heading(22))
+            NavigationLink(value: TabRoute.goals) {
+                HStack(spacing: NoopMetrics.space4) {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                        Text("Build your best self").font(WhoopReferenceFont.heading(15))
+                        Text("Set goals, track progress, and build lasting habits.")
+                            .font(StrandFont.subhead).foregroundStyle(StrandPalette.textSecondary)
+                        Text("EXPLORE PLANS →").font(WhoopReferenceFont.label(11))
+                            .foregroundStyle(WoopHomePalette.strain)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "target").font(WhoopReferenceFont.score(42))
+                        .foregroundStyle(StrandPalette.statusPositive)
+                }
+                .foregroundStyle(StrandPalette.onDarkPrimary)
+                .referenceMonitorCard()
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var referenceDiscoverSection: some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+            Text("Discover More").font(WhoopReferenceFont.heading(22))
+            NavigationLink(value: TabRoute.metricExplorer) {
+                Label("Explore your health trends", systemImage: "chart.xyaxis.line")
+                    .font(StrandFont.headline).foregroundStyle(StrandPalette.onDarkPrimary)
+                    .referenceMonitorCard()
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -1450,30 +1625,42 @@ struct OverviewDashboardView: View {
 
     // MARK: - Journal (opt-in, DashboardExtraSection.journal)
 
-    @ViewBuilder
     private var journalSection: some View {
-        if let logged = journalLoggedDays {
-            let keys = Self.journalDayKeys(anchor: selectedLogicalDay)
-            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+        let keys = PeriodCalendar.weekDays(containing: selectedDayKey, firstWeekday: 2)
+        return VStack(alignment: .leading, spacing: NoopMetrics.space5) {
+            Button { router.openJournal() } label: {
                 HStack {
-                    Text("Journal").whoopReferenceOverline()
+                    Text("MY JOURNAL").whoopReferenceOverline()
                     Spacer()
-                    Text("\(logged.count)/\(keys.count)").font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
-                }
-                NoopCard(padding: Self.cardPadding) {
-                    Button { router.openJournal() } label: {
-                        HStack(spacing: 5) {
-                            ForEach(keys, id: \.self) { key in
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(logged.contains(key) ? StrandPalette.metricAmber : StrandPalette.textPrimary.opacity(0.1))
-                                    .frame(height: 18)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
+                    Image(systemName: "chevron.right")
                 }
             }
+            .buttonStyle(.plain)
+            HStack(spacing: NoopMetrics.space3) {
+                ForEach(keys, id: \.self) { key in
+                    VStack(spacing: NoopMetrics.space2) {
+                        Text((TodayView.dayParser.date(from: key) ?? selectedLogicalDay)
+                            .formatted(.dateTime.weekday(.abbreviated)).uppercased())
+                            .font(WhoopReferenceFont.label(9))
+                            .foregroundStyle(StrandPalette.textSecondary)
+                        Image(systemName: journalLoggedDays?.contains(key) == true ? "checkmark.circle.fill" : "circle")
+                            .font(WhoopReferenceFont.body(21))
+                            .foregroundStyle(journalLoggedDays?.contains(key) == true
+                                ? StrandPalette.statusPositive : StrandPalette.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            Button { router.openJournal() } label: {
+                Label("BEHAVIOR INSIGHTS", systemImage: "lightbulb")
+                    .font(WhoopReferenceFont.label(11))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .background(WoopHomePalette.activityRow, in: RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
         }
+        .foregroundStyle(StrandPalette.onDarkPrimary)
+        .referenceMonitorCard()
     }
 
     // MARK: - Menstrual cycle (opt-in, DashboardExtraSection.menstrualCycle)
@@ -1582,4 +1769,9 @@ private struct DashboardStepGoalSheet: View {
             }
         }
     }
+}
+
+private struct ReferenceHomeScrollOffset: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
