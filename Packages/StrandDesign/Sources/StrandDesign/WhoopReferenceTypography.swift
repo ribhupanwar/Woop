@@ -156,7 +156,7 @@ public extension Text {
 public enum WoopDashboardMetrics {
     public static let rowMinHeight: CGFloat = 56
     public static let horizontalPadding: CGFloat = 14
-    public static let verticalPadding: CGFloat = 10
+    public static let verticalPadding: CGFloat = 8
     public static let iconSize: CGFloat = 20
     public static let iconColumn: CGFloat = 24
     public static let rowGap: CGFloat = 12
