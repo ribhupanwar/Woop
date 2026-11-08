@@ -118,11 +118,11 @@ public enum WoopHomePalette {
 
 /// Clean-room typographic roles for reference-matched iPhone screens.
 /// WHOOP's bundled DINPro files are proprietary and are not redistributed.
-/// This separate layer approximates their compact sans-serif character with system fonts,
-/// leaving the app's existing StrandFont roles unchanged.
+/// Apple-provided DIN Alternate numerals and Avenir Next text approximate the reference families.
+/// No extracted font file is bundled, and the app's existing StrandFont roles remain unchanged.
 public enum WhoopReferenceFont {
     public static func score(_ size: CGFloat = 48) -> Font {
-        .system(size: size, weight: .semibold, design: .default).width(.condensed).monospacedDigit()
+        .custom("DINAlternate-Bold", size: size, relativeTo: .title).monospacedDigit()
     }
 
     /// Tight tracking for large WHOOP-reference score numerals.
@@ -130,16 +130,16 @@ public enum WhoopReferenceFont {
         -size * 0.02
     }
     public static func heading(_ size: CGFloat = 18) -> Font {
-        .system(size: size, weight: .semibold, design: .default)
+        .custom("AvenirNext-DemiBold", size: size, relativeTo: .headline)
     }
     public static func label(_ size: CGFloat = 10) -> Font {
-        .system(size: size, weight: .semibold, design: .default)
+        .custom("AvenirNext-Bold", size: size, relativeTo: .caption)
     }
     public static func metric(_ size: CGFloat = 14) -> Font {
-        .system(size: size, weight: .semibold, design: .default).width(.condensed).monospacedDigit()
+        .custom("DINAlternate-Bold", size: size, relativeTo: .headline).monospacedDigit()
     }
     public static func body(_ size: CGFloat = 12) -> Font {
-        .system(size: size, weight: .regular, design: .default)
+        .custom("AvenirNext-Regular", size: size, relativeTo: .body)
     }
 }
 

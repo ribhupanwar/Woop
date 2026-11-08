@@ -16,8 +16,15 @@ change stored inputs, scoring formulas, the analysis recipe, or BLE commands.
 - [WHOOP Stress Monitor guide](https://support.whoop.com/s/article/Get-to-Know-the-Stress-Monitor?language=en_US)
 
 No proprietary font, artwork, executable code or decompiled implementation is included. Existing
-StrandFont and font registrations are preserved; the separate reference numeral roles use the
-platform's condensed system width. This is an approximation of reference typography.
+StrandFont and font registrations are preserved. The separate reference roles use Apple's preinstalled
+DIN Alternate Bold for scores and metrics, and Avenir Next for text. These approximate the reference
+families; they are not claims of identical DINPro/Proxima Nova metrics.
+
+DSTA artifact `13158456060` was downloaded and its ZIP SHA-256 verified as
+`6718dfa73c6a130112dbd1ab9315c1c6fec509c2fbb36fddd51a7053b3649b26`. Its resource inventory confirms
+DINPro Regular/Medium/Bold and Proxima Nova Regular/Semibold/Bold in the app, alongside Readex Pro.
+Only metadata was inspected; no font binary was extracted or added to Woop. Apple documents DIN
+Alternate in its [system font inventory](https://developer.apple.com/fonts/system-fonts/).
 
 ## Implemented presentation
 
