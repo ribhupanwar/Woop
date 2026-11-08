@@ -37,6 +37,8 @@ struct OverviewDashboardView: View {
     // shows whichever scale the user picked in Settings (0…100 or WHOOP's 0…21), never an invented one.
     @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
     @AppStorage(OverviewHealthCardsPrefs.selectionKey) private var healthCardsRaw = ""
+    @AppStorage(UnitPrefs.skinTempDisplayKey) private var referenceSkinTempRaw = ""
+    @AppStorage(UnitPrefs.temperatureKey) private var referenceTemperatureRaw = ""
     @AppStorage(OverviewFocusPrefs.slotKeys[0]) private var focusSlot1Raw = OverviewFocusPrefs.defaults[0].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[1]) private var focusSlot2Raw = OverviewFocusPrefs.defaults[1].rawValue
     @AppStorage(OverviewFocusPrefs.slotKeys[2]) private var focusSlot3Raw = OverviewFocusPrefs.defaults[2].rawValue
@@ -163,7 +165,9 @@ struct OverviewDashboardView: View {
         let selectedDate = PeriodGoalTracker.date(selectedDayKey, calendar: .current) ?? selectedLogicalDay
         return BodyVitalSigns.readings(
             sourceRows: repo.vitalMetricRows.filter { $0.metric.day <= selectedDayKey },
-            temperatureUnit: .celsius, now: selectedDate)
+            temperatureUnit: UnitPrefs.resolveTemperature(system: unitSystem, override: referenceTemperatureRaw),
+            now: selectedDate, hrvOverCountByDay: snapshot.hrvOverCountByDay,
+            skinTempPreferred: SkinTempDisplay.Kind(rawValue: referenceSkinTempRaw) ?? .absolute)
     }
 
     private var healthCards: [DashboardCard] { OverviewHealthCardsPrefs.decode(healthCardsRaw) }
@@ -409,6 +413,7 @@ struct OverviewDashboardView: View {
         var vitalCarry: DashboardVitalCarry = DashboardVitalCarry()
         var recentWorkouts: [WorkoutRow] = []
         var journalLoggedDays: Set<String>?
+        var hrvOverCountByDay: [String: Double] = [:]
     }
     @State private var snapshot = Snapshot()
     @State private var lastLoadedKey: DashboardLoadKey?
@@ -463,6 +468,8 @@ struct OverviewDashboardView: View {
         async let vo2maxSeriesA = repo.exploreSeries(key: "vo2max_est", source: Repository.whoopSource, days: 120)
         async let vitalitySeriesA = repo.exploreSeries(key: "vitality", source: Repository.whoopSource, days: 120)
         async let stressStoredA = repo.series(key: "stress", source: Repository.whoopSource, days: 120)
+        async let hrvOverCountA = repo.exploreSeries(key: "hrv_rr_overcount", source: Repository.whoopSource,
+                                                   days: selectedDayOffset + 14)
         // The computed "steps_est" metricSeries the IntelligenceEngine writes — the same series Today
         // reads. Consulted ONLY when the day has no real count, so it never overrides a measurement.
         async let stepsEstSeriesA = repo.exploreSeries(key: "steps_est", source: Repository.whoopSource, days: 120)
@@ -485,6 +492,8 @@ struct OverviewDashboardView: View {
         next.fitnessAgeToday = latestBanked(await fitnessAgeSeriesA, asOf: selectedDayKey)
         next.vo2maxToday = latestBanked(await vo2maxSeriesA, asOf: selectedDayKey)
         next.vitalityToday = latestBanked(await vitalitySeriesA, asOf: selectedDayKey)
+        next.hrvOverCountByDay = Dictionary((await hrvOverCountA).map { ($0.day, $0.value) },
+                                            uniquingKeysWith: { first, _ in first })
         let storedStress = await stressStoredA
         next.stressToday = await runUnescalated { [stressCut = StressMath.Cut.current()] in StressModel(days: scopedDays, stored: storedStress.filter { $0.day <= selectedDayKey }, cut: stressCut)?.score }
         next.stepsEstToday = (await stepsEstSeriesA).last(where: { $0.day == selectedDayKey })
@@ -514,7 +523,7 @@ struct OverviewDashboardView: View {
         } else {
             next.recentWorkouts = []
         }
-        let journalKeys = Self.journalDayKeys(anchor: selectedLogicalDay)
+        let journalKeys = PeriodCalendar.weekDays(containing: selectedDayKey, firstWeekday: 2)
         next.journalLoggedDays = await repo.nativeJournalDays(from: journalKeys.first ?? "", to: journalKeys.last ?? "")
 
         // Publish the Momentum feed. Until now nothing on this screen did, so a wearer whose Today is a
@@ -1209,8 +1218,9 @@ struct OverviewDashboardView: View {
                     .referenceMonitorCard()
                 }
                 .buttonStyle(.plain)
+                if card == .steps { ReferenceWeeklyTrainingRows(dayKey: selectedDayKey) }
             }
-            ReferenceWeeklyTrainingRows(dayKey: selectedDayKey)
+            if !healthCards.contains(.steps) { ReferenceWeeklyTrainingRows(dayKey: selectedDayKey) }
             NavigationLink(value: TabRoute.metricExplorer) {
                 Label("Show all metrics", systemImage: "chevron.right")
                     .font(StrandFont.footnote)
@@ -1616,7 +1626,7 @@ struct OverviewDashboardView: View {
     // MARK: - Journal (opt-in, DashboardExtraSection.journal)
 
     private var journalSection: some View {
-        let keys = Self.journalDayKeys(anchor: selectedLogicalDay)
+        let keys = PeriodCalendar.weekDays(containing: selectedDayKey, firstWeekday: 2)
         return VStack(alignment: .leading, spacing: NoopMetrics.space5) {
             Button { router.openJournal() } label: {
                 HStack {

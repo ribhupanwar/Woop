@@ -66,6 +66,10 @@ The reference navigation now uses a floating material bar with a separate Coach 
 setup when the feature is off. It does not activate the feature. Scrolled Home keeps a compact pillar
 strip. The Healthspan empty state uses an original decorative calibration sphere with no synthetic age.
 
+Home and Health summaries use the monitor's temperature preference and HRV over-count caveat inputs,
+so an unverified vital cannot become a five-of-five healthy summary. Journal displays a Monday–Sunday
+week, and the seven-day chart uses existing civil-day helpers to avoid DST-dependent duplicated dates.
+
 ## Validation and remaining comparison
 
 Local Swift grammar parsing, YAML parsing and `git diff --check` are source checks. They do not replace

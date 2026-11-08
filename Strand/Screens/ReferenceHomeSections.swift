@@ -126,13 +126,8 @@ struct ReferenceRecoveryStrainChart: View {
     }
 
     private var keys: [String] {
-        let parser = TodayView.dayParser
-        guard let end = parser.date(from: selectedDay) else { return [] }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        return (0..<7).reversed().compactMap { offset in
-            calendar.date(byAdding: .day, value: -offset, to: end).map { parser.string(from: $0) }
-        }
+        guard PeriodGoalTracker.date(selectedDay, calendar: .current) != nil else { return [] }
+        return (0..<7).reversed().map { WeeklyDigestEngine.addDays(selectedDay, -$0) }
     }
 
     private var points: [Point] {

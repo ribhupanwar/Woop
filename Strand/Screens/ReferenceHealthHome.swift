@@ -7,9 +7,17 @@ struct ReferenceHealthHome: View {
     @EnvironmentObject private var repo: Repository
     @State private var curve: DaytimeStress.Result?
     @State private var curveLoaded = false
+    @State private var hrvOverCountByDay: [String: Double] = [:]
+    @AppStorage(UnitPrefs.systemKey) private var unitSystemRaw = UnitSystem.metric.rawValue
+    @AppStorage(UnitPrefs.temperatureKey) private var temperatureRaw = ""
+    @AppStorage(UnitPrefs.skinTempDisplayKey) private var skinTempRaw = ""
 
     private var readings: [BodyVitalReading] {
-        BodyVitalSigns.readings(sourceRows: repo.vitalMetricRows, temperatureUnit: .celsius)
+        BodyVitalSigns.readings(sourceRows: repo.vitalMetricRows,
+            temperatureUnit: UnitPrefs.resolveTemperature(system: UnitSystem(rawValue: unitSystemRaw) ?? .metric,
+                                                          override: temperatureRaw),
+            hrvOverCountByDay: hrvOverCountByDay,
+            skinTempPreferred: SkinTempDisplay.Kind(rawValue: skinTempRaw) ?? .absolute)
             .filter { $0.key != "spo2raw" }
     }
 
@@ -30,15 +38,15 @@ struct ReferenceHealthHome: View {
                             VStack(spacing: NoopMetrics.space3) {
                                 Text(shortLabel(reading.key)).font(WhoopReferenceFont.label(9))
                                     .foregroundStyle(StrandPalette.textSecondary)
-                                Image(systemName: reading.value == nil ? "minus.square"
+                                Image(systemName: reading.value == nil || reading.caveat != nil ? "minus.square"
                                       : reading.banding.band == .inRange ? "checkmark.square.fill" : "exclamationmark.square.fill")
-                                    .foregroundStyle(reading.value == nil ? StrandPalette.textTertiary
+                                    .foregroundStyle(reading.value == nil || reading.caveat != nil ? StrandPalette.textTertiary
                                                      : reading.banding.band == .inRange ? StrandPalette.statusPositive : StrandPalette.statusWarning)
                             }
                             .frame(maxWidth: .infinity)
                         }
                     }
-                    Text("\(readings.filter { $0.value != nil && $0.banding.band == .inRange }.count)/5 metrics within range")
+                    Text("\(readings.filter { $0.value != nil && $0.caveat == nil && $0.banding.band == .inRange }.count)/5 metrics within range")
                         .font(StrandFont.subhead)
                 }
                 .foregroundStyle(StrandPalette.onDarkPrimary)
@@ -50,6 +58,9 @@ struct ReferenceHealthHome: View {
                 .font(StrandFont.footnote).foregroundStyle(StrandPalette.textSecondary)
         }
         .task(id: repo.refreshSeq) {
+            let flags = await repo.exploreSeries(key: "hrv_rr_overcount", source: Repository.whoopSource, days: 14)
+            guard !Task.isCancelled else { return }
+            hrvOverCountByDay = Dictionary(flags.map { ($0.day, $0.value) }, uniquingKeysWith: { first, _ in first })
             let result = await StressDayCurve.today(repo: repo,
                 personalBaseline: PuffinExperiment.stressPersonalBaselineEnabled)
             guard !Task.isCancelled else { return }
