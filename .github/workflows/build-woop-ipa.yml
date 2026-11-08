@@ -62,6 +62,8 @@ jobs:
           key: macos-26-nomic-${{ hashFiles('Tools/bootstrap-nomic.sh') }}
 
       - name: Install or verify pinned on-device model and runtime
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           chmod +x Tools/bootstrap-nomic.sh
           Tools/bootstrap-nomic.sh
