@@ -9,6 +9,8 @@ RESOURCE_DIR="$VENDOR_DIR/Resources"
 LLAMA_TAG="b9623"
 LLAMA_ARCHIVE="llama-${LLAMA_TAG}-xcframework.zip"
 LLAMA_URL="https://github.com/ggml-org/llama.cpp/releases/download/${LLAMA_TAG}/${LLAMA_ARCHIVE}"
+# The immutable API asset is the same b9623 archive; both paths use the checksum below.
+LLAMA_API_URL="https://api.github.com/repos/ggml-org/llama.cpp/releases/assets/446645389"
 LLAMA_SHA256="8857832e4699bc8483f038d0c8ac6927de11ce8c6772f79b2a99db8a48ab2d83"
 LLAMA_FRAMEWORK="$VENDOR_DIR/llama.xcframework"
 
@@ -61,8 +63,13 @@ if ! verify_framework 2>/dev/null; then
     if [ ! -f "$archive_path" ] || [ "$(sha256_of "$archive_path")" != "$LLAMA_SHA256" ]; then
         temp_archive="$archive_path.download"
         rm -f "$temp_archive"
-        curl -L --fail --show-error --progress-bar \
-            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$LLAMA_URL" -o "$temp_archive"
+        if ! curl -L --fail --show-error --progress-bar \
+            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$LLAMA_URL" -o "$temp_archive"; then
+            echo "Release download unavailable; trying the same pinned GitHub API asset."
+            curl -L --fail --show-error --progress-bar \
+                --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 \
+                -H 'Accept: application/octet-stream' "$LLAMA_API_URL" -o "$temp_archive"
+        fi
         verify_file "$temp_archive" "$LLAMA_SHA256" "llama.cpp XCFramework archive"
         mv "$temp_archive" "$archive_path"
     fi
