@@ -5003,4 +5003,6 @@
     <string name="forge_data_update_body">Woop überträgt deinen Verlauf in den neuen Speicher. Das passiert einmal und kann ein paar Minuten dauern. Lass die App geöffnet.</string>
     <string name="workout_export_title">Training exportieren</string>
     <string name="workout_export_body">Speichere dieses Training mit seinem Puls als FIT-Datei für Strava, Garmin Connect oder eine andere App. Die Datei entsteht auf deinem Handy und verlässt es erst, wenn du sie teilst.</string>
+    <string name="woop_home">Startseite</string>
+    <string name="woop_activity">Aktivität</string>
 </resources>
