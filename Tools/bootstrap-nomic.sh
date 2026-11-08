@@ -61,7 +61,8 @@ if ! verify_framework 2>/dev/null; then
     if [ ! -f "$archive_path" ] || [ "$(sha256_of "$archive_path")" != "$LLAMA_SHA256" ]; then
         temp_archive="$archive_path.download"
         rm -f "$temp_archive"
-        curl -L --fail --show-error --progress-bar "$LLAMA_URL" -o "$temp_archive"
+        curl -L --fail --show-error --progress-bar \
+            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$LLAMA_URL" -o "$temp_archive"
         verify_file "$temp_archive" "$LLAMA_SHA256" "llama.cpp XCFramework archive"
         mv "$temp_archive" "$archive_path"
     fi
@@ -89,7 +90,8 @@ fi
 if ! verify_file "$NOMIC_MODEL" "$NOMIC_SHA256" "Nomic model" 2>/dev/null; then
     temp_model="$NOMIC_MODEL.download"
     rm -f "$temp_model"
-    curl -L --fail --show-error --progress-bar "$NOMIC_URL" -o "$temp_model"
+    curl -L --fail --show-error --progress-bar \
+            --retry 3 --retry-delay 2 --retry-max-time 300 --retry-all-errors --connect-timeout 30 "$NOMIC_URL" -o "$temp_model"
     verify_file "$temp_model" "$NOMIC_SHA256" "Nomic model"
     mv "$temp_model" "$NOMIC_MODEL"
 fi
