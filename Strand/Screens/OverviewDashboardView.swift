@@ -191,12 +191,12 @@ struct OverviewDashboardView: View {
             ScrollViewReader { scrollProxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Self.sectionSpacing) {
-                    Color.clear.frame(height: 0).id(Self.topAnchorID)
+                    header
+                        .id(Self.topAnchorID)
                         .background(GeometryReader { marker in
                             Color.clear.preference(key: ReferenceHomeScrollOffset.self,
                                 value: marker.frame(in: .named("woop.home.scroll")).minY)
                         })
-                    header
                     overviewCard
                     ReferenceMonitorEntries(readings: selectedVitalReadings, stress: stressCurve?.scored.last?.level ?? stressToday,
                                             stressCaption: stressCurve?.scored.last.map { Date(timeIntervalSince1970: Double($0.startTs)).formatted(.dateTime.hour().minute()) } ?? String(localized: "Daily score"))
@@ -209,7 +209,7 @@ struct OverviewDashboardView: View {
                     // rewrite and restored; these two dashboards then shipped without it. Same shared
                     // leaf, so all four Today screens cannot drift apart.
                     ActiveWorkoutIndicatorSection()
-                    todayActivitiesSection
+                    todayActivitiesSection.padding(.top, NoopMetrics.space3)
                     if selectedDayOffset == 0 { ReferenceTonightSleepCard() }
                     journalSection
                     referencePlanSection
