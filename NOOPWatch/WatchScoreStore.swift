@@ -21,6 +21,7 @@ final class WatchScoreStore: NSObject, WCSessionDelegate {
     /// The latest snapshot the watch knows about. nil = nothing has ever synced (fresh install).
     private(set) var snapshot: WatchScoreSnapshot?
     private(set) var strengthWorkout: StrengthWorkoutCompanionState?
+    private(set) var commandError: String?
 
     /// The shared App Group suite the watch app + its complication both read/write. `Bundle.main` is
     /// process-global, so this is exactly the lookup `WatchScoreSnapshot.appGroupId` itself performs —
@@ -93,13 +94,26 @@ final class WatchScoreStore: NSObject, WCSessionDelegate {
         DispatchQueue.main.async { self.strengthWorkout = state }
     }
 
+    func clearCommandError() { commandError = nil }
+
     func send(_ kind: StrengthWorkoutCompanionCommand.Kind) {
         guard let state = strengthWorkout, WCSession.isSupported() else { return }
+        guard WCSession.default.activationState == .activated, WCSession.default.isReachable else {
+            commandError = String(localized: "Open Woop on your iPhone to confirm the set.")
+            return
+        }
+        commandError = nil
         let command = StrengthWorkoutCompanionCommand(
             sessionId: state.sessionId, expectedRevision: state.revision, kind: kind)
         guard let data = try? JSONEncoder().encode(command) else { return }
-        WCSession.default.sendMessage([StrengthWorkoutCompanionState.commandKey: data],
-                                      replyHandler: nil, errorHandler: nil)
+        // The phone command handler is the reply-bearing WCSession delegate overload.
+        WCSession.default.sendMessage([StrengthWorkoutCompanionState.commandKey: data], replyHandler: { _ in
+            // Delivery is not proof that a set was saved: phone validation remains authoritative.
+        }, errorHandler: { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.commandError = String(localized: "Set command was not delivered. Check your iPhone.")
+            }
+        })
     }
 
     func sendTelemetry(bpm: Int?, sampleCount: Int) {

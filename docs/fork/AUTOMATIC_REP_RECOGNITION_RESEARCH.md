@@ -57,3 +57,23 @@ Woop already has routine context, native set logging, correction/history and Wat
 recording. It has no Watch motion rep-capture pipeline, calibrated counter, trained exercise model or
 hardware evaluation for these features. This document is a concrete development route, not a claim
 that Garmin-style recognition is implemented. No camera permission or third-party service was added.
+
+## Opt-in Watch set-end trial
+
+An optional Watch-only trial now implements bounded motion/rest candidate detection, not rep or
+exercise recognition. It samples device motion at 25 Hz for at most two minutes after Start trial.
+Heuristic thresholds are provisional: eight seconds of elapsed movement context, at least three moving
+seconds above 0.16 g, then four quiet seconds. Sampling gaps, invalid samples and context changes reset
+evidence. It stops on candidate, error, timeout or leaving the trial. The trial stops during rest/pause
+or session changes; changing HR alone does not interrupt capture. Nothing is persisted from motion.
+
+A candidate offers Complete set or Dismiss. Complete set sends the existing session/revision-pinned
+phone command; the phone still rejects a set without entered numbers and remains the only set writer.
+The Watch bridge now uses a reply handler, matching the phone's reply-bearing WCSession delegate
+method. Delivery errors and an unreachable phone are surfaced. Delivery is not treated as proof that
+logging succeeded. These gates do not constitute motion accuracy validation.
+
+Synthetic tests cover a movement/rest sequence, pure rest, brief adjustments, continuous motion,
+invalid values and sample dropout. Real Apple Watch hardware, battery usage and false suggestions
+remain untested. Wrist-stationary work is likely to be missed. Requires the updated Woop Watch app;
+installing only the phone IPA does not install or exercise this trial. Analysis migration required: no.

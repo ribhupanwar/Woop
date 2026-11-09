@@ -27,6 +27,7 @@ struct WatchWorkoutView: View {
     // App-owned so a recording survives this page being rebuilt by the page deck.
     @Environment(WatchWorkoutSession.self) private var workout
     @State private var confirmingFinish = false
+    @State private var showingMotionTrial = false
 
     var body: some View {
         // One screen, no scrolling. A GeometryReader hands each state the real space it has to live in so
@@ -51,6 +52,23 @@ struct WatchWorkoutView: View {
             .frame(width: geo.size.width, height: geo.size.height)
             .padding(.horizontal, 4)
         }
+        .toolbar {
+            if companion.strengthWorkout != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showingMotionTrial = true } label: {
+                        Label("Motion set trial", systemImage: "waveform.path")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingMotionTrial) { WatchMotionSetTrialView() }
+        .alert("Check iPhone", isPresented: Binding(
+            get: { companion.commandError != nil },
+            set: { if !$0 { companion.clearCommandError() } })) {
+                Button("OK") { companion.clearCommandError() }
+            } message: {
+                Text(verbatim: companion.commandError ?? "")
+            }
         .onAppear { synchronizeCompanion(companion.strengthWorkout) }
         .onChange(of: companion.strengthWorkout) { _, state in synchronizeCompanion(state) }
         .onChange(of: workout.bpm) { _, bpm in companion.sendTelemetry(bpm: bpm, sampleCount: workout.sampleCount) }

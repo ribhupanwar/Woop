@@ -2420,7 +2420,7 @@ private struct ActivityProgramsView: View {
                         }
                         Text("In openGym, use Plan → Export plan file, then choose its JSON here. Review the import before saving. Exercise media and progression rules are not imported.")
                             .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
-                        Text("Sets and reps require confirmation. Automatic rep and exercise recognition is not available.")
+                        Text("Start your gym session, then open Woop on Apple Watch. Use Done set, or try the optional Motion set trial. Enter actual reps and weight on iPhone first; automatic rep and exercise recognition is not available.")
                             .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
                     }
                 }
