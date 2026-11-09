@@ -199,3 +199,13 @@ configurable audio, interval workouts and target pace/HR concepts. Neither Runne
 embedded, linked or copied. Native equivalent entry points are not full third-party feature parity.
 Automatic reps/weight recognition and direct Strava OAuth remain absent. Runtime sensor validation,
 Apple compilation and device review remain required. Analysis migration required: no.
+
+## Calorie prefix presentation
+
+The Home reference calorie metric, daily energy headlines and workout list/detail numeric fields now
+omit the leading approximation marker. Home and daily energy headlines retain an Estimated caption
+for model-derived totals; workout detail retains its existing source caption, and compact legacy rows
+include the source caption beside calories. The formatter's default legacy marker and full coach/source
+sentences remain available. Missing energy still displays a dash; numeric values, source precedence,
+confidence and calorie formulas are unchanged. Tests cover clean formatting, legacy provenance marker
+and missing totals. Analysis migration required: no.

@@ -57,12 +57,12 @@ enum WorkoutEnergyDisplay {
         "\(row.source)|\(row.startTs)|\(row.endTs)|\(row.sport)"
     }
 
-    /// "529 kcal" when it was recorded, "~529 kcal" when it was not. The tilde is the same marker
-    /// `EnergyDisplay` uses for a modelled daily total, so one habit reads both.
-    static func text(_ resolved: WorkoutEnergyEstimate.Resolved?) -> String? {
+    /// Estimate markers remain available for legacy callers. Clean numeric UI uses the separate
+    /// provenance caption instead; the full sentence below retains the source for coach context.
+    static func text(_ resolved: WorkoutEnergyEstimate.Resolved?, marksEstimate: Bool = true) -> String? {
         guard let resolved else { return nil }
         let number = Int(resolved.kcal.rounded()).formatted(.number.grouping(.automatic))
-        return resolved.isEstimated ? "~\(number)" : number
+        return resolved.isEstimated && marksEstimate ? "~\(number)" : number
     }
 
     /// The line under the figure that says what it is. Nil for a recorded one: a caption on every

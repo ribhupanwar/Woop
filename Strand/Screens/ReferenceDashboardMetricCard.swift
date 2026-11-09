@@ -33,6 +33,7 @@ struct ReferenceDashboardMetricCard: View {
     let card: DashboardCard
     let value: String
     let comparison: Comparison?
+    var estimated = false
 
     private var title: String {
         switch card {
@@ -73,6 +74,9 @@ struct ReferenceDashboardMetricCard: View {
                     Text(verbatim: comparison.value).font(WoopDashboardMetricStyle.comparison)
                         .foregroundStyle(StrandPalette.textSecondary)
                     .accessibilityLabel(Text(verbatim: "\(comparison.value), \(comparison.day)"))
+                } else if estimated {
+                    Text("Estimated").font(WhoopReferenceFont.body(10))
+                        .foregroundStyle(StrandPalette.textSecondary)
                 } else if !card.unit.isEmpty && card != .calories {
                     Text(verbatim: card.unit).font(WhoopReferenceFont.body(10))
                         .foregroundStyle(StrandPalette.textSecondary)

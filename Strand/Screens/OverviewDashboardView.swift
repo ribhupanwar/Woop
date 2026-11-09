@@ -581,7 +581,7 @@ struct OverviewDashboardView: View {
         case .fitnessAge:
             return fitnessAgeToday.map { "\(Int($0.rounded()))" } ?? "—"
         case .calories:
-            return EnergyDisplay.totalText(todayEnergySummary)
+            return EnergyDisplay.totalText(todayEnergySummary, marksEstimate: false)
         case .vo2max:
             return vo2maxToday.map { String(format: "%.1f", locale: AppLanguage.activeLocale, $0) } ?? "—"
         case .vitality:
@@ -1119,8 +1119,12 @@ struct OverviewDashboardView: View {
             .padding(.vertical, 8)
             ForEach(healthCards) { card in
                 NavigationLink(value: card.detailRoute(day: displayDay, appleDay: nil)) {
-                    ReferenceDashboardMetricCard(card: card, value: healthValueText(card),
-                        comparison: comparisonReading(card))
+                    ReferenceDashboardMetricCard(card: card,
+                        value: card == .calories ? EnergyDisplay.totalText(todayEnergySummary, marksEstimate: false) : healthValueText(card),
+                        comparison: comparisonReading(card),
+                        estimated: card == .calories && (todayEnergySummary.map {
+                            $0.source != .appleSplit && $0.totalBurnedSoFar != nil
+                        } ?? false))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("woop.dashboard.metric.\(card.rawValue)")

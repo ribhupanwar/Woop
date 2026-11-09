@@ -86,12 +86,15 @@ struct EnergyHeroCard: View {
 
     private var headline: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(EnergyDisplay.totalText(summary, includesUnit: true))
+            Text(EnergyDisplay.totalText(summary, includesUnit: true, marksEstimate: false))
                 .font(StrandFont.heroNumber)
                 .foregroundStyle(StrandPalette.textPrimary)
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
+            if summary.source != .appleSplit {
+                Text("Estimated").font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+            }
             Text("total burned so far")
                 .font(StrandFont.caption)
                 .foregroundStyle(StrandPalette.textSecondary)
@@ -267,7 +270,7 @@ struct EnergyHeroCard: View {
 
     private var accessibilitySummary: String {
         var parts = [String(localized: "Energy"),
-                     EnergyDisplay.totalText(summary, includesUnit: true),
+                     EnergyDisplay.totalText(summary, includesUnit: true, marksEstimate: false),
                      String(localized: "total burned so far")]
         for stat in stats {
             if let value = stat.valueText { parts.append("\(stat.spoken): \(value)") }

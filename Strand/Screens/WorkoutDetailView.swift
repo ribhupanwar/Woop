@@ -411,7 +411,7 @@ struct WorkoutDetailView: View {
             // hand-entered session never records kcal, and the screen said nothing rather than
             // saying what it could work out. The tilde and the caption keep it an estimate.
             StatTile(label: "Calories",
-                     value: WorkoutEnergyDisplay.text(energy) ?? (energyPending ? "…" : "–"),
+                     value: WorkoutEnergyDisplay.text(energy, marksEstimate: false) ?? (energyPending ? "…" : "–"),
                      caption: energyCaption,
                      accent: energy != nil ? StrandPalette.metricAmber : StrandPalette.textTertiary) {
                 if energyPending && energy == nil { pendingIndicator }
