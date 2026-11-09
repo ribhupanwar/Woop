@@ -5008,4 +5008,5 @@
     <string name="workout_export_body">Zapisz ten trening z tętnem jako plik FIT do zaimportowania w Stravie, Garmin Connect lub innej aplikacji. Plik powstaje na Twoim telefonie i opuszcza go dopiero, gdy go udostępnisz.</string>
     <string name="woop_home">Start</string>
     <string name="woop_activity">Aktywność</string>
+    <string name="woop_wrist_alerts">Alerty na nadgarstku Woop</string>
 </resources>

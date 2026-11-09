@@ -164,7 +164,7 @@ import kotlinx.coroutines.launch
 private val SEX_CHOICES = listOf("male" to R.string.onboarding_male, "female" to R.string.onboarding_female,
                                  "nonbinary" to R.string.onboarding_other)
 
-private const val SOURCE_URL = "https://github.com/DX23876/noop"
+private const val SOURCE_URL = "https://github.com/ribhupanwar/Woop"
 
 /**
  * The Forge Settings pages, as the iOS hub lists them (`SettingsPage`): title, subtitle and icon. [hosted] marks the
@@ -213,7 +213,7 @@ internal val SETTINGS_SEARCH_WORDS: Map<ForgeSettingsPage, List<String>> = mapOf
                                              "reset baseline", "charge baseline"),
     ForgeSettingsPage.DataBackup to listOf("export", "import", "backup file", "noopbak", "restore", "Health Connect",
                                            "data sources", "WHOOP export", "CSV"),
-    ForgeSettingsPage.Help to listOf("how NOOP works", "how your scores work", "limitations", "test centre", "diagnostics",
+    ForgeSettingsPage.Help to listOf("how Woop works", "how your scores work", "limitations", "test centre", "diagnostics",
                                      "bug report", "strap log"),
     ForgeSettingsPage.Lab to listOf("experimental", "beta", "stress baseline", "training-based VO2max", "AgeLess",
                                     "daily rhythm"),

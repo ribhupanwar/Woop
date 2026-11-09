@@ -194,7 +194,7 @@ internal fun setTypeName(type: String): String = stringResource(when (type) {
 })
 @Composable
 internal fun strengthSource(source: String): String = when (source) {
-    "noop_native" -> "NOOP"
+    "noop_native" -> "Woop"
     "hevy_api", "hevy_csv" -> "Hevy"
     "manual" -> stringResource(R.string.forge_report_manual)
     else -> source

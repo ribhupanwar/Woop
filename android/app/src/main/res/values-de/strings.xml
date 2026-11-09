@@ -205,7 +205,7 @@
     <string name="l10n_add_device_wizard_experimental_best_effort_support_we_re_db288aa8">Experimentelle Best-Effort-Unterstützung. Wir testen diese noch, sie verbinden sich also vielleicht nicht auf jedem Gerät. Sie erfinden nie Daten und sagen dir ehrlich, wenn Live nicht möglich ist.</string>
     <string name="l10n_add_device_wizard_i_understand_this_disconnects_the_ring_66bbb125">Ich verstehe, dass dies den Ring von Oura trennt und dass Woop das nicht für mich rückgängig machen kann. Um zu Oura zurückzukehren, würde ich den Ring erneut auf Werkseinstellungen zurücksetzen und ihn in der Oura-App einrichten.</string>
     <string name="l10n_add_device_wizard_i_understand_this_disconnects_the_ring_ccbb3225">Ich verstehe, dass dies den Ring von Oura trennt und dass Woop das nicht für mich rückgängig machen kann.</string>
-    <string name="l10n_add_device_wizard_installing_noop_s_key_and_confirming_aab5cf61">NOOPs Schlüssel wird installiert; anschließend wird bestätigt, dass der Ring nur noch auf Woop antwortet. Halte den Ring in der Nähe und öffne die Oura-App nicht.</string>
+    <string name="l10n_add_device_wizard_installing_noop_s_key_and_confirming_aab5cf61">Woops Schlüssel wird installiert; anschließend wird bestätigt, dass der Ring nur noch auf Woop antwortet. Halte den Ring in der Nähe und öffne die Oura-App nicht.</string>
     <string name="l10n_add_device_wizard_keep_the_oura_app_instead_import_60d70411">Stattdessen die Oura-App behalten (Datei importieren)</string>
     <string name="l10n_add_device_wizard_make_sure_it_s_awake_and_8c40e59f">Stelle sicher, dass er wach und nirgendwo anders verbunden ist.</string>
     <string name="l10n_add_device_wizard_name_signal_signalbars_level_rssi_of_6aa514f6">%1$s, Signal %2$s von 4</string>
@@ -228,7 +228,7 @@
     <string name="l10n_add_device_wizard_use_file_import_0e092cb4">Dateiimport verwenden</string>
     <string name="l10n_add_device_wizard_we_could_not_take_over_this_fec1ce93">Wir konnten diesen Ring nicht übernehmen.</string>
     <string name="l10n_add_device_wizard_whoop_5_0_mg_support_is_e452e686">Die Unterstützung für WHOOP 5.0 / MG ist neuer und in Woop noch experimentell.</string>
-    <string name="l10n_add_device_wizard_whoop_is_noop_s_primary_fully_ac6fa33b">WHOOP ist NOOPs primäres, voll unterstütztes Band. Andere Herzfrequenzgurte streamen Live-Herzfrequenz und HRV, aber nicht WHOOPs tiefere Schlaf- und Erholungsdaten.</string>
+    <string name="l10n_add_device_wizard_whoop_is_noop_s_primary_fully_ac6fa33b">WHOOP ist Woops primäres, voll unterstütztes Band. Andere Herzfrequenzgurte streamen Live-Herzfrequenz und HRV, aber nicht WHOOPs tiefere Schlaf- und Erholungsdaten.</string>
     <string name="l10n_app_root_more_4bab2d8f">Mehr</string>
     <string name="l10n_app_root_moregroupchevron_b2b36ec6">moreGroupChevron</string>
     <string name="l10n_apple_health_screen_apple_health_b19b87da">Apple Health</string>
@@ -1518,7 +1518,7 @@
     <string name="l10n_settings_screen_contact_support_at_support_email_f0c4adce">Kontakt-Support bei %1$s</string>
     <string name="l10n_settings_screen_continuous_hrv_capture_1f0805d8">Kontinuierliche HRV-Erfassung</string>
     <string name="l10n_settings_screen_couldn_t_check_try_again_b3c885d9">Prüfung fehlgeschlagen. Versuch es erneut.</string>
-    <string name="l10n_settings_screen_counter_ticks_per_step_leave_at_3ce8c1d5">Zählerticks pro Schritt. Lass es auf 1,0, außer deine Schritte fallen zu hoch aus. Auf einem WHOOP 5/MG können sie sehr hoch ausfallen (10× oder mehr), daher geht das hier bis 30. Geh bekannte 1.000 Schritte und teile NOOPs Zählung durch die echte Zahl, um deinen Wert zu erhalten.</string>
+    <string name="l10n_settings_screen_counter_ticks_per_step_leave_at_3ce8c1d5">Zählerticks pro Schritt. Lass es auf 1,0, außer deine Schritte fallen zu hoch aus. Auf einem WHOOP 5/MG können sie sehr hoch ausfallen (10× oder mehr), daher geht das hier bis 30. Geh bekannte 1.000 Schritte und teile Woops Zählung durch die echte Zahl, um deinen Wert zu erhalten.</string>
     <string name="l10n_settings_screen_show_cycle_awareness_59709019">Zyklusbewusstsein anzeigen</string>
     <string name="l10n_settings_screen_cycle_awareness_ffb94783">Zyklusbewusstsein</string>
     <string name="l10n_settings_screen_day_cycle_background_8c254f01">Tageszyklus-Hintergrund</string>
@@ -2852,7 +2852,7 @@
     <string name="l10n_settings_screen_bold_19e07430">Fett</string>
     <string name="l10n_settings_screen_softer_9edfeba1">Weicher</string>
     <string name="oura_notify_mask_full_title">Oura-Benachrichtigungsmaske ff (experimentell)</string>
-    <string name="oura_notify_mask_full_desc">Sendet beim nächsten Verbinden die SetNotification-Maske der offiziellen App (1c 01 ff) statt NOOPs 3f. Der Ring packt für die offizielle App ~10 Pakete in eine Benachrichtigung, für Woop nur eines (9× langsameres Auslesen); das ist der erste Kandidat für den Schalter. Standardmäßig aus; die erste Verbindung nach dem Ausschalten läuft wieder mit 3f. Im Strap-Protokoll auf „-> notify_all(ff)“ achten und die Benachrichtigungsgrößen in der Rohaufzeichnung vergleichen.</string>
+    <string name="oura_notify_mask_full_desc">Sendet beim nächsten Verbinden die SetNotification-Maske der offiziellen App (1c 01 ff) statt Woops 3f. Der Ring packt für die offizielle App ~10 Pakete in eine Benachrichtigung, für Woop nur eines (9× langsameres Auslesen); das ist der erste Kandidat für den Schalter. Standardmäßig aus; die erste Verbindung nach dem Ausschalten läuft wieder mit 3f. Im Strap-Protokoll auf „-> notify_all(ff)“ achten und die Benachrichtigungsgrößen in der Rohaufzeichnung vergleichen.</string>
     <string name="data_sources_whoop_live_subtitle">Koppelt sich direkt über Bluetooth mit deinem Strap: keine WHOOP-App, keine Cloud. Der Strap kann seine Herzfrequenz außerdem als Standard-Bluetooth-Sensor senden.</string>
     <string name="data_sources_band_broadcast_description">Sendet die eigene Live-Herzfrequenz des Straps über Bluetooth für Garmin, Zwift oder Fitnessgeräte.</string>
     <string name="whoop4_direct_broadcast_explainer">Dein WHOOP 4.0 kann die Herzfrequenz direkt übertragen. Öffne Datenquellen und verwende „Herzfrequenz vom Band übertragen“ für Zwift, Peloton, Garmin oder Fitnessgeräte. Bei Bedarf kannst du alternativ „HF von diesem Telefon übertragen“ verwenden.</string>
@@ -3374,7 +3374,7 @@
     <string name="forge_tl_very_high">Sehr hoch</string>
     <string name="forge_tl_vo2_apple">Von der Apple Watch bei Spaziergängen und Läufen im Freien gemessen.</string>
     <string name="forge_tl_vo2_eight_weeks">VO₂max, letzte acht Wochen</string>
-    <string name="forge_tl_vo2_empty">Noch keine VO₂max-Werte in den letzten acht Wochen. Sie kommen aus Apple Health oder aus NOOPs wöchentlicher Schätzung, sobald Profil und Ruhepuls es erlauben.</string>
+    <string name="forge_tl_vo2_empty">Noch keine VO₂max-Werte in den letzten acht Wochen. Sie kommen aus Apple Health oder aus Woops wöchentlicher Schätzung, sobald Profil und Ruhepuls es erlauben.</string>
     <string name="forge_tl_vo2_estimator">Von Woop geschätzt (%s) aus Ruhepuls und Aktivität. Eine Schätzung, kein Labortest.</string>
     <string name="forge_tl_vo2_noop">Von Woop aus Ruhepuls und Aktivität geschätzt. Eine Schätzung, kein Labortest.</string>
     <string name="forge_tl_vs_usual">ggü. deinem Üblichen</string>
@@ -3741,7 +3741,7 @@
     <string name="forge_media_rights">Die Bilder und Animationen gehören Gym visual. Behalte diese Namensnennung bei und nutze sie nur privat und nicht-kommerziell. Woop vergibt keine Lizenz für diese Dateien.</string>
     <string name="forge_media_downloaded">Bereit</string>
     <string name="forge_media_unsafe">Das heruntergeladene Medienpaket enthielt einen unsicheren Dateipfad.</string>
-    <string name="forge_media_too_large">Das Übungsmedienpaket überschreitet NOOPs Speichergrenze von 200 MB.</string>
+    <string name="forge_media_too_large">Das Übungsmedienpaket überschreitet Woops Speichergrenze von 200 MB.</string>
     <string name="forge_media_checksum_failed">Das heruntergeladene Medienpaket stimmte nicht mit seiner veröffentlichten Prüfsumme überein.</string>
     <string name="forge_media_no_space">Es ist nicht genug freier Speicher vorhanden, um das Übungsmedienpaket zu installieren.</string>
     <string name="forge_media_network_failed">Der Anbieter war nicht erreichbar oder hat eine nicht unterstützte Antwort zurückgegeben.</string>
@@ -5005,4 +5005,5 @@
     <string name="workout_export_body">Speichere dieses Training mit seinem Puls als FIT-Datei für Strava, Garmin Connect oder eine andere App. Die Datei entsteht auf deinem Handy und verlässt es erst, wenn du sie teilst.</string>
     <string name="woop_home">Startseite</string>
     <string name="woop_activity">Aktivität</string>
+    <string name="woop_wrist_alerts">Woop-Handgelenkwarnungen</string>
 </resources>

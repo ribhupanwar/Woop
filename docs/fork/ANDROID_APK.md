@@ -99,3 +99,15 @@ days or next-period dates. Sensor phase/window estimates retain the existing dat
 are awareness estimates, not fertility or contraception guidance. Symptom logging and period end/flow
 tracking are not implemented by this change. No new permissions, server, analytics formula or database
 schema are introduced. Analysis migration required: no.
+
+## Android product branding cleanup
+
+Visible upstream product names in native UI literals, onboarding, About/settings, Forge wordmark,
+source display names, help, report/share headings and translated resource values now say Woop.
+The launcher debug label is Woop and notification access uses a translated Woop wrist-alert label.
+The Forge header no longer appends the separate legacy F emblem. The source link points to this fork.
+Package/application/component identifiers, source IDs, preference keys, resource identifiers, backup
+extensions and schemas remain unchanged for installation/data compatibility; historical goal-catalog
+lookup keys and upstream source comments/credits are retained. No physiological algorithm changed.
+Tools/test_android_woop_branding.py checks localized product text, manifest labels and the wordmark.
+Analysis migration required: no. New APK/device verification is required after CI packaging.

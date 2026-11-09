@@ -134,7 +134,7 @@ fun ForgeTrainingHistoryPage(initialFocus: String = "all", onClose: () -> Unit) 
             }
         }
         if (focus == "all" || focus == "cardio") HistoryLane(o, "cardio", o.cardio, TrainingLane.Cardio.color) {
-            HistoryAdaptations(o, listOf(HistoryCurve("NOOP", o.vo2, TrainingLane.Cardio.color),
+            HistoryAdaptations(o, listOf(HistoryCurve("Woop", o.vo2, TrainingLane.Cardio.color),
                 HistoryCurve("Apple Watch", o.vo2Apple, Forge.colors.textSecondary, dotsOnly = true)),
                 stringResource(R.string.forge_history_vo2), { historyNumber(it, 1) })
         }

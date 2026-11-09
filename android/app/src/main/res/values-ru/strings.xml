@@ -4893,4 +4893,5 @@
     <string name="workout_export_body">Сохрани эту тренировку с пульсом как FIT-файл для импорта в Strava, Garmin Connect или другое приложение. Файл создаётся на твоём телефоне и покидает его, только когда ты им поделишься.</string>
     <string name="woop_home">Главная</string>
     <string name="woop_activity">Активность</string>
+    <string name="woop_wrist_alerts">Оповещения Woop на запястье</string>
 </resources>

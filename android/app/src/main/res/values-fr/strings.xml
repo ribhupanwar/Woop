@@ -4991,4 +4991,5 @@
     <string name="workout_export_body">Enregistre cet entraînement avec sa fréquence cardiaque dans un fichier FIT à importer dans Strava, Garmin Connect ou une autre app. Le fichier est créé sur ton téléphone et ne le quitte que si tu le partages.</string>
     <string name="woop_home">Accueil</string>
     <string name="woop_activity">Activité</string>
+    <string name="woop_wrist_alerts">Alertes au poignet Woop</string>
 </resources>

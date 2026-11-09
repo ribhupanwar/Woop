@@ -4962,4 +4962,5 @@
     <string name="workout_export_body">将此训练连同心率保存为 FIT 文件，可导入 Strava、Garmin Connect 或其他应用。文件在你的手机上生成，只有在你分享时才会离开手机。</string>
     <string name="woop_home">首页</string>
     <string name="woop_activity">活动</string>
+    <string name="woop_wrist_alerts">Woop 腕带提醒</string>
 </resources>
