@@ -458,6 +458,19 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/NOOP Staging.app/NOOP Staging"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
+  WoopUIReviewTests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - WoopUIReviewTests
+    dependencies:
+      - target: NOOPiOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).woop.ui.review
+
   # WidgetKit + Live Activity extension — the iOS analogue of the macOS menu-bar
   # extra. Reads a tiny snapshot the app publishes into the shared App Group.
   NOOPiOSWidgets:
@@ -539,6 +552,7 @@ targets:
         # Built from the same $(BUNDLE_ID_PREFIX) rather than $(PRODUCT_BUNDLE_IDENTIFIER) because that
         # build setting would resolve to THIS target's own id, not NOOPiOS's.
         WKCompanionAppBundleIdentifier: $(BUNDLE_ID_PREFIX).noopai
+        NSMotionUsageDescription: "Woop reads wrist movement only during an optional motion set trial. Suggestions need confirmation and stay on your devices."
         NSHealthShareUsageDescription: "NOOP reads your heart rate from the Watch sensor to show a live readout on your wrist. It stays on your device."
         NSHealthUpdateUsageDescription: "NOOP records a basic workout session on your Watch for a higher-fidelity heart rate. The session stays on your device."
     entitlements:
@@ -646,6 +660,16 @@ schemes:
       region: DE
       targets:
         - NOOPiOSTests
+  WoopUIReview:
+    build:
+      targets:
+        NOOPiOS: all
+    test:
+      config: Debug
+      language: en
+      region: US
+      targets:
+        - WoopUIReviewTests
   # `xcodebuild -scheme NOOPWatch …` compile-verifies the watchOS app + its embedded complication
   # extension (M3). Name matches the app-build CI matrix entry the verify script adds.
   NOOPWatch:

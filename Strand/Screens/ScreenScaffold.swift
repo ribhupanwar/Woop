@@ -41,6 +41,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
     /// at-root re-tap of the active tab (#198 follow-up). Default 0 never changes, so macOS and every
     /// non-tab screen keep their exact prior scroll behaviour.
     @Environment(\.scrollToTopSignal) private var scrollToTopSignal
+    @Environment(\.woopReferenceUI) private var referenceUI
     @ObservedObject private var backgroundStore = BackgroundImageStore.shared
     @AppStorage(SceneBackgroundPrefs.enabledKey) private var showDayCycleBackground = SceneBackgroundPrefs.defaultEnabled
     @AppStorage(SkyBehindCardsPrefs.enabledKey) private var skyBehindCards = false
@@ -55,7 +56,7 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
             #if os(iOS)
             // One shared page gutter keeps every screen aligned with Today and the grouped lists.
             .padding(.horizontal, NoopMetrics.screenHPadding)
-            .padding(.top, 24)
+            .padding(.top, referenceUI ? 16 : 24)
             // No tab-bar reserve here any more. The iOS shell uses the PLATFORM tab bar, which is part
             // of the safe area, so the scroll view already ends above it. The old
             // `NoopMetrics.tabBarClearance` compensated for a custom bar drawn OVER the content; keeping
@@ -88,8 +89,12 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
         // on the opaque canvas and stay fully legible (2026-06-23: cards were "losing the data").
         .background(alignment: .top) {
             ZStack(alignment: .top) {
-                StrandPalette.surfaceBase
-                topBackground
+                if referenceUI {
+                    WoopReferenceCanvas()
+                } else {
+                    StrandPalette.surfaceBase
+                    topBackground
+                }
             }
             .ignoresSafeArea()
         }
@@ -156,10 +161,14 @@ struct ScreenScaffold<Content: View, Trailing: View>: View {
         return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 if let title {
-                    Text(title).font(StrandFont.title1).foregroundStyle(titleColor)
+                    Text(title)
+                        .font(referenceUI ? WhoopReferenceFont.heading(26) : StrandFont.title1)
+                        .foregroundStyle(titleColor)
                 }
                 if let subtitle {
-                    Text(subtitle).font(StrandFont.subhead).foregroundStyle(subtitleColor)
+                    Text(subtitle)
+                        .font(referenceUI ? WhoopReferenceFont.body(13) : StrandFont.subhead)
+                        .foregroundStyle(subtitleColor)
                 }
             }
             Spacer(minLength: 0)

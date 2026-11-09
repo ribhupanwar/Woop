@@ -132,6 +132,15 @@ final class EnergyDisplayTests: XCTestCase {
         XCTAssertEqual(EnergyDisplay.totalText(result, includesUnit: true), "~\(value) kcal")
     }
 
+    func testReferenceCalorieNumberCanUseSeparateEstimateCaption() {
+        let value = Int(3_199.6.rounded()).formatted(.number.grouping(.automatic))
+        let result = summary(total: 3_199.6, source: .strapWornTime)
+        XCTAssertEqual(EnergyDisplay.totalText(result, marksEstimate: false), value)
+        XCTAssertEqual(EnergyDisplay.totalText(result, includesUnit: true, marksEstimate: false), "\(value) kcal")
+        XCTAssertEqual(EnergyDisplay.totalText(summary(total: nil, source: .profileOnly), marksEstimate: false), "—")
+        XCTAssertEqual(EnergyDisplay.totalText(result), "~\(value)")
+    }
+
     func testAppleSplitTotalIsNotMarkedApproximate() {
         let value = Int(2_700.0).formatted(.number.grouping(.automatic))
         XCTAssertEqual(EnergyDisplay.totalText(summary(total: 2_700, source: .appleSplit)), value)

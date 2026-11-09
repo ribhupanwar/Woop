@@ -39,7 +39,7 @@ internal fun librarySourceName(source: String): String = when (source) {
     "user" -> stringResource(R.string.forge_library_created_by_you)
     "exercise_db" -> "ExerciseDB"
     "imported" -> stringResource(R.string.forge_library_imported)
-    else -> "NOOP"
+    else -> "Woop"
 }
 
 private val EQUIPMENT_NAMES = mapOf(

@@ -157,6 +157,7 @@ internal fun TrainingSettingsSection(onOpenMedia: () -> Unit) {
     var media by remember { mutableStateOf(prefs.getString("training.mediaPresentation", "large") ?: "large") }
     var suggestions by remember { mutableStateOf(NoopPrefs.autoDetectWorkouts(context)) }
     val activityPrefs = remember { NoopPrefs.of(context) }
+    var automaticallyRecord by remember { mutableStateOf(activityPrefs.getBoolean(com.noop.core.CoreActivity.KEY_AUTOMATIC_SAVE, false)) }
     var walks by remember { mutableStateOf(activityPrefs.getBoolean(com.noop.core.CoreActivity.KEY_WALKS, true)) }
     var level by remember { mutableStateOf(activityPrefs.getString(com.noop.core.CoreActivity.KEY_LEVEL, "balanced") ?: "balanced") }
     var notify by remember { mutableStateOf(activityPrefs.getBoolean(com.noop.core.CoreActivity.KEY_NOTIFY, true)) }
@@ -265,9 +266,16 @@ internal fun TrainingSettingsSection(onOpenMedia: () -> Unit) {
                   suggestions) { on ->
             suggestions = on
             NoopPrefs.setAutoDetectWorkouts(context, on)
+            if (on && automaticallyRecord) activityPrefs.edit().putLong(com.noop.core.CoreActivity.KEY_AUTOMATIC_SINCE, System.currentTimeMillis() / 1000).apply()
             scope.launch(Dispatchers.IO) { ActivitySuggestionState.reload(context) }
         }
         if (suggestions) {
+            RowDivider()
+            ToggleRow("Automatically record activities", "After sync and analysis, eligible completed activities are saved. Uncertain types remain Activity and can be edited.", automaticallyRecord) { on ->
+                automaticallyRecord = on
+                activityPrefs.edit().putBoolean(com.noop.core.CoreActivity.KEY_AUTOMATIC_SAVE, on)
+                    .apply { if (on) putLong(com.noop.core.CoreActivity.KEY_AUTOMATIC_SINCE, System.currentTimeMillis() / 1000) }.apply()
+            }
             // Activity detection's own choices (decision 2026-10-31); a WHOOP 4.0 counts no steps.
             val noSteps = remember { activeStrapCountsNoSteps(context) }
             RowDivider()

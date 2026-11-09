@@ -51,10 +51,9 @@ fun ForgeWordmark(modifier: Modifier = Modifier) {
             Text(ch.toString(), style = Forge.type.title2.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
                  color = Forge.sceneInk.text.copy(alpha = 0.9f))
         }
-        ForgeMark(14.dp)
     }
 }
 
 /** The brand name is not translated. */
-private const val BRAND = "NOOP Forge"
-private const val BRAND_LETTERS = "NOOP"
+private const val BRAND = "Woop"
+private const val BRAND_LETTERS = "WOOP"

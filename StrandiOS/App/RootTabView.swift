@@ -57,7 +57,7 @@ struct RootTabView: View {
     /// when a hub row deep-links to it via NavRouter. nil = closed.
     @State private var routedPillar: NavRouter.Destination?
     /// Selected tab — bound so tab switches can crossfade (README §Motion: ~240ms opacity swap
-    /// between tab roots, calm easing). Defaults to Today.
+    /// between tab roots, calm easing). Defaults to Home.
     @State private var selectedTab: Int = 0
     @State private var customizeTodayAfterDismissal = false
     /// One `NavigationPath` per tab, indexed by tab tag. Re-tapping the already-active tab pops
@@ -80,30 +80,10 @@ struct RootTabView: View {
     /// Whitespace alone is not a search — it would blank the index for a stray space.
     private var isSearchingMore: Bool { !SearchMatch.tokens(moreQuery).isEmpty }
 
-    /// The WHOOP-inspired overview is the default Today layout for fresh installs. Existing wearer
-    /// selections remain respected through AppStorage; the Settings picker can still select any layout.
-    /// This changes presentation only and leaves all five independent navigation stacks intact.
-    @AppStorage(TodayDashboardStyle.storageKey) private var todayDashboardStyleRaw = TodayDashboardStyle.overview.rawValue
-    private var todayDashboardStyle: TodayDashboardStyle {
-        TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview
-    }
-
-    /// The Today tab root, honouring the chosen dashboard style.
-    ///
-    /// The Heute-screen redesign prototype used to take priority here when its own
-    /// `noop.heuteRedesignEnabled` flag was on. The flag is no longer read and the prototype was deleted
-    /// on 2026-10-10, so no persisted `true` from an earlier build can resurrect it.
-    ///
-    /// Every style carries the same `AnalysisUpdateBanner` at its foot while an analysis migration runs.
-    @ViewBuilder private var todayTabRoot: some View {
-        Group {
-            switch todayDashboardStyle {
-            case .classic:  TodayView()
-            case .liquid:   LiquidTodayView()
-            case .trends:   TrendsDashboardView()
-            case .overview: OverviewDashboardView()
-            }
-        }
+    /// Home always opens the owner-approved reference dashboard, including on upgrades with a saved
+    /// legacy dashboard preference. Home owns the daily dashboard and its detail routes.
+    private var homeTabRoot: some View {
+        OverviewDashboardView()
         .safeAreaInset(edge: .bottom, spacing: 0) { AnalysisUpdateBanner() }
     }
 
@@ -122,7 +102,7 @@ struct RootTabView: View {
         // deterministic screenshots and does not affect production navigation or derived values.
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--demo-tab"), i + 1 < args.count {
-            let demoTabs = ["home": 0, "today": 1, "activity": 2, "healthspan": 3, "more": 4]
+            let demoTabs = ["home": 0, "today": 0, "activity": 2, "healthspan": 3, "health": 3, "more": 4]
             if let tab = demoTabs[args[i + 1].lowercased()] {
                 _selectedTab = State(initialValue: tab)
             }
@@ -145,6 +125,7 @@ struct RootTabView: View {
                     reselectTab(tag)
                 } else {
                     selectedTab = tag
+                    if tag == 0 { Task { await model.refreshDashboard() } }
                 }
             }
         )
@@ -155,7 +136,10 @@ struct RootTabView: View {
     /// pop is skipped, so scroll position survives and the refresh doesn't double with a re-run of the
     /// root's `.task` (#198).
     private func reselectTab(_ tag: Int) {
-        Task { await repo.refresh() }
+        Task {
+            if tag == 0 { await model.refreshDashboard() }
+            else { await repo.refresh() }
+        }
         if !tabPaths[tag].isEmpty {
             tabPaths[tag] = NavigationPath()   // on a subpage: animated pop back to the root
         } else {
@@ -169,18 +153,23 @@ struct RootTabView: View {
     /// rebuild the tab roots underneath it. The same class of rebuild is what #197 caused with an
     /// `.id()` reset and #198 had to undo — it lost scroll position and re-ran `.task`.
     ///
-    /// Only a decisive horizontal flick switches tabs. Today uses horizontal swipe to change DAYS, so
-    /// the attachment mask below disables this recognizer there entirely. Both thresholds are unchanged
+    /// Only a decisive horizontal flick switches tabs. Both Home dashboard styles and Today can use
+    /// horizontal swipe to change days, so neither participates in this ancestor gesture.
+    /// Both thresholds are unchanged
     /// from the original gesture.
+    private static let visibleTabTags = [0, 3, 2, 4]
+
     private var tabSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 24)
             .onEnded { v in
                 // Defensive guard for a selection change during an in-flight gesture. The GestureMask at
                 // the attachment site keeps this recognizer out of Today hit testing in the steady state.
-                guard selectedTab != 0 else { return }
+                guard selectedTab > 1 else { return }
                 let dx = v.translation.width, dy = v.translation.height
                 guard abs(dx) > 60, abs(dx) > abs(dy) * 1.6 else { return }
-                let next = min(4, max(0, selectedTab + (dx < 0 ? 1 : -1)))
+                guard let index = Self.visibleTabTags.firstIndex(of: selectedTab) else { return }
+                let nextIndex = min(Self.visibleTabTags.count - 1, max(0, index + (dx < 0 ? 1 : -1)))
+                let next = Self.visibleTabTags[nextIndex]
                 if next != selectedTab {
                     withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24)) { selectedTab = next }
                 }
@@ -188,34 +177,25 @@ struct RootTabView: View {
     }
 
     var body: some View {
-        // The platform tab bar drives navigation. NOOP drew its own floating bar for one reason — a
-        // native TabView can't host a centre item that overflows the bar, and the signature gold FAB
-        // sat there. That FAB has since moved to the top-right of each screen's header, which left a
-        // custom bar doing exactly what the native one does, minus the system's safe-area handling,
-        // Dynamic Type and (on iOS 26) Liquid Glass. Reverting to native also stops this shell
-        // diverging from upstream, which is where the duplicated-bar merge damage came from.
-        //
-        // The ZStack stays for the draggable CoachFloatingButton below, which still floats over
-        // every tab.
+        // TabView retains the four visible navigation stacks with their stable route tags. The reference bar only drives its existing
+        // selection binding, so re-tap, pop-to-root and scroll restoration keep one owner.
+        VStack(spacing: 0) {
         ZStack(alignment: .bottom) {
             TabView(selection: nativeTabSelection) {
-                tab(todayTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
-                tab(TodayView(), "Today", "calendar", path: $tabPaths[1], scrollSignal: scrollTop[1]).environment(\.dashboardIsActive, selectedTab == 1).tag(1)
+                tab(homeTabRoot, "Home", "house.fill", path: $tabPaths[0], scrollSignal: scrollTop[0]).environment(\.dashboardIsActive, selectedTab == 0).tag(0)
+                tab(ReferenceHealthHub(), "Health", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 tab(WorkoutsView(), "Activity", "figure.run", path: $tabPaths[2], scrollSignal: scrollTop[2]).environment(\.dashboardIsActive, selectedTab == 2).tag(2)
-                tab(ScrollView { HealthspanSection().padding() }, "Healthspan", "heart.text.square", path: $tabPaths[3], scrollSignal: scrollTop[3]).environment(\.dashboardIsActive, selectedTab == 3).tag(3)
                 moreTab(path: $tabPaths[4], scrollSignal: scrollTop[4]).environment(\.dashboardIsActive, selectedTab == 4).tag(4)
             }
-            // Overview Dashboard mockup fidelity (2026-08-31): the active tab reads green, not the
-            // configurable Accent colour. `.tint()` colours the whole bar uniformly — there is no native
-            // per-tab-item override — so this is deliberately a global change across all four tabs.
-            .tint(StrandPalette.chargeColor)
+            // White active navigation follows the supplied dark reference; score colors stay local.
+            .tint(StrandPalette.accent)
+            .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
             // #1841: the same "Hide bar when scrolling" preference the macOS settings screen exposes.
             // Here the system owns the behaviour — iOS 26's tab bar MINIMISES to a pill on scroll down
             // rather than sliding away entirely, so this is the platform's read of the same intent.
             .noopTabBarAutoHide(bottomBarAutoHide)
-            // Tab crossfade — README §Motion: ~240ms opacity swap between tab roots, global calm
-            // easing cubic-bezier(0.22,1,0.36,1).
-            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24), value: selectedTab)
+            // Tab changes do not animate the entire retained dashboard hierarchy. Individual charts
+            // and presentations keep their own animations without making a large tab switch expensive.
             // Swipe left/right anywhere to move between tabs (2026-07-02), but ONLY while the current
             // tab is at its root. Attaching this ancestor drag gesture unconditionally defeated the
             // edge-restriction of a pushed NavigationStack screen's native interactive-pop gesture —
@@ -237,10 +217,10 @@ struct RootTabView: View {
             // interactive-pop itself: far worse than the bug being fixed.
             .simultaneousGesture(
                 tabSwipeGesture,
-                including: selectedTab != 0 && tabPaths[selectedTab].isEmpty ? .all : .subviews
+                including: selectedTab > 1 && tabPaths[selectedTab].isEmpty ? .all : .subviews
             )
             // The minimized running workout, above the tab bar on every tab.
-            .activeSessionMiniBar()
+            .activeSessionMiniBar(enabled: bottomBarAutoHide)
 
             // Draggable floating Coach button — an alternative entry to the Today banner, honouring the
             // user's Coach-entry preference. Floats over every tab; a tap opens the chat.
@@ -248,6 +228,18 @@ struct RootTabView: View {
                 CoachFloatingButton(isPresented: $showCoach)
             }
         }
+        if !bottomBarAutoHide {
+            // Physical layout space prevents TabView children and floating controls from extending
+            // underneath the reference navigation, even when a child ignores inherited safe insets.
+            SessionBottomAccessory()
+                .padding(.horizontal, NoopMetrics.screenPadding)
+                .background(NoopChromeSurface())
+            referenceTabBar
+        }
+        }
+        .preferredColorScheme(.dark)
+        .environment(\.colorScheme, .dark)
+        .environment(\.woopReferenceUI, true)
         .coachCover(isPresented: $showCoach, coach: coach)
         .activeSessionPresentation()
         .task { await session.restoreIfNeeded() }
@@ -537,6 +529,39 @@ struct RootTabView: View {
     /// Calm-easing curve (cubic-bezier(0.22,1,0.36,1)) at the README sheet-present duration.
     private static let sheetEase = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.42)
 
+    private var referenceTabBar: some View {
+        HStack(spacing: 0) {
+            referenceTabItem(0, "Home", "house")
+            referenceTabItem(3, "Health", "heart.text.square")
+            referenceTabItem(2, "Activity", "figure.run")
+            referenceTabItem(4, "More", "line.3.horizontal")
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(WoopHomePalette.canvasBottom.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.white.opacity(0.06)).frame(height: 0.5)
+        }
+    }
+
+    private func referenceTabItem(_ tag: Int, _ title: LocalizedStringKey, _ symbol: String) -> some View {
+        Button { nativeTabSelection.wrappedValue = tag } label: {
+            VStack(spacing: 5) {
+                Image(systemName: symbol).font(.system(size: 22, weight: .regular))
+                Text(title).font(WhoopReferenceFont.body(10))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(selectedTab == tag ? Color.white : Color.white.opacity(0.44))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(selectedTab == tag ? .isSelected : [])
+        .accessibilityIdentifier("woop.tab.\(tag)")
+    }
+
     // MARK: - Quick-action sheet
 
     /// Routes a chosen quick action to the existing screen, or shows the action menu itself.
@@ -655,6 +680,7 @@ struct RootTabView: View {
         // Drive this tab's root scroll-to-top on an at-root re-tap (#198 follow-up); read by ScreenScaffold
         // / LiquidTodayView inside. Only THIS tab's token changes on its reselect, so the others don't scroll.
         .environment(\.scrollToTopSignal, scrollSignal)
+        .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
         .tabItem { Label(title, systemImage: icon) }
     }
 
@@ -722,6 +748,7 @@ struct RootTabView: View {
         .onChangeCompat(of: path.wrappedValue.count) { _ in moreSearchFocused = false }
         // Scroll the More index to the top on an at-root re-tap (#198 follow-up); read by its ScreenScaffold.
         .environment(\.scrollToTopSignal, scrollSignal)
+        .toolbar(bottomBarAutoHide ? .visible : .hidden, for: .tabBar)
         .tabItem { Label("More", systemImage: "ellipsis") }
     }
 
@@ -799,7 +826,7 @@ enum MoreDestination: Hashable {
     case body, energyPlan
     case ageless, rhythmAge
     case fusedRecord, appleHealth, miBand, dataSources, backupSync, shortcutsExport, noopLimitations
-    case alarms, automations, testCentre, siriShortcuts, powerSaving, settings
+    case alarms, automations, testCentre, siriShortcuts, powerSaving, settings, firmware
     /// Settings opened from a search hit, carrying the query so the screen lands already filtered to
     /// the matching section. Distinct from `.settings` (the plain row) so an ordinary tap on the
     /// Settings row still opens the whole screen.
@@ -850,6 +877,7 @@ enum MoreDestination: Hashable {
         case .alarms:          SmartAlarmView()
         case .automations:     AutomationsView()
         case .testCentre:      TestCentreView()
+        case .firmware:        BandFirmwareView()
         case .siriShortcuts:   SiriShortcutsSettingsView()
         case .powerSaving:     PowerSavingView()
         case .settings:        SettingsView()
@@ -1016,6 +1044,7 @@ private struct QuickActionSheet: View {
                     VStack(spacing: 8) {
                         row("Live HR", icon: "waveform.path.ecg", tint: StrandPalette.metricRose) { onPick(.live) }
                         row("Start workout", icon: "figure.run", tint: StrandPalette.effortColor) { onPick(.workout) }
+                            .accessibilityIdentifier("woop.quickActions.startWorkout")
                         row("Log journal", icon: "square.and.pencil",
                             tint: AppleInspiredColors.color(for: "journal", enabled: appleInspiredColors)) { onPick(.journal) }
                         row("Breathe", icon: "wind", tint: StrandPalette.restColor) { onPick(.breathe) }

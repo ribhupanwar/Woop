@@ -39,7 +39,7 @@ private sealed interface Notice {
 }
 
 private const val BACKUP_MIME = "application/octet-stream"
-private const val BACKUP_NAME_PREFIX = "NOOP-Forge-"
+private const val BACKUP_NAME_PREFIX = "Woop-Forge-"
 private const val BACKUP_EXTENSION = ".noopbak"
 
 /** Starts a `.noopbak` export or import of the core's store; the picker, the work and the dialogs follow. */

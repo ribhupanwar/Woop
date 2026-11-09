@@ -35,12 +35,15 @@ enum HealthspanEmptyReason: Equatable {
 }
 
 struct HealthspanSection: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
+    @Environment(\.dashboardAppModel) private var appModel
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var profile: ProfileStore
     @State private var snapshot: HealthspanSnapshot?
     @State private var emptyReason = HealthspanEmptyReason.unknown
     @State private var loaded = false
     @State private var showsDetail = false
+    @State private var showsECG = false
 
     private var sex: HealthspanEngine.Sex? { HealthspanEngine.Sex(profileValue: profile.sex) }
 
@@ -59,8 +62,22 @@ struct HealthspanSection: View {
             } else {
                 ComingSoon.loading("Reading your healthspan age…", title: "Healthspan", symbol: "hourglass")
             }
+            if referenceUI {
+                NoopButton("Measure ECG", systemImage: "waveform.path.ecg", kind: .secondary, fullWidth: true) {
+                    showsECG = true
+                }
+                .disabled(appModel == nil)
+                .accessibilityIdentifier("woop.healthspan.measureECG")
+                Text("WHOOP MG · Requires a connected band and the ECG experiment enabled.")
+                    .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+            }
         }
         .task(id: repo.refreshSeq) { await load() }
+        .sheet(isPresented: $showsECG) {
+            if let appModel {
+                EcgReadingSheet(controller: appModel.ecgReading, onClose: { showsECG = false })
+            }
+        }
         .sheet(isPresented: $showsDetail) {
             if let snapshot {
                 NavigationStack { HealthspanDetailView(snapshot: snapshot) }
@@ -107,9 +124,13 @@ struct HealthspanSection: View {
             .foregroundStyle(StrandPalette.textSecondary)
             .frame(minHeight: 44)
         }
-        .padding(NoopMetrics.space5)
+        .padding(referenceUI ? 0 : NoopMetrics.space5)
         .frame(maxWidth: .infinity)
-        .background { FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius) }
+        .background {
+            if !referenceUI {
+                FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius)
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
@@ -261,21 +282,37 @@ struct HealthspanTopRow: View {
     var showsPace = true
     @State private var progress = 0.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.woopReferenceUI) private var referenceUI
 
     var body: some View {
         VStack(spacing: NoopMetrics.space3) {
-            HealthspanAgeGauge(age: week.result.healthspanAge, actualAge: week.result.chronologicalAge, progress: progress)
-                .frame(maxWidth: .infinity)
+            if referenceUI {
+                HealthspanReferenceOrb(age: week.result.healthspanAge,
+                                       actualAge: week.result.chronologicalAge)
+            } else {
+                HealthspanAgeGauge(age: week.result.healthspanAge, actualAge: week.result.chronologicalAge, progress: progress)
+                    .frame(maxWidth: .infinity)
+            }
             let used = week.result.componentsUsed, all = HealthspanEngine.Component.allCases.count
             if used < all {
                 Text("Based on \(used) of \(all) measures")
                     .font(StrandFont.footnote)
                     .foregroundStyle(StrandPalette.textSecondary)
             }
-            if showsPace, let pace = week.pace { pacePill(pace) }
+            if showsPace, let pace = week.pace {
+                if referenceUI {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("PACE OF AGING").whoopReferenceOverline()
+                        HealthspanPaceSlider(pace: pace)
+                    }
+                    .padding(.top, 16)
+                } else {
+                    pacePill(pace)
+                }
+            }
         }
         .onAppear {
-            if reduceMotion { progress = 1 } else { withAnimation(.easeOut(duration: 0.9)) { progress = 1 } }
+            if reduceMotion || referenceUI { progress = 1 } else { withAnimation(.easeOut(duration: 0.9)) { progress = 1 } }
         }
     }
 

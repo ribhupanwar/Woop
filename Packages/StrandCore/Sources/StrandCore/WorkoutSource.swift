@@ -29,6 +29,14 @@ public enum WorkoutSource: Equatable, Sendable {
     /// The source a confirmed activity-detection suggestion is stored under. It must not end in "-noop",
     /// which reads as a legacy detected bout.
     public static let confirmedSuggestionSource = "detected-confirmed"
+    /// Automatically saved detector output. Remains `.detected`, never wearer-confirmed ground truth.
+    public static func automaticDetectionSource(computedId: String) -> String { "woop-auto:" + computedId }
+    public static func isAutomaticallyDetected(_ source: String) -> Bool {
+        source.hasPrefix("woop-auto:") && source.hasSuffix("-noop")
+    }
+    public static func detectedOwner(source: String) -> String {
+        isAutomaticallyDetected(source) ? String(source.dropFirst("woop-auto:".count)) : source
+    }
 
     /// Rows the wearer put there: a hand-logged session or a suggestion they confirmed. Both can be edited
     /// and deleted, and both read the strap trace for the heart rate they lack.

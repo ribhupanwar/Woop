@@ -12,7 +12,8 @@ public enum WorkoutPhysiology {
         }
         if WorkoutSource.classify(source) == .oura { return importedIds + [WorkoutSource.ouraSource] }
         guard WorkoutSource.classify(source) == .detected else { return importedIds }
-        return [source.hasSuffix("-noop") ? String(source.dropLast(5)) : source]
+        let recordingSource = WorkoutSource.detectedOwner(source: source)
+        return [recordingSource.hasSuffix("-noop") ? String(recordingSource.dropLast(5)) : recordingSource]
     }
 
     public static func bucketSeconds(from: Int, to: Int) -> Int {

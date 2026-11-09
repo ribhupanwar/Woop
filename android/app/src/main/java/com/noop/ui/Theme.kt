@@ -145,7 +145,7 @@ object Palette {
     val hrZones: List<Color> get() = listOf(zone1, zone1, zone2, zone3, zone4, zone5)
 
     // Status (Classic = green/amber/red).
-    val statusPositive get() = if (isClassic) classic.statusPositive else active.statusPositive
+    val statusPositive get() = if (host != null) com.noop.ui.forge.WoopReferenceColors.healthGood else if (isClassic) classic.statusPositive else active.statusPositive
     val statusWarning get() = if (isClassic) classic.statusWarning else active.statusWarning
     val statusCritical get() = if (isClassic) classic.statusCritical else active.statusCritical
 

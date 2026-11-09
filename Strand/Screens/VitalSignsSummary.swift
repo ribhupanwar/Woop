@@ -35,6 +35,7 @@ struct BodyVitalReading: Identifiable {
     /// knowing it runs high for you. Pure formatted data (a number and a unit), never a sentence.
     /// Defaulted so existing call sites keep compiling unchanged.
     var secondary: String? = nil
+    var hardwareLabel: String? = nil
 
     var id: String { key }
 
@@ -55,11 +56,11 @@ struct BodyVitalReading: Identifiable {
     /// The tile caption: "<day> · <source> · <state>". Falls back to a metric-specific "no value"
     /// line when nothing resolved, so an empty tile still says why instead of a bare dash.
     var stateCaption: String {
-        guard let day else { return missingCaption }
+        guard let day else { return [hardwareLabel, missingCaption].compactMap { $0 }.joined(separator: " · ") }
         // #1636: the secondary reading leads, so it sits directly under the headline value.
         var parts = secondary.map { [$0] } ?? []
         parts.append(Self.dayLabel(day))
-        if let sourceText = Self.sourceLabel(source, key: key) {
+        if let sourceText = Self.sourceLabel(source, key: key, hardwareLabel: hardwareLabel) {
             parts.append(sourceText)
         }
         parts.append(stateText)
@@ -92,15 +93,19 @@ struct BodyVitalReading: Identifiable {
 
     /// Short provenance word for the caption. The local-cache fallback stays unnamed (previews/tests),
     /// and computed skin temp reads "vs baseline" (#622) since that figure is a ±°C nightly deviation.
-    private static func sourceLabel(_ source: DailyMetricSource?, key: String) -> String? {
+    private static func sourceLabel(_ source: DailyMetricSource?, key: String, hardwareLabel: String? = nil) -> String? {
         guard let source else { return nil }
         switch source {
         case .whoopImport:
             return String(localized: "WHOOP import")
         case .noopComputed:
+            if let hardwareLabel {
+                return key == "skin" ? "\(hardwareLabel) · " + String(localized: "vs baseline")
+                    : "\(hardwareLabel) · " + String(localized: "on-device")
+            }
             // Live pipeline stores ±°C vs personal baseline (#622) — not absolute wrist °C.
             if key == "skin" { return String(localized: "vs baseline") }
-            return String(localized: "NOOP computed")
+            return String(localized: "Woop computed")
         case .appleHealth:
             return String(localized: "Apple Health")
         case .localCache:
@@ -136,7 +141,11 @@ enum BodyVitalSigns {
                          hrvOverCountByDay: [String: Double] = [:],
                          // #1846: the Settings lead-with choice, so this tile agrees with Today and the
                          // detail screen. A setting that reaches two of three surfaces is worse than none.
-                         skinTempPreferred: SkinTempDisplay.Kind = .absolute) -> [BodyVitalReading] {
+                         skinTempPreferred: SkinTempDisplay.Kind = .absolute,
+                         hardwareOnly: Bool = false,
+                         hardwareLabel: String? = nil) -> [BodyVitalReading] {
+        // Explicit hardware mode excludes imported files, Apple aggregates and merged caches.
+        let sourceRows = hardwareOnly ? sourceRows.filter { $0.source == .noopComputed } : sourceRows
         let logicalDay = logicalDayKey(now)
 
         // Resolve one metric to a per-day series, taking the FIRST source (by precedence) that carries
@@ -432,7 +441,11 @@ enum BodyVitalSigns {
                 // headline IS the absolute — on a deviation-led tile it would just repeat the value.
                 secondary: skinSecondary
             ),
-        ]
+        ].map { reading in
+            var reading = reading
+            reading.hardwareLabel = hardwareOnly ? hardwareLabel : nil
+            return reading
+        }
     }
 
     /// The newest day any resolved reading was sourced from — drives the section's "Latest" trailing label.

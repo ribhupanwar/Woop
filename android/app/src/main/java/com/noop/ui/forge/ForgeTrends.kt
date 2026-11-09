@@ -287,7 +287,7 @@ private fun WeekReview(all: Map<CoreRead.Metric, List<CoreRead.Point>>, today: L
         androidx.compose.material3.Button(colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = colors.surface, contentColor = colors.text), onClick = {
             val text = buildString {
-                appendLine("NOOP · $title (${weekRange(digest.weekStart, digest.weekEnd)})")
+                appendLine("Woop · $title (${weekRange(digest.weekStart, digest.weekEnd)})")
                 labels.forEach { (label, metric) ->
                     digest.summary(metric)?.thisWeek?.takeIf { it.n > 0 }?.let { appendLine("$label: ${it.mean.roundToInt()}") }
                 }

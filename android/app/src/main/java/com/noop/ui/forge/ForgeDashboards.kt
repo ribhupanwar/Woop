@@ -28,7 +28,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.CheckCircleOutline
@@ -89,7 +88,7 @@ import kotlin.math.roundToInt
  * drawn here; the opt-in extras reuse the Liquid Today sections, as the iOS dashboards reuse theirs.
  */
 
-private const val WORDMARK = "N O O P"
+private const val WORDMARK = "W O O P"
 private const val LONG_DAY_PATTERN = "EEEE, d. MMMM"
 private const val SHORT_DAY_PATTERN = "d MMM"
 private const val DASH = "—"
@@ -121,7 +120,7 @@ internal enum class DashboardSection(val raw: String, val extra: Boolean, val ti
                                     YOUR_CARDS, MENSTRUAL_CYCLE, JOURNAL, DATA_SOURCES, ADDED_CARDS)
         fun defaultOrder(dashboard: String): List<DashboardSection> =
             if (dashboard == "trends") listOf(COACH, HERO, TRENDS_CHART, METRIC_STRIP, ACTIVITY, GOALS, MOMENTUM) + EXTRAS
-            else listOf(COACH, OVERVIEW, FOCUS, GOALS, HEALTH, MOMENTUM) + EXTRAS
+            else listOf(OVERVIEW, ACTIVITY, FOCUS, GOALS, HEALTH, MOMENTUM) + EXTRAS
         fun of(raw: String) = entries.firstOrNull { it.raw == raw }
     }
 }
@@ -167,7 +166,7 @@ internal object OverviewPrefs {
     val FOCUS_KEYS = listOf("overview.focus.slot1", "overview.focus.slot2", "overview.focus.slot3")
     val FOCUS_DEFAULTS = listOf("hrv", "restingHr", "steps")
     const val HEALTH_KEY = "overview.healthCards"
-    val HEALTH_DEFAULTS = listOf(DashboardCard.RESTING_HR, DashboardCard.HRV, DashboardCard.RESPIRATORY,
+    val HEALTH_DEFAULTS = listOf(DashboardCard.HRV, DashboardCard.RESTING_HR, DashboardCard.STEPS, DashboardCard.VO2MAX, DashboardCard.RESPIRATORY,
                                  DashboardCard.FITNESS_AGE, DashboardCard.CALORIES, DashboardCard.WEIGHT)
     fun focus(c: Context) = FOCUS_KEYS.mapIndexed { i, k -> NoopPrefs.of(c).getString(k, null) ?: FOCUS_DEFAULTS[i] }
     fun health(c: Context): List<DashboardCard> {
@@ -191,50 +190,24 @@ internal fun DashboardHeader(date: LocalDate, isToday: Boolean, battery: String?
                              onQuickActions: () -> Unit, onUpdates: () -> Unit, onCoach: (() -> Unit)?, onArrange: () -> Unit,
                              onPickDay: () -> Unit = {}) {
     val colors = Forge.colors
-    val ink = Forge.sceneInk
-    Column(Modifier.fillMaxWidth().padding(top = ForgeMetrics.space6), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Long-pressing the wordmark arranges the sections, the dashboards' one shortcut (iOS `onLongPressGesture`).
-            Text(WORDMARK, style = Forge.type.title2.copy(fontWeight = FontWeight.Bold), color = ink.text,
-                 modifier = Modifier.combinedClickable(onClick = {}, onLongClick = onArrange))
-            Spacer(Modifier.weight(1f))
-            // The strap's battery, "+" for the quick actions, the updates bell and (while the coach is on) the coach.
-            if (battery != null) {
-                Row(Modifier.height(36.dp).background(colors.inset, CircleShape).clickable(onClick = onBattery)
-                        .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(Icons.Rounded.BatteryFull, null, tint = colors.text, modifier = Modifier.size(16.dp))
-                    Text(battery, style = Forge.type.footnote, color = colors.text)
-                }
-                Spacer(Modifier.width(ForgeMetrics.space2))
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Box(Modifier.size(36.dp).background(colors.rest, CircleShape).combinedClickable(onClick = onArrange, onLongClick = onArrange), contentAlignment = Alignment.Center) {
+                Text("W", style = Forge.type.headline, color = Color.Black)
             }
-            HeaderIcon(Icons.Rounded.Add, stringResource(R.string.forge_db_quick_actions), onQuickActions)
-            Spacer(Modifier.width(ForgeMetrics.space2))
-            Box {
-                HeaderIcon(if (unread > 0) Icons.Rounded.NotificationsActive else Icons.Rounded.Notifications,
-                           stringResource(R.string.forge_db_updates), onUpdates)
-                if (unread > 0) {
-                    Box(Modifier.align(Alignment.TopEnd).size(16.dp).background(ForgeTokens.Color.systemRed.resolve(), CircleShape),
-                        contentAlignment = Alignment.Center) {
-                        Text(minOf(unread, 99).toString(), style = Forge.type.caption.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-                             color = Color.White)
-                    }
-                }
-            }
-            if (onCoach != null) {
-                Spacer(Modifier.width(ForgeMetrics.space2))
-                HeaderIcon(Icons.Rounded.Person, stringResource(R.string.forge_db_coach), onCoach)
+            Text(if (isToday) "TODAY" else date.format(DateTimeFormatter.ofPattern("EEE, d MMM")).uppercase(),
+                 style = Forge.type.overline, color = colors.text,
+                 modifier = Modifier.background(colors.inset, RoundedCornerShape(50)).clickable(onClick = onPickDay).padding(horizontal = 22.dp, vertical = 12.dp))
+            Row(Modifier.clickable(onClick = onBattery), verticalAlignment = Alignment.CenterVertically) {
+                Text(battery ?: "—", style = Forge.type.captionNumber, color = colors.textSecondary)
+                WoopBandOutline(colors.textSecondary)
             }
         }
-        val locale = Locale.getDefault()
-        Row(Modifier.clickable(onClick = onPickDay), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (isToday) stringResource(R.string.nav_today)
-                 else date.format(DateTimeFormatter.ofPattern(LONG_DAY_PATTERN, locale)).replaceFirstChar { it.titlecase(locale) },
-                 style = Forge.type.caption, color = ink.secondary)
-            Text("·", style = Forge.type.caption, color = ink.secondary)
-            Text(stringResource(R.string.forge_db_swipe), style = Forge.type.caption, color = ink.secondary)
-            Icon(Icons.Rounded.CalendarMonth, null, tint = ink.secondary, modifier = Modifier.size(11.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Text(WORDMARK, style = Forge.type.title2, color = colors.textSecondary,
+                 modifier = Modifier.combinedClickable(onClick = onUpdates, onLongClick = onArrange))
+            Spacer(Modifier.width(12.dp))
+            HeaderIcon(Icons.Rounded.Add, stringResource(R.string.forge_db_quick_actions), onQuickActions)
         }
     }
 }
@@ -468,51 +441,22 @@ private fun chargeWordRes(score: Double): Int = when {
 internal fun DashboardGlanceCard(day: CoreRead.Day?, effortFormat: (Double) -> String, effortMax: String,
                                  onOpen: (CoreRead.Metric) -> Unit, onHealth: () -> Unit) {
     val colors = Forge.colors
-    val charge = day?.charge; val effort = day?.effort; val rest = day?.rest
-    // `overviewTone`: a depleted Charge or a maxed-out day is critical, a low Charge or a short night a warning.
-    val critical = (charge != null && charge < 25) || (effort ?: 0.0) >= 90
-    val warning = (charge != null && charge < 50) || (rest ?: 0.0) < 70
-    ForgeCard(Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.forge_db_glance).uppercase(), style = Forge.type.overline, color = colors.textSecondary)
-            Row(Modifier.height(IntrinsicSize.Min)) {
-                GlanceRing(stringResource(R.string.forge_db_recovery), charge, charge?.roundToInt()?.toString(), "%", null, colors.charge,
-                    charge?.let { stringResource(chargeWordRes(it)) },
-                    stringResource(when {
-                        charge == null -> R.string.forge_db_no_score
-                        charge >= 70 -> R.string.forge_db_recovered
-                        charge >= 50 -> R.string.forge_db_moderate_training
-                        else -> R.string.forge_db_easy_day
-                    })) { onOpen(CoreRead.Metric.Charge) }
-                VerticalHairline()
-                GlanceRing(stringResource(R.string.forge_db_strain), effort, effort?.let(effortFormat), "", effortMax, colors.effort,
-                    effort?.let { stringResource(if (it < 30) R.string.forge_db_w_light else if (it < 60) R.string.forge_db_w_moderate else R.string.forge_db_w_high) },
-                    stringResource(when {
-                        effort == null -> R.string.forge_db_no_load
-                        effort < 60 -> R.string.forge_db_optimal_training
-                        else -> R.string.forge_db_demanding
-                    })) { onOpen(CoreRead.Metric.Effort) }
-                VerticalHairline()
-                GlanceRing(stringResource(R.string.forge_db_sleep), rest, rest?.roundToInt()?.toString(), "%", null, colors.rest,
-                    rest?.let { stringResource(if (it >= 80) R.string.forge_db_w_good else if (it >= 60) R.string.forge_db_w_fair else R.string.forge_db_w_low) },
-                    day?.sleepMinutes?.let { m ->
-                        stringResource(R.string.forge_db_sleep_detail, m.toInt() / 60, m.toInt() % 60,
-                            stringResource(when { rest == null -> R.string.forge_db_unscored; rest >= 70 -> R.string.forge_db_good; else -> R.string.forge_db_limited }),
-                            stringResource(if ((rest ?: 0.0) >= 70) R.string.forge_db_regen_ok else R.string.forge_db_regen_catching))
-                    } ?: stringResource(R.string.forge_db_no_sleep)) { onOpen(CoreRead.Metric.Rest) }
-            }
-            HorizontalDivider(color = colors.divider)
-            val tone = when { critical -> ForgeTokens.StrandPalette.statusCritical.resolve(); warning -> ForgeTokens.StrandPalette.statusWarning.resolve()
-                              else -> ForgeTokens.StrandPalette.statusPositive.resolve() }
-            Row(Modifier.fillMaxWidth().clickable(onClick = onHealth), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(if (!critical && !warning) Icons.Rounded.CheckCircleOutline else Icons.Rounded.WarningAmber, null, tint = tone,
-                     modifier = Modifier.size(16.dp))
-                Text(stringResource(when { critical -> R.string.forge_db_several; warning -> R.string.forge_db_one_two; else -> R.string.forge_db_all_green }),
-                     style = Forge.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = colors.text, modifier = Modifier.weight(1f))
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = colors.textTertiary, modifier = Modifier.size(14.dp))
-            }
+    Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        ReferenceRing("SLEEP", day?.rest, day?.rest?.roundToInt()?.let { "$it%" }, colors.rest) { onOpen(CoreRead.Metric.Rest) }
+        ReferenceRing("RECOVERY", day?.charge, day?.charge?.roundToInt()?.let { "$it%" }, day?.charge?.let(WoopReferenceColors::recovery) ?: colors.missing) { onOpen(CoreRead.Metric.Charge) }
+        ReferenceRing("STRAIN", day?.effort, day?.effort?.let(effortFormat), colors.effort) { onOpen(CoreRead.Metric.Effort) }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.ReferenceRing(label: String, score: Double?, value: String?, color: Color, onClick: () -> Unit) {
+    Column(Modifier.weight(1f).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally,
+           verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(92.dp), contentAlignment = Alignment.Center) {
+            ScoreRing(score, color, 6.dp)
+            Text(value ?: "—", style = Forge.type.title2.copy(fontSize = 27.sp, fontWeight = FontWeight.Bold), color = Forge.colors.text)
         }
+        Text(label, style = Forge.type.overline, color = Forge.colors.text)
     }
 }
 
@@ -606,35 +550,35 @@ private fun androidx.compose.foundation.layout.RowScope.MiniCard(icon: ImageVect
 internal fun DashboardHealthList(cards: List<DashboardCard>, d: DashboardDay, history: List<CoreRead.Day>,
                                  onOpen: (DashboardCard) -> Unit, onAll: () -> Unit) {
     val colors = Forge.colors
-    Column(verticalArrangement = Arrangement.spacedBy(ForgeMetrics.gap)) {
-        Text(stringResource(R.string.forge_db_health).uppercase(), style = Forge.type.overline, color = Forge.sceneInk.secondary)
-        ForgeCard(Modifier.fillMaxWidth(), contentPadding = 0.dp) {
-            Column {
-                cards.forEachIndexed { i, card ->
-                    if (i > 0) HorizontalDivider(color = colors.divider, modifier = Modifier.padding(start = 40.dp))
-                    Row(Modifier.fillMaxWidth().clickable { onOpen(card) }.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.size(22.dp).background(cardTint(card).copy(alpha = 0.16f), CircleShape), contentAlignment = Alignment.Center) {
-                            Icon(card.icon, null, tint = cardTint(card), modifier = Modifier.size(10.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("My Dashboard", style = Forge.type.title2, color = colors.textSecondary)
+        cards.forEach { card ->
+            val previous = history.filter { it.day < d.date.toString() }.maxByOrNull { it.day }
+            val currentNumber = dashboardTrendValue(card, d.day)
+            val previousNumber = dashboardTrendValue(card, previous)
+            val direction = if (currentNumber != null && previousNumber != null)
+                currentNumber.compareTo(previousNumber) else null
+            ForgeCard(Modifier.fillMaxWidth().clickable { onOpen(card) }, radius = 13.dp, contentPadding = 8.dp) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(min = 38.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(card.icon, null, tint = colors.textSecondary, modifier = Modifier.size(24.dp))
+                    Text(stringResource(card.titleRes).uppercase(), style = Forge.type.overline, color = colors.text, modifier = Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.End) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Text(cardValue(card, d), style = Forge.type.title2.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold), color = colors.text)
+                            if (direction != null) Text(if (direction > 0) "▲" else if (direction < 0) "▼" else "●",
+                                fontSize = 8.sp, color = dashboardTrendColor(card, direction) ?: colors.textSecondary)
                         }
-                        Text(stringResource(card.titleRes), style = Forge.type.footnote, color = colors.text, modifier = Modifier.weight(1f))
-                        Text(cardValue(card, d), style = Forge.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = colors.text)
-                        if (card.unit.isNotEmpty()) Text(card.unit, style = Forge.type.footnote, color = colors.textTertiary)
-                        healthStatus(card, d.day, history)?.let { (word, tone) ->
-                            Box(Modifier.size(5.dp).background(tone, CircleShape))
-                            Text(word, style = Forge.type.footnote, color = tone)
-                        }
-                        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = colors.textTertiary, modifier = Modifier.size(12.dp))
+                        if (direction != null && previousNumber != null) {
+                            Text(java.text.NumberFormat.getIntegerInstance().format(previousNumber.roundToInt()),
+                                style = Forge.type.caption.copy(fontSize = 11.sp), color = colors.textSecondary)
+                        } else if (card.unit.isNotEmpty()) Text(card.unit, style = Forge.type.caption.copy(fontSize = 11.sp), color = colors.textSecondary)
                     }
-                }
-                HorizontalDivider(color = colors.divider)
-                Row(Modifier.fillMaxWidth().clickable(onClick = onAll).padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.forge_db_show_all), style = Forge.type.footnote.copy(fontWeight = FontWeight.SemiBold), color = colors.accent)
-                    Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = colors.accent, modifier = Modifier.size(12.dp))
                 }
             }
         }
+        Text(stringResource(R.string.forge_db_show_all), style = Forge.type.subhead, color = colors.accent,
+             modifier = Modifier.fillMaxWidth().clickable(onClick = onAll).padding(vertical = 12.dp), textAlign = TextAlign.Center)
     }
 }
 
@@ -662,10 +606,15 @@ internal fun ForgeStyledDashboard(
     style: String, revision: Int, date: LocalDate, day: CoreRead.Day?, viewModel: AppViewModel,
     onSection: @Composable (TodaySection) -> Unit,
     onHealth: () -> Unit, onSleep: () -> Unit, onStress: () -> Unit, onCoach: () -> Unit, onActivity: () -> Unit,
+    onStartActivity: () -> Unit = onActivity, onAlarm: () -> Unit = onSleep,
 ) {
     val context = LocalContext.current
     val isToday = date == LocalDate.now()
-    val sections = remember(revision, style) { DashboardLayoutPrefs.visible(context, style) }
+    val sections = remember(revision, style) {
+        if (style == "overview") listOf(DashboardSection.OVERVIEW, DashboardSection.ACTIVITY) +
+            DashboardLayoutPrefs.visible(context, style).filter { it != DashboardSection.OVERVIEW && it != DashboardSection.ACTIVITY }
+        else DashboardLayoutPrefs.visible(context, style)
+    }
     val effortFormat = rememberEffortFormat()
     val effortMax = if (UnitPrefs.effortScale(context) == EffortScale.WHOOP) "21" else "100"
     val figures by produceState(DashboardDay(day, isToday, date, null, null, null, null, null), day, date) {
@@ -693,17 +642,32 @@ internal fun ForgeStyledDashboard(
         DashboardCard.COACH -> onCoach()
         else -> onHealth()
     }
-    ForgeArrangeHint(style)
     sections.forEach { section ->
         when (section) {
             DashboardSection.COACH -> if (isToday) onSection(TodaySection.COACH)
             DashboardSection.HERO -> DashboardHeroRings(day, effortFormat) { onHealth() }
             DashboardSection.TRENDS_CHART -> DashboardTrendsCard(date, isToday, effortFormat, onOpen = onHealth)
             DashboardSection.METRIC_STRIP -> DashboardMetricStrip(TrendsMetricSlots.slots(context), figures, ::open)
-            DashboardSection.ACTIVITY -> DashboardActivity(viewModel, onViewAll = onActivity)
-            DashboardSection.OVERVIEW -> DashboardGlanceCard(day, effortFormat, effortMax, onOpen = { onHealth() }, onHealth = onHealth)
+            DashboardSection.ACTIVITY -> {
+                WoopActivityTimeline(date, viewModel, onActivity, onStartActivity)
+                if (isToday) WoopTonightSleep(viewModel, onAlarm)
+            }
+            DashboardSection.OVERVIEW -> {
+                DashboardGlanceCard(day, effortFormat, effortMax, onOpen = { onHealth() }, onHealth = onHealth)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ForgeCard(Modifier.weight(1f).clickable(onClick = onHealth), radius = 13.dp) {
+                        Text("HEALTH MONITOR", style = Forge.type.overline, color = Forge.colors.text)
+                    }
+                    ForgeCard(Modifier.weight(1f).clickable(onClick = onStress), radius = 13.dp) {
+                        Text("STRESS MONITOR", style = Forge.type.overline, color = Forge.colors.text)
+                    }
+                }
+            }
             DashboardSection.FOCUS -> DashboardFocusRow(OverviewPrefs.focus(context), figures, stepGoal, ::open, onSleep, onCoach)
-            DashboardSection.HEALTH -> DashboardHealthList(OverviewPrefs.health(context), figures, history, ::open, onHealth)
+            DashboardSection.HEALTH -> {
+                DashboardHealthList(OverviewPrefs.health(context), figures, history, ::open, onHealth)
+                WoopDashboardCharts(date, onStress)
+            }
             DashboardSection.MOMENTUM -> if (isToday) onSection(TodaySection.SYNTHESIS)
             DashboardSection.GOALS -> if (isToday) onSection(TodaySection.GOALS)
             DashboardSection.KEY_METRICS -> onSection(TodaySection.KEY_METRICS)
@@ -878,4 +842,41 @@ internal fun ForgeDayPicker(selected: LocalDate, onPick: (LocalDate) -> Unit, on
             androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.forge_lay_cancel)) }
         },
     ) { androidx.compose.material3.DatePicker(state = state) }
+}
+
+/** Independent curved device outline. Battery percentage remains a real readout beside it. */
+@Composable
+private fun WoopBandOutline(tint: Color) {
+    Canvas(Modifier.size(25.dp, 36.dp)) {
+        val sx = size.width / 25f
+        val sy = size.height / 36f
+        val outline = androidx.compose.ui.graphics.Path().apply {
+            moveTo(15f * sx, 2f * sy)
+            lineTo(9f * sx, 2f * sy)
+            cubicTo(3f * sx, 10f * sy, 2f * sx, 22f * sy, 5f * sx, 30f * sy)
+            lineTo(12f * sx, 32f * sy)
+            cubicTo(18f * sx, 25f * sy, 20f * sx, 13f * sy, 19f * sx, 5f * sy)
+            moveTo(7f * sx, 26f * sy)
+            lineTo(12f * sx, 27f * sy)
+        }
+        drawPath(outline, tint, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.2.dp.toPx()))
+    }
+}
+
+private fun dashboardTrendValue(card: DashboardCard, day: CoreRead.Day?): Double? = when (card) {
+    DashboardCard.HRV -> day?.hrv
+    DashboardCard.RESTING_HR -> day?.restingHr?.toDouble()
+    DashboardCard.STEPS -> day?.steps?.toDouble()
+    else -> null
+}?.takeIf { it.isFinite() }
+
+/** Trend relative to the previous recorded day; no health verdict for calories or weight. */
+internal fun dashboardTrendColor(card: DashboardCard, direction: Int): Color? {
+    if (direction == 0) return null
+    val favorable = when (card) {
+        DashboardCard.HRV, DashboardCard.STEPS -> direction > 0
+        DashboardCard.RESTING_HR -> direction < 0
+        else -> return null
+    }
+    return if (favorable) WoopReferenceColors.healthGood else WoopReferenceColors.stressHigh
 }

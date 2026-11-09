@@ -88,6 +88,7 @@ enum StrapBatteryCopy {
 
 /// Compact exact-fill header control shared by the two reference dashboards.
 struct DashboardBatteryButton: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject private var live: LiveState
     var size: CGFloat = 36
 
@@ -108,6 +109,15 @@ struct DashboardBatteryButton: View {
                 // screen, while Today's own row has shown "87% · ~3 days left" all along. Offline and
                 // not-yet-read stay a plain circle: there is no number to show, and a capsule sized for one
                 // would leave a gap.
+                Group {
+                if referenceUI {
+                    HStack(spacing: 5) {
+                        if case .charge(let pct, _, _) = state {
+                            Text(StrapBatteryCopy.percentText(pct)).font(WhoopReferenceFont.metric(13))
+                        } else { Text("—").font(WhoopReferenceFont.metric(13)) }
+                        ReferenceBandGlyph(connected: live.connected)
+                    }.foregroundStyle(StrandPalette.textSecondary)
+                } else {
                 HStack(spacing: 5) {
                     ring
                     if case .charge(let pct, _, _) = state {
@@ -124,6 +134,8 @@ struct DashboardBatteryButton: View {
                         Capsule().fill(StrandPalette.surfaceInset)
                             .overlay(Capsule().noopRestingRim())
                     }
+                }
+                }
                 }
             }
             .buttonStyle(.plain)

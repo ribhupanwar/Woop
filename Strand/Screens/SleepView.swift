@@ -28,6 +28,7 @@ import UIKit
 // minutes for light/deep/rem/awake; typical = mean of repo.days).
 
 struct SleepView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -57,9 +58,9 @@ struct SleepView: View {
     @AppStorage(SkyBehindCardsPrefs.enabledKey) private var skyBehindCards = false
     /// "Sky behind cards": the Sleep tab's own night scene reaches behind the whole page, as the day-cycle
     /// sky does on Today, so Card transparency shows it under every card.
-    private var nightBehindCards: Bool { showDayCycleBackground && skyBehindCards }
+    private var nightBehindCards: Bool { !referenceUI && showDayCycleBackground && skyBehindCards }
     private var heroUsesLiquidStyle: Bool {
-        (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
+        !referenceUI && (TodayDashboardStyle.resolve(todayDashboardStyleRaw) ?? .overview) == .liquid
     }
     /// Which night the hero hypnogram shows: 0 = last night, N = N sleep-sessions back.
     /// Snaps back to 0 whenever the data key changes — a stale offset would silently point
@@ -650,83 +651,166 @@ struct SleepView: View {
         }
     }
 
-    /// Immersive Rest-world hero: compact Bevel-like hierarchy — centered "Sleep", muted circular
-    /// performance ring, state word, source badge. Night scene lives on ScreenScaffold.topBackground
-    /// (fixed under the status bar); this column only owns the readable content. Presentation-only.
+    /// The reference layout leads with recorded time asleep beside a compact sleep-performance ring.
+    /// The optional Liquid layout retains its organic gauge. Both use the same prepared night.
     @ViewBuilder
     /// The night artwork needs its own on-image title treatment in light mode.
     /// Analysis migration required: no.
     private func restHero(_ model: SleepModel) -> some View {
         let night = heroNight(model)
         let score = performanceScore(for: night)
-        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
-            // The sleep score is named ONCE here ("Sleep performance"); the old trailing "Rest" chip and the
-            // duplicate "Rest" night-detail tile showed the same number under a second name (redesign bug §1).
-            // This heading deliberately sits inside the always-dark night scene in BOTH colour schemes.
-            // Scheme-following text tokens turn black in Light mode, so use the fixed on-dark pair.
-            VStack(alignment: .leading, spacing: 2) {
-                Text(nightRelativeLabel)
-                    .font(WhoopReferenceFont.label(11))
-                    .tracking(1.1)
-                    .foregroundStyle(StrandPalette.onDarkSecondary)
-                Text("SLEEP\nPERFORMANCE")
-                    .font(WhoopReferenceFont.heading(22))
-                    .foregroundStyle(StrandPalette.onDarkPrimary)
-            }
-            .padding(.horizontal, NoopMetrics.screenHPadding)
-            let content = VStack(spacing: NoopMetrics.space4) {
-                if let score {
-                    VStack(spacing: NoopMetrics.space3) {
-                        if heroUsesLiquidStyle {
-                            // The same organic Rest ring as Liquid Today's hero, drawn large and sized to
-                            // the phone (2026-10-02, replacing the filling vessel).
-                            SleepOrganicRestRing(score: score)
-                        } else {
-                            // Classic, Trends and Overview draw Today's ring, not the liquid vessel: the
-                            // hero follows the one dashboard-style setting like every other screen.
-                            GlowRing(fraction: score / 100, value: score, format: { "\(Int($0.rounded()))" },
-                                     color: StrandPalette.restColor, diameter: 172, lineWidth: 17.2)
-                        }
-                        Text(sleepScoreWord(score))
-                            .font(WhoopReferenceFont.label(12))
-                            .foregroundStyle(StrandPalette.restColor)
-                    }
-                    .padding(.top, NoopMetrics.space1)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
-                } else {
-                    // No 0–100 score for the night — lead with hours slept as a big rounded headline
-                    // whose minutes tick up on appear (the same count-up the scored hero gets).
-                    VStack(spacing: NoopMetrics.space1) {
-                        CountUpText(
-                            value: night.stages.asleep,
-                            format: { durationText($0) },
-                            font: StrandFont.number(46),
-                            color: StrandPalette.restBright
-                        )
-                        Text("asleep last night")
-                            .font(WhoopReferenceFont.body(13))
-                            .foregroundStyle(StrandPalette.textSecondary)
-                    }
-                    .padding(.vertical, NoopMetrics.space5)
-                    .accessibilityElement(children: .combine)
+        if referenceUI {
+            referenceSleepHero(night, model: model, score: score)
+        } else {
+            VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+                // The sleep score is named ONCE here ("Sleep performance"); the old trailing "Rest" chip and the
+                // duplicate "Rest" night-detail tile showed the same number under a second name (redesign bug §1).
+                // This heading deliberately sits inside the always-dark night scene in BOTH colour schemes.
+                // Scheme-following text tokens turn black in Light mode, so use the fixed on-dark pair.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(nightRelativeLabel)
+                        .font(WhoopReferenceFont.label(11))
+                        .tracking(1.1)
+                        .foregroundStyle(StrandPalette.onDarkSecondary)
+                    Text("SLEEP")
+                        .font(WhoopReferenceFont.heading(22))
+                        .foregroundStyle(StrandPalette.onDarkPrimary)
                 }
-                SourceBadge(score != nil ? heroSource(for: night) : (repo.activeDeviceIsOura ? "Oura" : "On-device"), tint: StrandPalette.restColor)
-            }
-            if heroUsesLiquidStyle {
-                // A subtle night atmosphere sits behind the liquid hero ONLY (faint indigo wash + crescent
-                // moon over the near-black canvas, no glow), clipped to the card.
-                content
-                    .padding(NoopMetrics.cardInnerPadding + NoopMetrics.space1)
-                    .frame(maxWidth: .infinity)
-                    .timeOfDayBackground(.night)
-                    .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
-            } else {
-                NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.restColor) {
-                    content.frame(maxWidth: .infinity)
+                .padding(.horizontal, NoopMetrics.screenHPadding)
+                let content = VStack(spacing: NoopMetrics.space4) {
+                    if !heroUsesLiquidStyle {
+                        referenceSleepSummary(night, score: score)
+                    } else if let score {
+                        VStack(spacing: NoopMetrics.space3) {
+                            if heroUsesLiquidStyle {
+                                // The same organic Rest ring as Liquid Today's hero, drawn large and sized to
+                                // the phone (2026-10-02, replacing the filling vessel).
+                                SleepOrganicRestRing(score: score)
+                            } else {
+                                // Classic, Trends and Overview draw Today's ring, not the liquid vessel: the
+                                // hero follows the one dashboard-style setting like every other screen.
+                                GlowRing(fraction: score / 100, value: score, format: { "\(Int($0.rounded()))" },
+                                         color: StrandPalette.restColor, diameter: 172, lineWidth: 17.2)
+                            }
+                            Text(sleepScoreWord(score))
+                                .font(WhoopReferenceFont.label(12))
+                                .foregroundStyle(StrandPalette.restColor)
+                        }
+                        .padding(.top, NoopMetrics.space1)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
+                    } else {
+                        // No 0–100 score for the night — lead with hours slept as a big rounded headline
+                        // whose minutes tick up on appear (the same count-up the scored hero gets).
+                        VStack(spacing: NoopMetrics.space1) {
+                            CountUpText(
+                                value: night.stages.asleep,
+                                format: { durationText($0) },
+                                font: StrandFont.number(46),
+                                color: StrandPalette.restBright
+                            )
+                            Text("asleep last night")
+                                .font(WhoopReferenceFont.body(13))
+                                .foregroundStyle(StrandPalette.textSecondary)
+                        }
+                        .padding(.vertical, NoopMetrics.space5)
+                        .accessibilityElement(children: .combine)
+                    }
+                    SourceBadge(score != nil ? heroSource(for: night) : (repo.activeDeviceIsOura ? "Oura" : "On-device"), tint: StrandPalette.restColor)
+                }
+                if heroUsesLiquidStyle {
+                    // A subtle night atmosphere sits behind the liquid hero ONLY (faint indigo wash + crescent
+                    // moon over the near-black canvas, no glow), clipped to the card.
+                    content
+                        .padding(NoopMetrics.cardInnerPadding + NoopMetrics.space1)
+                        .frame(maxWidth: .infinity)
+                        .timeOfDayBackground(.night)
+                        .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
+                } else {
+                    NoopCard(padding: NoopMetrics.cardInnerPadding, tint: StrandPalette.restColor) {
+                        content.frame(maxWidth: .infinity)
+                    }
                 }
             }
         }
+    }
+
+    private func referenceSleepHero(_ night: Night, model: SleepModel, score: Double?) -> some View {
+        let wakeDay = Repository.localDayKey(Date(timeIntervalSince1970: TimeInterval(night.session.endTs)))
+        let isModelNight = night.session.startTs == model.night.session.startTs
+            && night.session.endTs == model.night.session.endTs
+        let hoursDay = model.hoursVsNeeded.latestDay ?? Repository.logicalDayKey(Date())
+        let hours = isModelNight && hoursDay == wakeDay
+            ? model.hoursVsNeeded.latest : nil
+        let consistency = repo.importedSleep[wakeDay]?.consistencyPct
+            ?? (isModelNight ? model.consistency.latest : nil)
+        let efficiency = night.session.efficiency.map { $0 <= 1 ? $0 * 100 : $0 }
+            ?? (night.timeInBed > 0 ? min(100, night.stages.asleep / night.timeInBed * 100) : nil)
+        func percent(_ value: Double?) -> String {
+            guard let value, value.isFinite else { return "—" }
+            return "\(Int(value.rounded()))%"
+        }
+        return VStack(spacing: 14) {
+            Text(nightRelativeLabel).textCase(.uppercase)
+                .font(WhoopReferenceFont.label(12)).tracking(1.2)
+                .foregroundStyle(StrandPalette.textPrimary)
+            WoopMetricHero(title: "SLEEP PERFORMANCE", value: score.map { "\(Int($0.rounded()))" } ?? "—",
+                           suffix: score == nil ? "" : "%", fraction: score.map { $0 / 100 }, tint: WoopHomePalette.sleep)
+            NoopCard {
+                VStack(spacing: 0) {
+                    WoopMetricRow("Hours vs. needed", value: percent(hours), symbol: "moon.zzz",
+                                  estimated: hours != nil && repo.importedSleep[wakeDay]?.needMin == nil)
+                    Divider().overlay(Color.white.opacity(0.08))
+                    WoopMetricRow("Sleep consistency", value: percent(consistency), symbol: "moon",
+                                  estimated: consistency != nil && repo.importedSleep[wakeDay]?.consistencyPct == nil)
+                    Divider().overlay(Color.white.opacity(0.08))
+                    WoopMetricRow("Sleep efficiency", value: percent(efficiency), symbol: "chart.bar")
+                    Divider().overlay(Color.white.opacity(0.08))
+                    WoopMetricRow("Time asleep", value: durationText(night.stages.asleep), symbol: "bed.double")
+                }
+            }
+            SourceBadge(heroSource(for: night), tint: WoopHomePalette.sleep)
+        }
+        .padding(.horizontal, NoopMetrics.screenHPadding)
+    }
+
+    private func referenceSleepSummary(_ night: Night, score: Double?) -> some View {
+        HStack(alignment: .center, spacing: NoopMetrics.space4) {
+            VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                Text("TIME ASLEEP")
+                    .font(WhoopReferenceFont.label(10))
+                    .tracking(1.2)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                Text(durationText(night.stages.asleep))
+                    .font(WhoopReferenceFont.score(40))
+                    .monospacedDigit()
+                    .foregroundStyle(StrandPalette.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: NoopMetrics.space2) {
+                if let score {
+                    GlowRing(fraction: score / 100, value: score,
+                             format: { "\(Int($0.rounded()))" }, color: StrandPalette.restColor,
+                             diameter: 92, lineWidth: 10)
+                        .accessibilityLabel("Sleep performance \(Int(score.rounded())) of 100")
+                } else {
+                    ZStack {
+                        Circle().stroke(StrandPalette.surfaceInset, lineWidth: 10)
+                        Image(systemName: "moon.zzz")
+                            .font(.system(size: 22))
+                            .foregroundStyle(StrandPalette.restColor)
+                    }
+                    .frame(width: 92, height: 92)
+                    .accessibilityLabel("Sleep performance unavailable")
+                }
+                Text("Sleep performance")
+                    .font(WhoopReferenceFont.label(10))
+                    .foregroundStyle(StrandPalette.textSecondary)
+            }
+        }
+        .padding(.vertical, NoopMetrics.space2)
     }
 
     /// Fixed night-scene band behind Sleep scroll content — same ScreenScaffold.topBackground pattern
@@ -738,7 +822,7 @@ struct SleepView: View {
     /// With the scene behind the cards there is no sheet at all.
     @ViewBuilder
     private func canvasSheet(roundedTop: Bool) -> some View {
-        if !nightBehindCards {
+        if !referenceUI && !nightBehindCards {
             #if os(iOS)
             let gutter = NoopMetrics.screenHPadding
             #else

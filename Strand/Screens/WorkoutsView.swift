@@ -26,6 +26,7 @@ private struct WorkoutRecoveryTrendPoint: Identifiable, Equatable {
 // No custom card heights, paddings, colours or surfaces — uniformity is the bar.
 
 struct WorkoutsView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -146,6 +147,8 @@ struct WorkoutsView: View {
     @State private var searchText = ""
     /// Analysis migration required: no. Advanced filters are merely disclosed on demand.
     @State private var showingFilters = false
+    @State private var showingTrainingAnalysis = false
+    @State private var showingHistory = false
 
     /// Multi-select + merge mode. `selectionMode` toggles the leading checkmarks + the toolbar strip;
     /// `selected` holds the natural keys ("startTs|sport") of the chosen rows. Only MANUAL / DETECTED rows
@@ -202,7 +205,7 @@ struct WorkoutsView: View {
         let resolved = effectiveRange
         let unscopedRows = sessions(for: resolved)
         let trendRows = recoveryTrendRows(from: unscopedRows)
-        return ScreenScaffold(title: "Workouts", subtitle: "Every session, threaded together.",
+        return ScreenScaffold(title: "Activity",
                        onRefresh: { await repo.refresh() },
                        // PERF: the column ends in the full "All Sessions" log (the breakdown grid, the
                        // zones card, and a row-per-session table). On a large imported history the eager
@@ -212,43 +215,70 @@ struct WorkoutsView: View {
                        // The day-of-sky liquid backdrop, matching Today / Health / Sleep / Trends: a fixed,
                        // full-bleed time-of-day sky behind the scroll content (it does not scroll).
                        topBackground: liquidScaffoldSky()) {
-            if allRows.isEmpty {
-                VStack(alignment: .leading, spacing: NoopMetrics.space4) {
-                    if loaded {
-                        ComingSoon(what: "No workouts yet. They come from your WHOOP and Apple Health history. Import in Data Sources to bring them in, or add one you tracked elsewhere.",
-                                   action: ("Open Data Sources", { router.openDataSources() }))
-                    } else {
-                        ComingSoon.loading("Loading your sessions…", title: "Reading your sessions")
+            if referenceUI {
+                Picker("Activity view", selection: $showingHistory) {
+                    Text("Train").tag(false)
+                    Text("History").tag(true)
+                }.pickerStyle(.segmented)
+                if !showingHistory { ActivityTrainingHome(rows: allRows, historyLoaded: loaded) }
+            }
+            if !referenceUI || showingHistory {
+                if allRows.isEmpty {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+                        if loaded {
+                            ComingSoon(what: "No workouts yet. They come from your WHOOP and Apple Health history. Import in Data Sources to bring them in, or add one you tracked elsewhere.",
+                                       action: ("Open Data Sources", { router.openDataSources() }))
+                        } else {
+                            ComingSoon.loading("Loading your sessions…", title: "Reading your sessions")
+                        }
+                        if loaded {
+                            workoutActionRow
+                        }
                     }
-                    if loaded {
-                        workoutActionRow
-                    }
-                }
-            } else {
-                // Compute the per-sport groups ONCE per body evaluation, then thread them into every
-                // section — same idea as `unscopedRows` above, applied to the rest of the fan-out
-                // (rows → sportGroups → …) that used to rebuild several times per render.
-                // Current / Archived applies to what the LIST and its summaries show. `unscopedRows`
-                // itself stays unscoped so the HR-recovery trend and the auto-widen probe keep seeing the
-                // whole window.
-                let windowRows = Self.scopedRows(unscopedRows, scope: scope)
-                let groups = sportGroups(from: windowRows)
-                let zonesSummary = WorkoutZones.summary(from: windowRows)
+                } else {
+                    // Compute the per-sport groups ONCE per body evaluation, then thread them into every
+                    // section — same idea as `unscopedRows` above, applied to the rest of the fan-out
+                    // (rows → sportGroups → …) that used to rebuild several times per render.
+                    // Current / Archived applies to what the LIST and its summaries show. `unscopedRows`
+                    // itself stays unscoped so the HR-recovery trend and the auto-widen probe keep seeing the
+                    // whole window.
+                    let windowRows = Self.scopedRows(unscopedRows, scope: scope)
+                    let groups = sportGroups(from: windowRows)
+                    let zonesSummary = WorkoutZones.summary(from: windowRows)
 
-                workoutActionRow
-                scopeBar
-                rangeBar(rows: windowRows, effectiveRange: resolved)
-                if let postLogNote { postLogBanner(postLogNote) }
-                effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
-                summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
-                analysisRow
-                heatmapSection()
-                breakdownSection(groups: groups, rows: windowRows)
-                if let z = zonesSummary {
-                    zonesSection(z, totalSessions: windowRows.count)
+                    workoutActionRow
+                    if referenceUI { quickSportFilters }
+                    scopeBar
+                    rangeBar(rows: windowRows, effectiveRange: resolved)
+                    if let postLogNote { postLogBanner(postLogNote) }
+                    effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
+                    summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
+                    if referenceUI { sessionsSection(rows: windowRows) }
+                    if referenceUI {
+                        DisclosureGroup(isExpanded: $showingTrainingAnalysis) {
+                            analysisRow
+                            heatmapSection()
+                            breakdownSection(groups: groups, rows: windowRows)
+                            if let z = zonesSummary { zonesSection(z, totalSessions: windowRows.count) }
+                            recoveryTrendSection
+                        } label: {
+                            Label("Training analysis", systemImage: "chart.xyaxis.line")
+                                .font(WhoopReferenceFont.label(13))
+                                .foregroundStyle(StrandPalette.textPrimary)
+                                .frame(minHeight: 44)
+                        }
+                        .tint(WoopHomePalette.strain)
+                    } else {
+                        analysisRow
+                        heatmapSection()
+                        breakdownSection(groups: groups, rows: windowRows)
+                        if let z = zonesSummary {
+                            zonesSection(z, totalSessions: windowRows.count)
+                        }
+                        recoveryTrendSection
+                    }
+                    if !referenceUI { sessionsSection(rows: windowRows) }
                 }
-                recoveryTrendSection
-                sessionsSection(rows: windowRows)
             }
         }
         // Keyed on the energy revision too: a correction of stored session energy (recipes AI-13 to AI-15)
@@ -301,9 +331,22 @@ struct WorkoutsView: View {
         .onChange(of: range) { newRange in
             Task { await expandWindowIfNeeded(for: newRange == .all ? .all : effectiveRange) }
         }
-        .task(id: recoveryTrendInputKey(rows: trendRows)) {
+        .task(id: "\(showingHistory)|" + recoveryTrendInputKey(rows: trendRows)) {
+            guard !referenceUI || showingHistory else { return }
             await loadRecoveryTrend(rows: trendRows)
         }
+        #if os(iOS)
+        .toolbar {
+            if referenceUI {
+                ToolbarItem(placement: .primaryAction) {
+                    NavigationLink { ActivityProgramsView() } label: {
+                        Label("Programs", systemImage: "list.clipboard")
+                    }
+                    .accessibilityIdentifier("activity.programs")
+                }
+            }
+        }
+        #endif
         .sheet(item: $sheet) { target in
             ManualWorkoutSheet(editing: target.editing, hrSource: repo) { row, replacing in
                 Task {
@@ -542,7 +585,7 @@ struct WorkoutsView: View {
     /// the user can fine-tune via Edit afterwards).
     private static let relabelSports = ["Running", "Walking", "Cycling", "Strength Training",
                                         "Swimming", "Rowing", "Yoga", "HIIT",
-                                        "CrossFit", "Hiking", "Tennis"]
+                                        "CrossFit", "Hiking", "Tennis", "Dancing"]
 
     // MARK: - Range control
 
@@ -611,9 +654,31 @@ struct WorkoutsView: View {
         return count == 0 ? String(localized: "Filters") : String(localized: "Filters (\(count))")
     }
 
-    /// #64: filter controls beside the range pill — a Sport menu, a Source menu, and a search field, with
-    /// an "×" clear chip that appears only when a filter is active. Present on both size classes / both
-    /// platforms. The predicate is the pure `WorkoutFilter`; these controls only drive its state.
+    /// Frequently used, recorded sports feed the same filter as the advanced controls.
+    private var quickSportFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: NoopMetrics.space2) {
+                quickSportButton(String(localized: "All sports"), sport: nil)
+                // Actual stored names include user corrections; no guessed sport classification.
+                ForEach(Array(availableSports.prefix(5)), id: \.self) { sport in
+                    quickSportButton(sport, sport: sport)
+                }
+            }
+        }
+    }
+
+    private func quickSportButton(_ title: String, sport: String?) -> some View {
+        Button { sportFilter = sport } label: {
+            Text(verbatim: title).font(WhoopReferenceFont.body(12))
+                .foregroundStyle(sportFilter == sport ? StrandPalette.textPrimary : StrandPalette.textSecondary)
+                .padding(.horizontal, NoopMetrics.space3).frame(minHeight: 44)
+                .background(sportFilter == sport ? WoopHomePalette.strain.opacity(0.25) : WoopHomePalette.activityCard,
+                            in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(sportFilter == sport ? [.isSelected] : [])
+    }
+
     private var filterBar: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -1392,6 +1457,20 @@ struct WorkoutsView: View {
                 selectPill(rows: rows)
             }
             if selectionMode { selectionToolbar(rows: rows) }
+            if referenceUI && rows.isEmpty {
+                VStack(alignment: .leading, spacing: NoopMetrics.space2) {
+                    Text("No matching workouts").font(WhoopReferenceFont.heading(17))
+                    Text("Try another sport, date range or scope.")
+                        .font(WhoopReferenceFont.body(12)).foregroundStyle(StrandPalette.textSecondary)
+                    Button("Reset filters") {
+                        sportFilter = nil; sourceFilter = nil; searchText = ""
+                        scope = .current; range = .all
+                        selected.removeAll(); selectionMode = false
+                    }
+                    .frame(minHeight: 44)
+                }
+                .padding(NoopMetrics.cardPadding)
+            }
             NoopCard(padding: 0) {
                 if usesCompactSessions {
                     // #64: full-width native rows, no horizontal scroll — the iPhone list reads like the
@@ -1515,7 +1594,7 @@ struct WorkoutsView: View {
     @ViewBuilder
     private func compactSessionsList(rows: [WorkoutRow]) -> some View {
         LazyVStack(spacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+            ForEach(Array((referenceUI ? rows.sorted { $0.startTs > $1.startTs } : rows).enumerated()), id: \.offset) { idx, row in
                 compactSessionRow(row)
                     .background(idx % 2 == 1
                                 ? StrandPalette.surfaceInset.opacity(0.4)
@@ -1621,7 +1700,7 @@ struct WorkoutsView: View {
             // Estimated where nothing recorded it, marked with the same tilde the detail tile uses.
             // A dash here beside a figure on the detail screen was the reported confusion.
             let energy = resolvedEnergy(row)
-            cell(WorkoutEnergyDisplay.text(energy) ?? "–", width: ColWidth.kcal,
+            cell(WorkoutEnergyDisplay.text(energy, marksEstimate: false) ?? "–", width: ColWidth.kcal,
                  color: energy != nil ? StrandPalette.metricAmber : nil)
             cell(distanceLabel(row.distanceM), width: ColWidth.dist)
             // #796 - per-session Effort, on the user's scale, tinted the Effort colour when present.
@@ -1702,11 +1781,22 @@ struct WorkoutsView: View {
                             .font(StrandFont.number(15))
                             .foregroundStyle(row.strain != nil ? StrandPalette.effortColor : StrandPalette.textTertiary)
                     }
-                    Text(compactRowSubtitle(row))
-                        .font(StrandFont.footnote)
-                        .foregroundStyle(StrandPalette.textTertiary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    if referenceUI {
+                        Text(verbatim: dateLabel(row.startTs) + " · " + timeRangeLabel(row.startTs, row.endTs))
+                            .font(WhoopReferenceFont.body(11))
+                            .foregroundStyle(StrandPalette.textSecondary)
+                            .lineLimit(1)
+                        Text(verbatim: referenceSessionMetrics(row))
+                            .font(WhoopReferenceFont.metric(12))
+                            .foregroundStyle(StrandPalette.textPrimary)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(compactRowSubtitle(row))
+                            .font(StrandFont.footnote)
+                            .foregroundStyle(StrandPalette.textTertiary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
                 }
                 sourceBadge(row.source)
                 // Reserve the ••• column width inside the label; the interactive Menu is overlaid on top
@@ -1716,7 +1806,8 @@ struct WorkoutsView: View {
                 }
             }
             .padding(.horizontal, NoopMetrics.cardPadding)
-            .frame(minHeight: 56)
+            .padding(.vertical, referenceUI ? NoopMetrics.space2 : 0)
+            .frame(minHeight: referenceUI ? 76 : 56)
             .contentShape(Rectangle())
         }
         .buttonStyle(LiquidPressStyle())
@@ -1767,10 +1858,28 @@ struct WorkoutsView: View {
         if let d = durationLabelOrNil(row.durationS) { parts.append(d) }
         // Estimated where nothing recorded it, with the same tilde the table column and the detail
         // tile use — this subtitle IS the calorie readout on a phone, and it was the empty one.
-        if let kcal = WorkoutEnergyDisplay.text(resolvedEnergy(row)) { parts.append("\(kcal) kcal") }
+        if let kcal = WorkoutEnergyDisplay.text(resolvedEnergy(row), marksEstimate: false) {
+            let caption = WorkoutEnergyDisplay.caption(resolvedEnergy(row))
+            parts.append(["\(kcal) kcal", caption].compactMap { $0 }.joined(separator: " · "))
+        }
         if let d = row.distanceM, d > 0 { parts.append(distanceLabel(row.distanceM)) }
         if let hr = row.avgHr { parts.append(String(localized: "\(hr) bpm")) }
         return parts.joined(separator: " · ")
+    }
+
+    /// Read only recorded session fields; missing distance/HR never become zero-valued metrics.
+    private func referenceSessionMetrics(_ row: WorkoutRow) -> String {
+        var parts: [String] = []
+        if let duration = durationLabelOrNil(row.durationS) { parts.append(duration) }
+        if let distance = row.distanceM, distance.isFinite, distance > 0 {
+            parts.append(distanceLabel(distance))
+            if WorkoutCatalog.isOnFoot(row.sport), let seconds = row.durationS,
+               seconds.isFinite, seconds > 0 {
+                parts.append(UnitFormatter.paceFromSecPerKm(seconds / (distance / 1000), system: distanceUnitSystem))
+            }
+        }
+        if let hr = row.avgHr, hr > 0 { parts.append(String(localized: "\(hr) bpm")) }
+        return parts.isEmpty ? String(localized: "No data yet") : parts.joined(separator: " · ")
     }
 
     /// A full-sentence a11y label for a compact row.
@@ -2295,5 +2404,59 @@ private func previewWorkoutRows() -> [WorkoutRow] {
         .environmentObject(IntelligenceEngine(repo: repo, profile: ProfileStore(), deviceId: "preview"))
         .frame(width: 1040, height: 600)
         .preferredColorScheme(.dark)
+}
+#endif
+
+#if os(iOS)
+/// Native entry points reuse one recording authority, exercise library and saved-plan store.
+private struct ActivityProgramsView: View {
+    @State private var showingPlan = false
+    @State private var showingFeedback = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
+                NoopCard {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        Label("Gym programs", systemImage: "dumbbell").font(WhoopReferenceFont.heading(22))
+                        Text("Plan routines, choose exercises and log sets, reps and weights. Review previous performance and rest between sets.")
+                            .font(WhoopReferenceFont.body(13)).foregroundStyle(StrandPalette.textSecondary)
+                        NavigationLink { TrainingHubView() } label: {
+                            Label("Open gym training", systemImage: "arrow.right")
+                                .frame(minHeight: 44)
+                        }
+                        NavigationLink { TrainingHubView(importOpenGymOnOpen: true) } label: {
+                            Label("Import openGym plan", systemImage: "square.and.arrow.down")
+                                .frame(minHeight: 44)
+                        }
+                        Text("In openGym, use Plan → Export plan file, then choose its JSON here. Review the import before saving. Exercise media and progression rules are not imported.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+                        Text("Start your gym session, then open Woop on Apple Watch. Use Done set, or try the optional Motion set trial. Enter actual reps and weight on iPhone first; automatic rep and exercise recognition is not available.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                }
+                NoopCard {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        Label("Running programs", systemImage: "figure.run").font(WhoopReferenceFont.heading(22))
+                        Text("Build time or GPS-distance intervals, save templates and set a goal-time pacer. Active-time phases pause with the workout; distance phases wait during GPS loss.")
+                            .font(WhoopReferenceFont.body(13)).foregroundStyle(StrandPalette.textSecondary)
+                        Button("Edit running plan") { showingPlan = true }.frame(minHeight: 44)
+                        Button("Audio and workout feedback") { showingFeedback = true }.frame(minHeight: 44)
+                        WorkoutStartControl()
+                        Text("Choose Running when starting. Enable GPS for distance phases and the pacer; audio feedback is optional.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                }
+            }
+            .padding(NoopMetrics.screenPadding)
+        }
+        .background { WoopReferenceCanvas().ignoresSafeArea() }
+        .navigationTitle("Gym & Running")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPlan) { WorkoutPlanEditorView(gpsEnabled: true) }
+        .sheet(isPresented: $showingFeedback) {
+            WorkoutFeedbackSettingsView(sport: "Running", gpsEnabled: true, hasTargetZone: false)
+        }
+    }
 }
 #endif

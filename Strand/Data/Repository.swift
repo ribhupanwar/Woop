@@ -176,6 +176,10 @@ final class Repository: ObservableObject {
     /// hypnogram) instead of the generic "On-device", and flag the split as the ring's RAW on-device stages.
     /// Not a stored value and never crosses `.noopbak`, so no Android twin is required.
     var activeDeviceIsOura: Bool { DeviceBrandCatalog.isOura(deviceId) }
+    /// Registry-backed hardware identity for WHOOP-only monitor presentation.
+    var activeDeviceIsWhoopForVitals: Bool {
+        deviceId == Self.whoopSource || registeredWhoopIds.contains(deviceId)
+    }
     private var store: WhoopStore?
 
     /// Daily metrics (recovery/strain/sleep/HRV/RHR…) over the recent window, oldest→newest.
@@ -3144,6 +3148,15 @@ final class Repository: ObservableObject {
 
 
 
+    /// A detail opened from a lightweight dashboard must resolve its own heart-rate readout. Those
+    /// callers intentionally skip the history-wide reconcile, so carrying their row straight into a
+    /// detail could otherwise show an old live-stream average beside the denser historical trace.
+    /// Uses the same source/coverage rules as the full workout list and never writes stored metrics.
+    func workoutWithReconciledHeartRate(_ row: WorkoutRow) async -> WorkoutRow {
+        guard let store = await ensureStore() else { return row }
+        return await reconcileWorkoutHrWithTrace([row], store: store, cap: 1).first ?? row
+    }
+
     /// DISPLAY-ONLY: reconcile each workout's shown Avg/Max HR with the strap trace that actually drives
     /// its graph / zones / effort (#77, #499). The detail screen always charts (`workoutHrBuckets`) and
     /// zone-bins (`workoutZoneMinutes`) the strap's own ~1 Hz samples over `[startTs, endTs]`; the
@@ -3454,7 +3467,7 @@ final class Repository: ObservableObject {
         guard let store = await ensureStore() else { return }
         // The displayed history is a union across current and archived computed ids; `source` is the
         // detected row's owning id and is therefore the only safe deletion target.
-        _ = try? await store.deleteWorkouts(deviceId: row.source, sport: row.sport,
+        _ = try? await store.deleteWorkouts(deviceId: WorkoutSource.detectedOwner(source: row.source), sport: row.sport,
                                             from: row.startTs, to: row.startTs)
     }
 

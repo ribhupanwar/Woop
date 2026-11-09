@@ -55,7 +55,10 @@ public enum ActivitySuggestions {
                                settings: Settings) -> [Suggestion] {
         let answerByKey = Dictionary(answers.map { ("\($0.track.rawValue):\($0.candidateStartTs)", $0) },
                                      uniquingKeysWith: { a, b in a.answeredAtTs >= b.answeredAtTs ? a : b })
-        let logged = workouts.filter { WorkoutSource.classify($0.source) != .detected && $0.endTs > $0.startTs }
+        let logged = workouts.filter {
+            (WorkoutSource.classify($0.source) != .detected || WorkoutSource.isAutomaticallyDetected($0.source))
+                && $0.endTs > $0.startTs
+        }
         return candidates.compactMap { row in
             guard let track = ActivityCandidates.Track(rawValue: row.track), row.endTs > row.startTs else { return nil }
             if track == .walk, !settings.walks { return nil }
@@ -119,6 +122,41 @@ public enum ActivitySuggestions {
     public static let walksKey = "noop.activityDetection.walks"
     public static let levelKey = "noop.activityDetection.level"
     public static let notificationsKey = "noop.activityDetection.notifications"
+    public static let automaticSaveKey = "woop.activityDetection.automaticSave"
+    public static let automaticSaveSinceKey = "woop.activityDetection.automaticSaveSince"
+
+    /// Auto-save is a separate wearer-controlled policy. It only adds settled, eligible sessions
+    /// beginning after activation, never rewrites an imported/edited session, and retains dismissals.
+    /// A sport label is used only for the strap's locomotion track; HR-only spans stay generic.
+    public static func automaticRows(_ suggestions: [Suggestion], existing: [WorkoutRow],
+                                     dismissed: [Range<Int>], activatedAt: Int, now: Int,
+                                     source: String) -> [WorkoutRow] {
+        guard activatedAt > 0, activatedAt <= now, source.hasSuffix("-noop") else { return [] }
+        var occupied = existing.filter { $0.endTs > $0.startTs }.map { $0.startTs..<$0.endTs }
+        var rows: [WorkoutRow] = []
+        let ordered = suggestions.sorted {
+            if $0.start != $1.start { return $0.start < $1.start }
+            if $0.track != $1.track { return $0.track == .walk }
+            return $0.id < $1.id
+        }
+        for s in ordered {
+            guard s.state == .open, s.asks, s.start >= activatedAt, s.end > s.start,
+                  s.end <= now - settleSeconds,
+                  s.durationMinutes >= ActivityCandidates.minimumMinutes else { continue }
+            let span = s.start..<s.end
+            guard !(occupied + dismissed).contains(where: { $0.overlaps(span) }) else { continue }
+            let sport: String
+            if s.track == .walk, s.kinds == [.run] { sport = "Running" }
+            else if s.track == .walk, s.kinds == [.walk] { sport = "Walking" }
+            else { sport = "detected" }
+            rows.append(WorkoutRow(startTs: s.start, endTs: s.end, sport: sport, source: source,
+                                   durationS: Double(s.end - s.start), energyKcal: nil, avgHr: s.avgBpm,
+                                   maxHr: nil, strain: nil, distanceM: nil, zonesJSON: nil,
+                                   notes: nil, steps: nil))
+            occupied.append(span)
+        }
+        return rows
+    }
 
     /// How many recent days every pass recomputes. Older days of the window are recomputed only when the
     /// rule changed, since their data no longer moves.

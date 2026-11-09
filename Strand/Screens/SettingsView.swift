@@ -278,6 +278,7 @@ struct SettingsView: View {
     /// sustained-elevated window and offers — via a single dismissible card — to save it as a workout.
     /// Nothing is ever created automatically. Mirrors the Android `NoopPrefs.KEY_AUTO_DETECT_WORKOUTS`.
     @AppStorage(PuffinExperiment.autoDetectWorkoutsKey) private var autoDetectWorkoutsEnabled = false
+    @AppStorage(ActivitySuggestions.automaticSaveKey) private var automaticActivitySave = false
     /// Activity detection's own choices (decision 2026-10-31): walks, how often to ask, notifications.
     @AppStorage(ActivitySuggestions.walksKey) private var activityWalks = true
     @AppStorage(ActivitySuggestions.levelKey) private var activityLevelRaw = ActivityCandidates.Level.balanced.rawValue
@@ -3437,14 +3438,35 @@ struct SettingsView: View {
                 .appleInspiredTint("settings.controls")
                 .onChangeCompat(of: autoDetectWorkoutsEnabled) { on in
                     guard on else { return }
+                    if automaticActivitySave {
+                        UserDefaults.standard.set(String(Int(Date().timeIntervalSince1970)),
+                                                  forKey: ActivitySuggestions.automaticSaveSinceKey)
+                        UserDefaults.standard.set(activityWalks, forKey: ActivitySuggestions.walksKey)
+                    }
                     ActivitySuggestionNotifier.requestAuthorization()
                     Task { await model.repo.refreshActivitySuggestions(hrMax: profile.maxHeartRate.wholeBpm) }
                 }
-                Text("After a sync, NOOP looks for walks and for stretches of raised heart rate and asks what they were. Nothing is saved until you answer. Times that already have a workout are skipped. Beta.")
+                Text(automaticActivitySave
+                     ? "After sync and analysis, eligible detected activities are saved automatically. You can change their type or times, or dismiss them. Existing workouts are skipped. Beta."
+                     : "After a sync, Woop looks for walks and for stretches of raised heart rate and asks what they were. Nothing is saved until you answer. Times that already have a workout are skipped. Beta.")
                     .font(StrandFont.caption)
                     .foregroundStyle(StrandPalette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 if autoDetectWorkoutsEnabled {
+                    Toggle("Automatically record activities", isOn: $automaticActivitySave)
+                        .toggleStyle(.switch)
+                        .onChangeCompat(of: automaticActivitySave) { enabled in
+                            if enabled {
+                                // New activation starts a new capture window, without backfilling old suggestions.
+                                UserDefaults.standard.set(String(Int(Date().timeIntervalSince1970)),
+                                                          forKey: ActivitySuggestions.automaticSaveSinceKey)
+                                UserDefaults.standard.set(activityWalks, forKey: ActivitySuggestions.walksKey)
+                            }
+                        }
+                    Text("After sync and analysis, completed detected activities are added to your timeline. Running and walking use available strap movement data; other types stay Activity until you edit them. Detection needs enough sensor data and is not continuous phone GPS recording.")
+                        .font(StrandFont.caption)
+                        .foregroundStyle(StrandPalette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                     let noSteps = selectedWhoopModelRaw == WhoopModel.whoop4.rawValue
                     Toggle(isOn: noSteps ? .constant(false) : $activityWalks) {
                         Text("Detect walks")

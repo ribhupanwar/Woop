@@ -317,6 +317,7 @@ extension ActiveSessionMiniBar {
 /// Hosts the mini bar where iOS expects a persistent player-style control: the tab bar's bottom
 /// accessory on iOS 26.1 and later, a card floating just above the tab bar before that.
 private struct ActiveSessionMiniBarHost: ViewModifier {
+    var enabled = true
     @EnvironmentObject private var session: ActiveSessionController
     @EnvironmentObject private var router: NavRouter
     /// The optional goals week bar (goals plan §2a). Off by default; on iOS 26.1+ it shares the tab bar's
@@ -325,8 +326,8 @@ private struct ActiveSessionMiniBarHost: ViewModifier {
     @ObservedObject private var tracking = GoalTrackingStore.shared
 
     func body(content: Content) -> some View {
-        let visible = session.hasLiveSession && !session.isPresented
-        let goalsVisible = goalsBar && !visible
+        let visible = enabled && session.hasLiveSession && !session.isPresented
+        let goalsVisible = enabled && goalsBar && !visible
             && tracking.periodSnapshots.contains { $0.goal.status == .active && $0.goal.period == .week }
         if #available(iOS 26.1, *) {
             content.tabViewBottomAccessory(isEnabled: visible || goalsVisible) {
@@ -348,6 +349,25 @@ private struct ActiveSessionMiniBarHost: ViewModifier {
 }
 
 extension View {
-    func activeSessionMiniBar() -> some View { modifier(ActiveSessionMiniBarHost()) }
+    func activeSessionMiniBar(enabled: Bool = true) -> some View {
+        modifier(ActiveSessionMiniBarHost(enabled: enabled))
+    }
+}
+
+/// The custom navigation shell reserves real space for the same active session / goals accessory.
+struct SessionBottomAccessory: View {
+    @EnvironmentObject private var session: ActiveSessionController
+    @EnvironmentObject private var app: AppModel
+    @EnvironmentObject private var router: NavRouter
+    @AppStorage(GoalsWeekAccessory.enabledKey) private var goalsBar = false
+    @ObservedObject private var tracking = GoalTrackingStore.shared
+
+    var body: some View {
+        if !session.isPresented && (session.hasLiveSession || app.workoutCompletion != nil) {
+            ActiveSessionMiniBar()
+        } else if goalsBar && tracking.periodSnapshots.contains(where: { $0.goal.status == .active && $0.goal.period == .week }) {
+            GoalsWeekAccessory { router.openGoals() }
+        }
+    }
 }
 #endif

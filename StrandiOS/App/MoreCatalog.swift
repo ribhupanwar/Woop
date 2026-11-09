@@ -190,6 +190,8 @@ enum MoreCatalog {
                                       keywords: ["goals", "weekly goal", "monthly goal", "journey", "progress"])
 
     static let rootEntries: [MoreEntry] = [
+        MoreEntry("Band firmware", "cpu", .firmware,
+                  keywords: ["firmware", "update", "version", "WHOOP MG"]),
         MoreEntry("Settings", "gearshape.fill", .settings,
                   keywords: ["preferences", "options", "configuration"]),
         // Used every day, so one tap from the tab rather than inside a group. The settings-like screens

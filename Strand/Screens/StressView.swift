@@ -38,6 +38,7 @@ func stressActivityMaskedHoursCaption(_ count: Int) -> String? {
 // is fully inspectable — see the "How this is computed" card at the bottom.
 
 struct StressView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     /// The empty state's "Open Data Sources" button routes through the shell (`NavRouter`), because
     /// neither shell exposes a selection this screen could set directly.
@@ -77,7 +78,7 @@ struct StressView: View {
     @State private var modelSignature: StressInputs?
 
     var body: some View {
-        ScreenScaffold(title: "Stress", subtitle: "Autonomic load across your waking day",
+        ScreenScaffold(title: referenceUI ? nil : "Stress", subtitle: referenceUI ? nil : "Autonomic load across your waking day",
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header). The content is one inner eager VStack, so the staggered
                        // section reveal is unchanged; this only defers building that stack until it scrolls in.
@@ -95,6 +96,17 @@ struct StressView: View {
                 ComingSoon.loading("Reading your heart-rate variability and resting heart rate…", title: "Reading your heart data")
             } else {
                 emptyState
+            }
+        }
+        .navigationTitle("Stress Monitor")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar {
+            if referenceUI {
+                ToolbarItem(placement: .principal) {
+                    Text("STRESS MONITOR").font(WhoopReferenceFont.label(14)).tracking(1.2)
+                }
             }
         }
         .onAppear { rebuildModelIfNeeded() }
@@ -356,7 +368,7 @@ struct StressView: View {
                         if let peak = drawnPeak, let lvl = peak.level {
                             Text("peak \(StressTrace.formatLevel(lvl)) · \(hourLabel(peak.hour))")
                                 .font(StrandFont.captionNumber)
-                                .foregroundStyle(StressRamp.color(lvl))
+                                .foregroundStyle(StressRamp.labelColor(lvl))
                         }
                     }
 
@@ -462,7 +474,10 @@ struct StressView: View {
     // "of 3" over it (the Today HeroScoreCell / Live BPM-gauge idiom). The band pill sits top-trailing and
     // one plain-English line explains the number below. Frosted card, liquid finish.
 
-    private func heroCard(_ model: StressModel) -> some View {
+    @ViewBuilder private func heroCard(_ model: StressModel) -> some View {
+        if referenceUI {
+            ReferenceStressGauge(score: model.score, asOf: model.fullTrend.last?.date)
+        } else {
         NoopCard(tint: StressRamp.calm) {
             VStack(alignment: .leading, spacing: NoopMetrics.cardInnerSpacing) {
                 HStack {
@@ -480,7 +495,7 @@ struct StressView: View {
                         Text(model.band.title)
                             .font(StrandFont.overline)
                             .tracking(StrandFont.overlineTracking)
-                            .foregroundStyle(StressRamp.color(model.score))
+                            .foregroundStyle(StressRamp.labelColor(model.score))
                         // One plain-English line beside the gauge.
                         Text(model.explanation)
                             .font(StrandFont.subhead)
@@ -490,6 +505,7 @@ struct StressView: View {
                     Spacer(minLength: 0)
                 }
             }
+        }
         }
     }
 
@@ -807,11 +823,19 @@ enum StressBand {
         }
     }
 
+    var color: Color {
+        switch self {
+        case .low: return WoopHomePalette.stressLow
+        case .medium: return WoopHomePalette.healthGood
+        case .high: return WoopHomePalette.stressHigh
+        }
+    }
+
     var tone: StrandTone {
         switch self {
-        case .low:    return .positive
-        case .medium: return .warning
-        case .high:   return .critical
+        case .low:    return .accent
+        case .medium: return .positive
+        case .high:   return .warning
         }
     }
 }
@@ -828,9 +852,11 @@ enum StressRamp {
     /// Band anchors, lifted from the shared palette (no hard-coded hex). These are the
     /// blue / green / amber the totals legend and band dots use, kept in lock-step with
     /// the gauge gradient below.
-    static let calm    = StrandPalette.accent         // #60A0E0 — calm WHOOP blue
-    static let steady  = StrandPalette.statusPositive // #03E095 — balanced WHOOP green
-    static let tense   = StrandPalette.statusWarning  // #F0A020 — high WHOOP amber
+    static let calm    = WoopHomePalette.stressLow         // Calm label/curve blue
+    static let steady  = WoopHomePalette.healthGood // Medium stress teal
+    static let tense   = WoopHomePalette.stressHigh  // High stress amber
+
+    static func labelColor(_ score: Double) -> Color { StressBand(score: score).color }
 
     /// The 3-stop gauge ramp, evenly spaced (blue → green → amber).
     static let stops: [Gradient.Stop] = [
@@ -1036,7 +1062,7 @@ extension StressMath {
 struct DaytimeLoadLine: View {
     let hours: [DaytimeStress.HourPoint]
 
-    private let chartHeight: CGFloat = 78
+    var chartHeight: CGFloat = 78
 
     var body: some View {
         GeometryReader { geo in

@@ -403,16 +403,13 @@ struct AppleHealthView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                 case .entitlementMissing:
-                    // #348 / #930: the sideload was re-signed WITHOUT the HealthKit entitlement (free
-                    // Apple IDs always lack it; some paid reseller certs do too), so "Enable Apple Health"
-                    // can never work and the app can never appear under Settings › Health › Data Access
-                    // & Devices. Give the honest path instead of impossible Settings instructions: bring
-                    // data in via a file import or the HealthKit-free Shortcuts export.
+                    // Diagnose this installed profile, not account price. Apple lists basic HealthKit
+                    // for free developer accounts too, but a re-signing tool may fail to provision it.
                     Text("This install can't connect to Apple Health directly. It was signed with a profile that doesn't include Apple's Health permission, so there's nothing to enable, and NOOP won't appear under Settings › Health.")
                         .font(StrandFont.subhead)
                         .foregroundStyle(StrandPalette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("To get your Apple Health data in anyway: import a Health export .zip in Data Sources, or turn on Shortcuts Export to feed your strap data into Health without the entitlement. (A build installed from the App Store or signed with a paid Apple Developer account connects directly.)")
+                    Text("Re-sign with a tool and provisioning profile that preserve HealthKit, then grant access in Apple Health. Basic HealthKit can be supported by a free developer account too. You can also import a Health export .zip in Data Sources. Shortcuts Export sends your strap data to Health; it does not enable direct HealthKit access.")
                         .font(StrandFont.caption)
                         .foregroundStyle(StrandPalette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)

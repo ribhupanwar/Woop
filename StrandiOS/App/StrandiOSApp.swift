@@ -55,9 +55,12 @@ struct StrandiOSApp: App {
     @AppStorage(AccentColor.customHexKey) private var accentCustomHex = AccentColor.defaultCustomHex
     /// Effort's display scale is also embedded in the shared widget snapshot. Observe it here so a
     /// Settings change gets one accurate full rebuild instead of waiting for an unrelated repo refresh.
-    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.hundred.rawValue
+    @AppStorage(UnitPrefs.effortScaleKey) private var effortScaleRaw = EffortScale.whoop.rawValue
 
     init() {
+        // Presentation only: new/unconfigured iPhone installs use the reference 0–21 axis. An explicit
+        // saved scale remains the wearer's choice; stored Effort stays on its canonical 0–100 axis.
+        UserDefaults.standard.register(defaults: [UnitPrefs.effortScaleKey: EffortScale.whoop.rawValue])
         // One-time migration off the retired card/button/both Coach-entry picker onto the three
         // independent entry toggles (banner/header-icon/floating-button). No-op after the first launch
         // that has them. Must run before any Today/RootTabView reads its @AppStorage default.
@@ -211,6 +214,16 @@ struct StrandiOSApp: App {
         model.healthWriteBack = { [weak bridge] in
             _ = await bridge?.writeBackAfterNewData()
         }
+        model.healthReadSync = { [weak bridge, weak model] in
+            guard let bridge, let model else { return }
+            // A pull asks for fresh days, not a full-library import. The regular sync and
+            // explicit history tools retain their wider windows.
+            await HealthSyncRefreshCoordinator.run(sync: {
+                _ = await bridge.sync(days: 3)
+            }, refresh: {
+                await model.refreshAfterAppleHealthSync(authorized: bridge.auth == .authorized)
+            })
+        }
     }
 
     var body: some Scene {
@@ -221,6 +234,7 @@ struct StrandiOSApp: App {
                 .environmentObject(model.live)
                 .environmentObject(model.repo)
                 .environmentObject(model.session)
+                .environment(\.woopReferenceUI, true)
                 .dashboardPresentationScope(model: model)
                 .environmentObject(model.profile)
                 .environmentObject(model.behavior)
@@ -232,7 +246,8 @@ struct StrandiOSApp: App {
                 // v5 L3: the shared stress check-in nudge surface, so the Breathe screen's passive
                 // card observes the SAME instance the central detector (AppModel.evaluateStress) posts to.
                 .environment(\.stressNudgeCenter, model.stressNudgeCenter)
-                .preferredColorScheme(AppearanceMode.resolve(appearanceRaw).colorScheme)
+                .preferredColorScheme(.dark)
+                .environment(\.colorScheme, .dark)
                 // Match SwiftUI format styles to the localization selected by the app's bundles. Language
                 // changes are process-wide on Apple and are applied after the documented reopen.
                 .environment(\.locale, AppLanguage.activeLocale)
@@ -595,7 +610,9 @@ private struct iOSRootView: View {
                     demo
                         .background(StrandPalette.surfaceBase.ignoresSafeArea())
                         .navigationBarTitleDisplayMode(.inline)
+                        .environment(\.woopReferenceUI, true)
                 }
+                .preferredColorScheme(.dark)
             )
         }
         #endif
@@ -669,7 +686,9 @@ private struct iOSRootView: View {
     /// FULL shell with the tab bar renders populated for verification + screenshots. No-op in Release.
     private var demoBypass: Bool {
         #if DEBUG
+        // UI verification can bypass gates WITHOUT seeding any metric or workout values.
         return CommandLine.arguments.contains("--demo-seed")
+            || CommandLine.arguments.contains("--ui-preview")
         #else
         return false
         #endif
@@ -758,6 +777,10 @@ enum DemoScreens {
         case "overviewdashboard": return AnyView(OverviewDashboardView())
         case "trends":   return AnyView(TrendsView())
         case "sleep":    return AnyView(SleepView())
+        case "recovery": return AnyView(RecoveryDetailView())
+        case "strain":
+            guard let metric = MetricCatalog.all.first(where: { $0.key == "strain" }) else { return nil }
+            return AnyView(MetricDetailView(metric: metric))
         case "live":     return AnyView(LiveView())
         case "stress":   return AnyView(StressView())
         case "workouts": return AnyView(WorkoutsView())

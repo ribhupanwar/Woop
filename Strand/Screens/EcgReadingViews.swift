@@ -7,7 +7,7 @@ import WhoopStore
 // MARK: - WHOOP MG ECG reading screens (OpenStrap port)
 //
 // The capture sheet, the saved-readings list and a saved reading. Every result shown here is the strap's
-// own; the category comes from OpenStrap's result-plus-heart-rate table. NOOP is not a medical device:
+// own; the category comes from OpenStrap's result-plus-heart-rate table. Woop is not a medical device:
 // a first-use notice states the limits and intended use, and every screen that names a category keeps
 // that notice one tap away behind an info button rather than as text on the screen.
 
@@ -76,21 +76,21 @@ enum EcgReadingConsent {
 
     static let points: [(LocalizedStringKey, LocalizedStringKey)] = [
         ("An experimental test feature",
-         "ECG readings in NOOP are an experimental feature for testing and personal interest. NOOP is not a medical device, and nothing here has been reviewed or approved for medical use."),
-        ("No approval for NOOP",
-         "WHOOP's ECG feature is cleared by the FDA only together with WHOOP's own app. That clearance does not extend to NOOP: reading the strap and analysing the trace here are not cleared or approved by the FDA or any other authority."),
+         "ECG readings in Woop are an experimental feature for testing and personal interest. Woop is not a medical device, and nothing here has been reviewed or approved for medical use."),
+        ("No approval for Woop",
+         "WHOOP's ECG feature is cleared by the FDA only together with WHOOP's own app. That clearance does not extend to Woop: reading the strap and analysing the trace here are not cleared or approved by the FDA or any other authority."),
         ("Not for medical use",
-         "Do not use these readings to diagnose, rule out or monitor a heart condition, or to decide on medication or treatment. NOOP does not recommend any medical use."),
+         "Do not use these readings to diagnose, rule out or monitor a heart condition, or to decide on medication or treatment. Woop does not recommend any medical use."),
         ("Where the result comes from",
-         "The rhythm result is calculated by the strap itself. NOOP shows it and cannot check whether it is correct. Heart rate, variability and intervals are NOOP's own estimates from the saved trace and are not validated."),
+         "The rhythm result is calculated by the strap itself. Woop shows it and cannot check whether it is correct. Heart rate, variability and intervals are Woop's own estimates from the saved trace and are not validated."),
         ("Limits of a wrist ECG",
          "One lead at the wrist, 100 samples per second, an uncalibrated amplitude and a filter inside the strap. Movement, loose contact or a slow heart rate can give wrong results. A single lead cannot replace a 12-lead ECG."),
         ("Values can differ from a calibrated ECG",
          "Compared with a calibrated single-lead ECG device, amplitude, QRS width, the T wave and intervals can differ noticeably. Take the numbers as a rough indication, not as a measurement you can rely on."),
         ("If you feel unwell",
-         "With symptoms such as chest pain, palpitations, dizziness or shortness of breath, contact a doctor. In an emergency, call your local emergency number (112 in Europe, 911 in the US) or alert your emergency contacts. Do not wait for or rely on a reading in NOOP."),
+         "With symptoms such as chest pain, palpitations, dizziness or shortness of breath, contact a doctor. In an emergency, call your local emergency number (112 in Europe, 911 in the US) or alert your emergency contacts. Do not wait for or rely on a reading in Woop."),
         ("Your readings stay with you",
-         "NOOP stores readings on this device and sends them to no one. A backup you make yourself includes them."),
+         "Woop stores readings on this device and sends them to no one. A backup you make yourself includes them."),
     ]
 }
 
@@ -297,7 +297,7 @@ struct EcgReadingSheet: View {
             primaryButton("Try again") { controller.begin(wrist: wrist) }
         case .inconclusiveRetry:
             outcome(icon: "questionmark.circle", title: "Inconclusive",
-                    lines: ["The strap could not decide. One more reading usually settles it."])
+                    lines: ["The band returned an inconclusive result. You can retake the reading after resting; another reading may still be inconclusive."])
             primaryButton("Take one more reading") { controller.retry() }
         }
     }
@@ -314,6 +314,9 @@ struct EcgReadingSheet: View {
                 .foregroundStyle(StrandPalette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        Text("WHOOP MG electrode signal · Band-reported result. Keep contact until the band finishes.")
+            .font(StrandFont.caption)
+            .foregroundStyle(WoopHomePalette.healthGood)
         if controller.phase == .failed || controller.phase == .cancelled {
             Label(EcgCategoryText.failure(controller.failureReason),
                   systemImage: controller.phase == .failed ? "exclamationmark.triangle" : "xmark.circle")
@@ -378,7 +381,7 @@ struct EcgReadingSheet: View {
         }
         HStack(spacing: 16) {
             EcgStat(label: "Heart rate", value: controller.liveHr.map(String.init) ?? "–", unit: "bpm")
-            EcgStat(label: "Signal", value: "\(controller.quality)/3")
+            EcgStat(label: "Signal", value: EcgSignalQuality(rawValue: UInt8(clamping: controller.quality))?.label.capitalized ?? "Unknown")
             EcgStat(label: "Interruptions", value: "\(controller.interruptions)/3")
         }
         .ecgCard()

@@ -10,6 +10,7 @@ object CoreSleepDebt {
     data class Ledger(
         val nightCount: Int, val onTarget: Boolean, val isDebt: Boolean, val deltas: List<Double>, val headline: String,
         val tag: String, val read: String, val balanceText: String, val needText: String, val tone: String,
+        val balanceMin: Double? = null, val needMin: Double? = null,
     )
 
     fun read(): Ledger? {
@@ -23,6 +24,7 @@ object CoreSleepDebt {
         val d = o.optJSONArray("deltas")
         return Ledger(o.getInt("nightCount"), o.optBoolean("onTarget"), o.optBoolean("isDebt"),
                       (0 until (d?.length() ?: 0)).map { d!!.getDouble(it) }, o.optString("headline"), o.optString("tag"),
-                      o.optString("read"), o.optString("balanceText"), o.optString("needText"), o.optString("tone"))
+                      o.optString("read"), o.optString("balanceText"), o.optString("needText"), o.optString("tone"),
+                      o.optDouble("balanceMin").takeIf { it.isFinite() }, o.optDouble("needMin").takeIf { it.isFinite() })
     }
 }

@@ -116,6 +116,9 @@ struct EnergyCard: View {
                 .foregroundStyle(StrandPalette.textPrimary)
                 .monospacedDigit()
                 .minimumScaleFactor(0.72)
+            if summary.source != .appleSplit {
+                Text("Estimated").font(StrandFont.caption).foregroundStyle(StrandPalette.textSecondary)
+            }
             Text("total burned so far")
                 .font(StrandFont.caption)
                 .foregroundStyle(StrandPalette.textSecondary)
@@ -130,7 +133,7 @@ struct EnergyCard: View {
     }
 
     private var headlineTotal: String {
-        EnergyDisplay.totalText(summary, includesUnit: true)
+        EnergyDisplay.totalText(summary, includesUnit: true, marksEstimate: false)
     }
 
     private var statStrip: some View {
@@ -269,11 +272,11 @@ struct EnergyCard: View {
 /// Keeping the approximation marker and rounding here prevents the compact Calories tile from
 /// drifting back to Apple active energy or the legacy `activeKcalEst` value.
 enum EnergyDisplay {
-    static func totalText(_ summary: DailyEnergySummary?, includesUnit: Bool = false) -> String {
+    static func totalText(_ summary: DailyEnergySummary?, includesUnit: Bool = false, marksEstimate: Bool = true) -> String {
         guard let summary, let total = summary.totalBurnedSoFar,
               total.isFinite, total >= 0 else { return "—" }
         let number = Int(total.rounded()).formatted(.number.grouping(.automatic))
-        let approximate = summary.source == .appleSplit ? number : "~\(number)"
+        let approximate = summary.source == .appleSplit || !marksEstimate ? number : "~\(number)"
         return includesUnit ? "\(approximate) kcal" : approximate
     }
 }

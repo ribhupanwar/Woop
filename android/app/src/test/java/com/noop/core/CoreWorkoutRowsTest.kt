@@ -8,6 +8,13 @@ import org.junit.Test
 
 /** The core's workout rows parse into Room's shape, take Room's keys and routes, and the comparison names each disagreeing field. */
 class CoreWorkoutRowsTest {
+    @Test fun automaticRowsKeepTheirRealStoreOwnerForEditingAndDismissal() {
+        val row = CoreWorkoutRows.parse("""[{"startTs":100,"endTs":1000,"sport":"Running","source":"woop-auto:strap-noop"}]""")!!.single()
+        assertEquals("strap-noop", row.deviceId)
+        assertEquals("woop-auto:strap-noop", row.source)
+        assertEquals("strap-noop", CoreWorkoutRows.withRoomKeys(listOf(row), emptyList()).single().deviceId)
+    }
+
     @Test fun parsesSwiftRowsTakesRoomKeysAndCompares() {
         val core = CoreWorkoutRows.parse("""[{"startTs":200,"endTs":260,"sport":"Run","source":"my-whoop","avgHr":140,"steps":null},
             {"startTs":100,"endTs":130,"sport":"Walk","source":"health-connect","distanceM":2100.5}]""")!!

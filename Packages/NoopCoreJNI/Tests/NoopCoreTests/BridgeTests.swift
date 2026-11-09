@@ -64,4 +64,18 @@ final class BridgeTests: XCTestCase {
         XCTAssertTrue(chosen.deepHrvWindow)
         XCTAssertEqual(chosen.dayCycleMode.rawValue, "midnight")
     }
+    func testAutomaticActivitySettingsRemainOffUntilExplicitlySupplied() {
+        var settings = CoreAnalysis.Settings.standard
+        var profile = CoreAnalysis.Profile(age: 30, sex: "male", weightKg: 70, heightCm: 175, hrMaxOverride: 0)
+        XCTAssertFalse(settings.activityDetectionEnabled)
+        XCTAssertFalse(settings.activityAutomaticSave)
+        XCTAssertEqual(settings.activityAutomaticSaveSince, 0)
+        CoreAnalysis.applyExtras(#"{"activityDetectionEnabled":true,"activityAutomaticSave":true,"activityAutomaticSaveSince":1794000000,"activityWalks":false,"activityDetectionLevel":"balanced"}"#,
+                                 to: &settings, profile: &profile)
+        XCTAssertTrue(settings.activityDetectionEnabled)
+        XCTAssertTrue(settings.activityAutomaticSave)
+        XCTAssertEqual(settings.activityAutomaticSaveSince, 1794000000)
+        XCTAssertFalse(settings.activityWalks)
+    }
+
 }

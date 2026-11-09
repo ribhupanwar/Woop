@@ -14,6 +14,8 @@ object CoreActivity {
     const val KEY_WALKS = "noop.activityDetection.walks"
     const val KEY_LEVEL = "noop.activityDetection.level"
     const val KEY_NOTIFY = "noop.activityDetection.notifications"
+    const val KEY_AUTOMATIC_SAVE = "woop.activityDetection.automaticSave"
+    const val KEY_AUTOMATIC_SINCE = "woop.activityDetection.automaticSaveSince"
 
     data class Item(
         val id: String, val track: String, val start: Long, val end: Long, val avgBpm: Int?, val load: Double,

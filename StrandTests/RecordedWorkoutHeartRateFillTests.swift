@@ -50,6 +50,41 @@ final class RecordedWorkoutHeartRateFillTests: XCTestCase {
             exerciseCount: nil, steps: nil)], deviceId: strap + "-noop")
     }
 
+    func testDetailResolvesStaleLiveAverageWithoutChangingStoredWorkout() async throws {
+        let (repo, store) = try await makeRepo()
+        let original = recordedRow(avgHr: 99)
+        _ = try await store.upsertWorkouts([original], deviceId: strap)
+        try await insertTrace(store)
+
+        let resolved = await repo.workoutWithReconciledHeartRate(original)
+        XCTAssertEqual(resolved.avgHr, 110)
+        XCTAssertEqual(resolved.maxHr, 140)
+        XCTAssertEqual(resolved.energyKcal, original.energyKcal)
+        XCTAssertEqual(resolved.startTs, original.startTs)
+        XCTAssertEqual(resolved.endTs, original.endTs)
+
+        let persisted = try await store.workouts(deviceId: strap, from: start, to: end, limit: 10)
+        XCTAssertEqual(persisted, [original], "a detail read must not rewrite captured or entered metrics")
+    }
+
+    func testDetailKeepsStoredHeartRateWhenHistoricalTraceIsTooSparse() async throws {
+        let (repo, store) = try await makeRepo()
+        let original = recordedRow(avgHr: 99)
+        try await insertTrace(store, coverage: 0.01)
+        let resolved = await repo.workoutWithReconciledHeartRate(original)
+        XCTAssertEqual(resolved, original)
+    }
+
+    func testDetailPreservesAnImportedWorkoutAverageAndPeak() async throws {
+        let (repo, store) = try await makeRepo()
+        let imported = WorkoutRow(startTs: start, endTs: end, sport: "Running", source: "whoop",
+                                  durationS: Double(end - start), energyKcal: 450, avgHr: 125, maxHr: 155,
+                                  strain: 50, distanceM: 5_000, zonesJSON: nil, notes: nil, steps: nil)
+        try await insertTrace(store)
+        let resolved = await repo.workoutWithReconciledHeartRate(imported)
+        XCTAssertEqual(resolved, imported, "another device's measured/imported values retain their provenance")
+    }
+
     func testARecordedWorkoutWithoutHeartRateGetsItsEffortFromTheStrapTrace() async throws {
         let (repo, store) = try await makeRepo()
         _ = try await store.upsertWorkouts([recordedRow()], deviceId: strap)

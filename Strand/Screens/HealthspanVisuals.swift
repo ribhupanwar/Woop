@@ -10,16 +10,87 @@ import StrandAnalytics
 // MARK: - Card
 
 extension View {
-    /// The white card every AgeLess block sits in, so nothing on the screen floats grey on the canvas.
-    func agelessCard() -> some View {
-        padding(NoopMetrics.space4)
+    func agelessCard() -> some View { modifier(HealthspanCardSurface()) }
+}
+
+private struct HealthspanCardSurface: ViewModifier {
+    @Environment(\.woopReferenceUI) private var referenceUI
+    func body(content: Content) -> some View {
+        content.padding(NoopMetrics.space4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background { FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius) }
+            .background {
+                if referenceUI {
+                    RoundedRectangle(cornerRadius: NoopMetrics.cardRadius).fill(WoopHomePalette.activityCard)
+                } else {
+                    FrostedCardSurface(tint: StrandPalette.agelessYoungDeep, cornerRadius: NoopMetrics.cardRadius)
+                }
+            }
             .clipShape(RoundedRectangle(cornerRadius: NoopMetrics.cardRadius, style: .continuous))
     }
 }
 
 // MARK: - Age gauge
+
+/// Static decorative particles frame the existing calculated age. Their positions carry no health
+/// meaning; no animation timer, third-party image or synthetic measurement is used.
+struct HealthspanReferenceOrb: View {
+    let age: Double
+    let actualAge: Double
+
+    private var tint: Color {
+        age <= actualAge ? WoopHomePalette.healthGood : StrandPalette.agelessOld
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(stops: [
+                    .init(color: .black.opacity(0.75), location: 0),
+                    .init(color: .black.opacity(0.65), location: 0.55),
+                    .init(color: tint.opacity(0.12), location: 0.82),
+                    .init(color: tint.opacity(0.38), location: 0.98),
+                    .init(color: tint.opacity(0.08), location: 1)
+                ], center: .center, startRadius: 0, endRadius: 180))
+                .overlay { Circle().stroke(tint.opacity(0.65), lineWidth: 1) }
+                .shadow(color: tint.opacity(0.15), radius: 18)
+            Canvas { context, size in
+                let radius = min(size.width, size.height) * 0.5
+                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+                for index in 0..<720 {
+                    let phase = Double(index) * 2.399963229728653
+                    let fraction = Double((index * 137 + 29) % 719) / 719
+                    let radial = 0.61 + 0.37 * sqrt(fraction)
+                    let x = center.x + CGFloat(cos(phase) * radial) * radius
+                    let y = center.y + CGFloat(sin(phase) * radial) * radius
+                    let diameter = CGFloat(0.8 + Double((index * 17) % 13) / 5)
+                    let dot = CGRect(x: x - diameter / 2, y: y - diameter / 2,
+                                     width: diameter, height: diameter)
+                    context.fill(Path(ellipseIn: dot),
+                                 with: .color(tint.opacity(0.16 + fraction * 0.66)))
+                }
+            }
+            .accessibilityHidden(true)
+            VStack(spacing: 8) {
+                Text(verbatim: HealthspanSection.years(age))
+                    .font(WhoopReferenceFont.score(52))
+                    .foregroundStyle(.white)
+                Text("WOOP AGE")
+                    .font(WhoopReferenceFont.label(15)).tracking(1.6)
+                    .foregroundStyle(StrandPalette.textSecondary)
+                let words = Text(age <= actualAge ? "years younger" : "years older")
+                Text("\(Text(verbatim: HealthspanSection.years(abs(age - actualAge)))) \(words)")
+                    .font(WhoopReferenceFont.label(13))
+                    .foregroundStyle(tint)
+                    .lineLimit(1).minimumScaleFactor(0.75)
+            }
+            .padding(38)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .frame(maxWidth: 380)
+        .padding(.vertical, 18)
+        .accessibilityElement(children: .combine)
+    }
+}
 
 /// The AgeLess age on a half-circle gauge spanning ten years either side of the actual age, which sits at the
 /// top with its own mark. Younger, the arc fills from the young end to the age in an indigo to cyan glow; older,
@@ -392,6 +463,7 @@ struct HealthspanLeverRow: View {
 /// says where the last 30 days are taking the measure, and a note says where the value came from or how to
 /// supply a missing one.
 struct HealthspanMeasureRow: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     let component: HealthspanEngine.Component
     let value: Double?
     let years: Double?
@@ -405,7 +477,8 @@ struct HealthspanMeasureRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: NoopMetrics.space2) {
             Text(HealthspanSection.componentName(component))
-                .font(StrandFont.subhead.weight(.medium))
+                .font(referenceUI ? WhoopReferenceFont.label(12) : StrandFont.subhead.weight(.medium))
+                .textCase(referenceUI ? .uppercase : nil)
                 .foregroundStyle(StrandPalette.textPrimary)
             HStack(alignment: .center, spacing: NoopMetrics.space3) {
                 bar
@@ -414,12 +487,12 @@ struct HealthspanMeasureRow: View {
                         if let trend {
                             Image(systemName: trend.rising ? "arrow.up" : "arrow.down")
                                 .font(StrandFont.caption.weight(.bold))
-                                .foregroundStyle(trend.better ? StrandPalette.agelessYoungDeep.legibleText
-                                                 : StrandPalette.agelessOld.legibleText)
+                                .foregroundStyle(trend.better ? (referenceUI ? WoopHomePalette.healthGood : StrandPalette.agelessYoungDeep.legibleText)
+                                                 : (referenceUI ? WoopHomePalette.stressHigh : StrandPalette.agelessOld.legibleText))
                         }
                         Text(years.map { HealthspanSection.signedNumber($0) } ?? "—")
                             .font(StrandFont.number(20).monospacedDigit())
-                            .foregroundStyle(Self.textColour(years))
+                            .foregroundStyle(referenceUI ? referenceContributionColor : Self.textColour(years))
                     }
                     Text("years").font(StrandFont.caption).foregroundStyle(StrandPalette.textTertiary)
                 }
@@ -433,6 +506,12 @@ struct HealthspanMeasureRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilitySummary))
+    }
+
+    private var referenceContributionColor: Color {
+        guard let years, years.isFinite else { return StrandPalette.textSecondary }
+        if abs(years) < 0.05 { return StrandPalette.textSecondary }
+        return years < 0 ? WoopHomePalette.healthGood : WoopHomePalette.stressHigh
     }
 
     /// The note in secondary ink, then "thin data" in coral when the basis is thin.
@@ -465,7 +544,11 @@ struct HealthspanMeasureRow: View {
                     let maxPos = max(0.3, scale.ticks.map(\.years).max() ?? 0)
                     let maxNeg = max(0.3, -(scale.ticks.map(\.years).min() ?? 0))
                     for (i, t) in scale.ticks.enumerated() {
-                        let colour = Self.colour(t.years, max: t.years > 0 ? maxPos : maxNeg)
+                        let colour = referenceUI
+                            ? (abs(t.years) < 0.05 ? StrandPalette.textTertiary.opacity(0.35)
+                               : (t.years < 0 ? WoopHomePalette.healthGood : WoopHomePalette.stressHigh)
+                                .opacity(0.4 + 0.6 * min(1, abs(t.years) / (t.years > 0 ? maxPos : maxNeg))))
+                            : Self.colour(t.years, max: t.years > 0 ? maxPos : maxNeg)
                         context.fill(Path(roundedRect: CGRect(x: CGFloat(i) * step + 1, y: 20, width: step - 2, height: 10),
                                           cornerRadius: 1.5), with: .color(colour))
                     }

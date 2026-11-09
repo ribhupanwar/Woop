@@ -48,6 +48,7 @@ enum TabRoute: Hashable {
     /// has no single source to name — `Repository.weightSeries()` unions NOOP's own weigh-ins over
     /// Apple Health — and because this screen also WRITES, which no `MetricDetailView` does.
     case weight
+    case labBook
     /// Today's energy detail, including source provenance and observed-day coverage.
     case energy
     /// The strength area: what the Hevy log contains, per exercise and per muscle group.
@@ -119,6 +120,7 @@ extension View {
             case .coach: CoachView()
             case .goals: GoalsOverviewScreen()
             case .periodGoal(let id): PeriodGoalDetailView(goalId: id)
+            case .labBook: LabBookView()
             }
         }
     }

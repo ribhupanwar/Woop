@@ -48,6 +48,7 @@ struct WearableConnectionStateCard: View {
 /// system: every surface is a NoopCard, every metric is a StatTile, every chart is
 /// a ChartCard — no ad-hoc card heights or paddings.
 struct HealthView: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
     @EnvironmentObject var profile: ProfileStore
     // NOTE: HealthView itself deliberately does NOT observe `LiveState`/`AppModel` for live HR. A
@@ -60,8 +61,8 @@ struct HealthView: View {
     // MARK: - Body
 
     var body: some View {
-        ScreenScaffold(title: "Health Monitor",
-                       subtitle: "Live vitals, streamed from the strap.",
+        ScreenScaffold(title: referenceUI ? nil : "Health Monitor",
+                       subtitle: referenceUI ? nil : "Live vitals, streamed from the strap.",
                        // PERF (scroll): lazy column — byte-identical layout (LazyVStack == eager VStack
                        // alignment/spacing/header); builds the trailing vitals/skin-temp/age sections on
                        // demand instead of all up-front.
@@ -80,6 +81,17 @@ struct HealthView: View {
                 // History present: `live` is irrelevant to the layout choice, so the parent renders the
                 // full section stack directly without observing the HR stream.
                 HealthSectionsStack()
+            }
+        }
+        .navigationTitle("Health Monitor")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .toolbar {
+            if referenceUI {
+                ToolbarItem(placement: .principal) {
+                    Text("HEALTH MONITOR").font(WhoopReferenceFont.label(14)).tracking(1.2)
+                }
             }
         }
     }
@@ -268,6 +280,7 @@ private struct SyncStatusSection: View {
 /// Live HR hero, split into its own view so the ~1Hz HR stream only re-renders this
 /// subtree — the static vitals grid does not. Depends on `live` and `profile` only.
 private struct HeartRateSection: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var live: LiveState
     @EnvironmentObject var profile: ProfileStore
     @EnvironmentObject var model: AppModel
@@ -349,6 +362,13 @@ private struct HeartRateSection: View {
     }
 
     var body: some View {
+        Group {
+            if referenceUI { ReferenceLiveHeartRate() }
+            else { legacyContent }
+        }
+    }
+
+    private var legacyContent: some View {
         // Compute the derived live values ONCE per body pass and thread them into the
         // subviews, instead of re-evaluating heavy computed properties multiple times.
         let displayHR = self.displayHR
@@ -357,7 +377,12 @@ private struct HeartRateSection: View {
         let zone = hrZone(displayHR)
         let series = hrSeries(displayHR)
 
-        return VStack(alignment: .leading, spacing: NoopMetrics.gap) {
+        return legacyHeartRate(displayHR: displayHR, hasLiveHR: hasLiveHR, fraction: fraction, zone: zone, series: series)
+    }
+
+    private func legacyHeartRate(displayHR: Int?, hasLiveHR: Bool, fraction: Double,
+                                 zone: Int, series: [LiveHRSample]) -> some View {
+        VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Heart Rate", overline: "Live", trailing: hrIsDerived ? String(localized: "from R-R") : nil)
 
             // The live HR hero is a flat WHOOP card tinted rose — heart-rate's metric accent.
@@ -1410,6 +1435,7 @@ private struct VitalitySection: View {
 /// Static vitals grid, split into its own view so it depends only on `repo` and is
 /// not re-rendered by the ~1Hz live HR stream.
 private struct VitalsSection: View {
+    @Environment(\.woopReferenceUI) private var referenceUI
     @EnvironmentObject var repo: Repository
 
     // Temperature display preference (D#103). Skin temp is stored in °C (absolute or a ±deviation); the
@@ -1434,7 +1460,9 @@ private struct VitalsSection: View {
             temperatureUnit: temperatureUnit,
             spo2CandidateByDay: spo2CandidateByDay,
             hrvOverCountByDay: hrvOverCountByDay,
-            skinTempPreferred: SkinTempDisplay.Kind(rawValue: skinTempDisplayRaw) ?? .absolute   // #1846
+            skinTempPreferred: referenceUI ? .deviation : (SkinTempDisplay.Kind(rawValue: skinTempDisplayRaw) ?? .absolute),
+            hardwareOnly: referenceUI && repo.activeDeviceIsWhoopForVitals,
+            hardwareLabel: repo.activeDeviceIsWhoopForVitals ? "WHOOP" : nil
         )
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Vital Signs", overline: "Latest", trailing: BodyVitalSigns.latestDayLabel(readings))
@@ -1449,11 +1477,18 @@ private struct VitalsSection: View {
                     // filled to the metric's fraction, with the value counting up beside it and the same
                     // banding caption + sparkline the classic tile carried. Every binding + accessibility
                     // label is preserved — this is the liquid restyle of the flat StatTile.
-                    LiquidVitalTile(reading: v)
-                        .staggeredAppear(index: idx)
+                    if referenceUI { ReferenceVitalTile(reading: v) }
+                    else { LiquidVitalTile(reading: v).staggeredAppear(index: idx) }
                 }
             }
-            Text("Once NOOP has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
+            if referenceUI {
+                NoopButton("Share your health report", systemImage: "square.and.arrow.up", kind: .secondary, fullWidth: true) {
+                    TrendsReportRenderer.exportPDF(page: HealthMonitorReportPage(readings: readings),
+                                                   suggestedName: "Woop-Health-Report.pdf")
+                }
+                .disabled(!readings.contains { $0.value != nil })
+            }
+            Text("Once Woop has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)

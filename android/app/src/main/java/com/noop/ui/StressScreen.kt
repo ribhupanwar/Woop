@@ -391,7 +391,7 @@ private val LIQUID_HERO_RADIUS = 26.dp
 
 @Composable
 private fun StressHeroCard(model: StressModel, modifier: Modifier = Modifier) {
-    val bandColor = StressRamp.color(model.score)
+    val bandColor = com.noop.ui.forge.WoopReferenceColors.stress(model.score)
     // The vessel fills on the SAME 0–3 scale the score uses (score / 3 → 0..1), tinted by the live band.
     val fraction = (model.score / 3.0).coerceIn(0.0, 1.0)
     Box(
@@ -411,7 +411,7 @@ private fun StressHeroCard(model: StressModel, modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Overline("Stress monitor", modifier = Modifier.weight(1f))
-                StatePill(model.band.title, tone = model.band.tone, showsDot = true)
+                Text(model.band.title, color = com.noop.ui.forge.WoopReferenceColors.stress(model.score))
             }
 
             // The liquid vessel + the count-up value rolled over it, with "of 3" + the band word beside.
@@ -437,7 +437,7 @@ private fun StressHeroCard(model: StressModel, modifier: Modifier = Modifier) {
                     LiquidVessel(
                         value = fraction,
                         tint = bandColor,
-                        animated = true,
+                        animated = false,
                         modifier = Modifier.size(112.dp),
                     )
                     // Count-up value over the vessel — white, tabular, a soft shadow for legibility, and
@@ -1638,9 +1638,9 @@ private fun StressEmpty() {
 // MARK: - Stress band
 
 internal enum class StressBand(val title: String, val tone: StrandTone) {
-    Low("LOW", StrandTone.Positive),
-    Medium("MEDIUM", StrandTone.Warning),
-    High("HIGH", StrandTone.Critical);
+    Low("LOW", StrandTone.Accent),
+    Medium("MEDIUM", StrandTone.Positive),
+    High("HIGH", StrandTone.Warning);
 
     companion object {
         fun forScore(score: Double): StressBand = when {
@@ -1660,9 +1660,9 @@ internal enum class StressBand(val title: String, val tone: StrandTone) {
 // screen. Never the gold or red→green recovery ramp.
 
 private object StressRamp {
-    val CALM = Palette.accent           // calm WHOOP blue — low
-    val STEADY = Palette.statusPositive // balanced WHOOP green — baseline
-    val TENSE = Palette.statusWarning   // high WHOOP amber — high
+    val CALM = com.noop.ui.forge.WoopReferenceColors.stressLow           // calm WHOOP blue — low
+    val STEADY = com.noop.ui.forge.WoopReferenceColors.healthGood // balanced WHOOP green — baseline
+    val TENSE = com.noop.ui.forge.WoopReferenceColors.stressHigh   // high WHOOP amber — high
 
     /** The 3-stop ramp, evenly spaced (blue → green → amber). */
     val stops: List<Pair<Float, Color>> = listOf(
