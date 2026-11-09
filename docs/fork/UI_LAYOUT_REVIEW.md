@@ -279,3 +279,20 @@ No third-party model, application runtime or exercise media is embedded. Tests c
 mapping, invalid goals, interior warm-up rejection and work-only plans. New Apple API compilation,
 Watch pairing/native preview and sideloaded-device operation still require CI/hardware validation.
 Analysis migration required: no.
+
+## Healthspan calculation state mismatch
+
+The reference Health hub exposed HealthspanSection regardless of the existing default-off
+HealthspanFeature flag, while AppAnalysisHost forwarded that flag to DailyAnalysis and the core
+healthspan pass only ran when enabled. The section could therefore show an unknown/no-analysis state
+as if it had proved a shortage of 30 nights. The section now distinguishes feature off, calculation in
+progress, profile requirement, known nights, missing measures and unknown analysis. Enable & calculate
+sets the existing preference and uses the same normal analysis/refresh path as the Settings switch.
+No reset, new age formula, lowered night gate or analysis-recipe bump is added.
+
+Unknown readiness no longer asserts a 30-night shortage. Counts/progress only appear from the stored
+gap when known. Existing synced/analyzed history counts; it is not a new 30-day wait from installation.
+The section reloads when profile age/sex or the feature preference changes and suppresses canceled
+async result publication. No unsupported biological age or pace is fabricated to fill the design.
+Swift syntax and whitespace checks passed; actual Apple compilation, new empty/ready screenshots and
+calculation from the owner's saved device history remain pending. Analysis migration required: no.

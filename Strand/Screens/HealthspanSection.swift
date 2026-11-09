@@ -44,6 +44,8 @@ struct HealthspanSection: View {
     @State private var loaded = false
     @State private var showsDetail = false
     @State private var showsECG = false
+    @State private var calculating = false
+    @AppStorage(HealthspanFeature.defaultsKey) private var healthspanEnabled = false
 
     private var sex: HealthspanEngine.Sex? { HealthspanEngine.Sex(profileValue: profile.sex) }
 
@@ -51,7 +53,13 @@ struct HealthspanSection: View {
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Healthspan", overline: "Weekly",
                           trailing: snapshot?.latest.isProvisional == true ? String(localized: "Provisional") : String(localized: "Beta"))
-            if sex == nil {
+            if !healthspanEnabled {
+                readinessCard(title: String(localized: "Healthspan is off"),
+                              detail: String(localized: "Enable the calculation to analyse your saved history. Opening this page alone does not calculate a healthspan age."))
+            } else if calculating {
+                ProgressView("Analysing saved history…")
+                    .frame(maxWidth: .infinity, minHeight: 100)
+            } else if sex == nil {
                 ComingSoon(what: "Set your sex in your profile to see your healthspan age.", symbol: "person")
             } else if let snapshot {
                 Button { showsDetail = true } label: { card(snapshot.latest) }
@@ -72,7 +80,13 @@ struct HealthspanSection: View {
                     .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
             }
         }
-        .task(id: repo.refreshSeq) { await load() }
+        .task(id: "\(repo.refreshSeq)|\(profile.age)|\(profile.sex)|\(healthspanEnabled)") {
+            guard healthspanEnabled, !calculating else {
+                if !healthspanEnabled { snapshot = nil; loaded = true }
+                return
+            }
+            await load()
+        }
         .sheet(isPresented: $showsECG) {
             if let appModel {
                 EcgReadingSheet(controller: appModel.ecgReading, onClose: { showsECG = false })
@@ -92,24 +106,72 @@ struct HealthspanSection: View {
     @ViewBuilder private var emptyState: some View {
         switch emptyReason {
         case .steps:
-            ComingSoon(what: "AgeLess needs your daily steps. Bring them in from Apple Health, or set up the step estimate in Settings.",
-                       symbol: "figure.walk")
+            readinessCard(title: String(localized: "Daily step history needed"),
+                          detail: String(localized: "Sync your device and analyse the recorded days. Healthspan needs daily steps as well as sleep and fitness inputs."))
         case .measures(let missing):
-            let names = missing.map(HealthspanSection.componentName).formatted(.list(type: .and))
-            ComingSoon(what: "AgeLess still needs: \(names)", symbol: "hourglass")
+            readinessCard(title: String(localized: "Missing Healthspan inputs"),
+                          detail: missing.map(HealthspanSection.componentName).formatted(.list(type: .and)))
         case .nights(let nights):
-            ComingSoon(what: "Your healthspan age appears after 30 nights of sleep data. \(nights) so far.",
-                       symbol: "hourglass")
+            readinessCard(title: String(localized: "Building sleep history"),
+                          detail: String(localized: "\(nights) of \(HealthspanWindow.minimumNights) recorded sleep nights analysed."),
+                          nights: nights)
         case .unknown:
-            ComingSoon(what: "Your AgeLess age appears after 30 nights of sleep data.", symbol: "hourglass")
+            readinessCard(title: String(localized: "No Healthspan analysis available"),
+                          detail: String(localized: "The stored analysis has not reported a result or readiness count yet. Calculate from saved history; this does not mean you must wait another 30 days."))
+        }
+    }
+
+    private func readinessCard(title: String, detail: String, nights: Int? = nil) -> some View {
+        NoopCard {
+            VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                Text("HEALTHSPAN AGE").font(WhoopReferenceFont.label(12))
+                Text("—").font(WhoopReferenceFont.score(48))
+                Text(verbatim: title).font(WhoopReferenceFont.heading(19))
+                Text(verbatim: detail).font(WhoopReferenceFont.body(12))
+                    .foregroundStyle(StrandPalette.textSecondary)
+                if let nights {
+                    ProgressView(value: Double(max(0, min(nights, HealthspanWindow.minimumNights))),
+                                 total: Double(HealthspanWindow.minimumNights))
+                        .tint(WoopHomePalette.healthGood)
+                }
+                if sex == nil {
+                    Text("Set your sex in your profile to see your healthspan age.")
+                        .font(WhoopReferenceFont.body(12)).foregroundStyle(StrandPalette.textSecondary)
+                }
+                NoopButton(healthspanEnabled ? "Calculate Healthspan" : "Enable & calculate Healthspan",
+                           systemImage: "arrow.clockwise", kind: .secondary, fullWidth: true) {
+                    calculate()
+                }
+                .disabled(appModel == nil || sex == nil || calculating)
+                .accessibilityIdentifier("woop.healthspan.calculate")
+                Text("Uses saved history. At least 30 recorded sleep nights and the required inputs are needed; the age is an estimate.")
+                    .font(WhoopReferenceFont.body(10)).foregroundStyle(StrandPalette.textSecondary)
+            }
+        }
+    }
+
+    private func calculate() {
+        guard let appModel, sex != nil, !calculating else { return }
+        calculating = true
+        healthspanEnabled = true
+        Task {
+            // Same opt-in calculation path as the Settings switch; no history reset or recipe bump.
+            await appModel.intelligence.analyzeRecent()
+            await repo.refresh()
+            calculating = false
+            await load()
         }
     }
 
     private func load() async {
-        if let sex {
-            snapshot = await HealthspanSnapshot.load(repo: repo, age: profile.age, sex: sex)
-            emptyReason = snapshot == nil ? HealthspanEmptyReason(await HealthspanSnapshot.gap(repo: repo)) : .unknown
-        }
+        guard let sex else { snapshot = nil; loaded = true; return }
+        let age = profile.age
+        let next = await HealthspanSnapshot.load(repo: repo, age: age, sex: sex)
+        guard !Task.isCancelled else { return }
+        let reason = next == nil ? HealthspanEmptyReason(await HealthspanSnapshot.gap(repo: repo)) : .unknown
+        guard !Task.isCancelled, healthspanEnabled else { return }
+        snapshot = next
+        emptyReason = reason
         loaded = true
     }
 
