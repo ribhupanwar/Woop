@@ -185,3 +185,17 @@ established. No source, assets or exercise media were copied. Woop's Watch curre
 for native strength sessions while the phone remains the set-log authority. Automatic exercise/rep/load
 recognition has not been implemented or hardware-validated; planned reps are not recorded as performed
 reps. This follow-up does not add an unvalidated motion classifier. Analysis migration required: no.
+
+## Combined Activity programs
+
+Activity's Programs entry now opens a native Gym & Running page. Gym opens the existing TrainingHub;
+running offers the existing plan editor, feedback editor and real recorder entry. The plan editor adds
+six 400 m work / 200 m recovery pairs with a timed warm-up and cool-down, using the existing measured-GPS
+phase engine. Tests cover GPS requirement, six work phases, distinct phase identities and exclusive
+active-time versus distance targets. Only Activity/program subpages change; other tabs retain their layout.
+
+RunnerUp reference inspected: https://github.com/jonasoreland/runnerup README (GPL-3.0): Android GPS,
+configurable audio, interval workouts and target pace/HR concepts. Neither RunnerUp nor openGym is
+embedded, linked or copied. Native equivalent entry points are not full third-party feature parity.
+Automatic reps/weight recognition and direct Strava OAuth remain absent. Runtime sensor validation,
+Apple compilation and device review remain required. Analysis migration required: no.

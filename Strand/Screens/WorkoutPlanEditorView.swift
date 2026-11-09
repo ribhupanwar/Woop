@@ -37,6 +37,10 @@ struct WorkoutPlanEditorView: View {
                                 phases = starter.phases
                             }
                         }
+                        Button("6 × 400 m · GPS intervals") {
+                            phases = RunningProgramStarter.distanceIntervals
+                        }
+                        .disabled(!gpsEnabled)
                     } header: { Text("Running starters") }
                     footer: {
                         Text("Editable examples, not a recovery-based prescription. Apply the plan, then start Running. Work and recovery phases advance automatically by active time; GPS is enabled separately when recording.")
@@ -157,5 +161,14 @@ enum RunningProgramStarter: String, CaseIterable, Identifiable {
         case .longRun:
             return [.init(kind: .warmup, seconds: 600), .init(kind: .work, seconds: 2400), .init(kind: .cooldown, seconds: 600)]
         }
+    }
+}
+
+extension RunningProgramStarter {
+    /// Work/recovery distance goals use the existing measured-GPS progression rules.
+    static var distanceIntervals: [WorkoutGuidance.Phase] {
+        [.init(kind: .warmup, seconds: 600)] + (0..<6).flatMap { _ in
+            [WorkoutGuidance.Phase(kind: .work, meters: 400), .init(kind: .recovery, meters: 200)]
+        } + [.init(kind: .cooldown, seconds: 300)]
     }
 }

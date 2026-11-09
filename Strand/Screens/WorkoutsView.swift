@@ -148,7 +148,6 @@ struct WorkoutsView: View {
     /// Analysis migration required: no. Advanced filters are merely disclosed on demand.
     @State private var showingFilters = false
     @State private var showingTrainingAnalysis = false
-    @State private var showingRunningProgram = false
 
     /// Multi-select + merge mode. `selectionMode` toggles the leading checkmarks + the toolbar strip;
     /// `selected` holds the natural keys ("startTs|sport") of the chosen rows. Only MANUAL / DETECTED rows
@@ -329,22 +328,12 @@ struct WorkoutsView: View {
         .toolbar {
             if referenceUI {
                 ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        NavigationLink { TrainingHubView() } label: {
-                            Label("Gym programs", systemImage: "dumbbell")
-                        }
-                        Button { showingRunningProgram = true } label: {
-                            Label("Running program", systemImage: "figure.run")
-                        }
-                    } label: {
+                    NavigationLink { ActivityProgramsView() } label: {
                         Label("Programs", systemImage: "list.clipboard")
                     }
                     .accessibilityIdentifier("activity.programs")
                 }
             }
-        }
-        .sheet(isPresented: $showingRunningProgram) {
-            WorkoutPlanEditorView(gpsEnabled: true)
         }
         #endif
         .sheet(item: $sheet) { target in
@@ -2401,5 +2390,53 @@ private func previewWorkoutRows() -> [WorkoutRow] {
         .environmentObject(IntelligenceEngine(repo: repo, profile: ProfileStore(), deviceId: "preview"))
         .frame(width: 1040, height: 600)
         .preferredColorScheme(.dark)
+}
+#endif
+
+#if os(iOS)
+/// Native entry points reuse one recording authority, exercise library and saved-plan store.
+private struct ActivityProgramsView: View {
+    @State private var showingPlan = false
+    @State private var showingFeedback = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: NoopMetrics.sectionGap) {
+                NoopCard {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        Label("Gym programs", systemImage: "dumbbell").font(WhoopReferenceFont.heading(22))
+                        Text("Plan routines, choose exercises and log sets, reps and weights. Review previous performance and rest between sets.")
+                            .font(WhoopReferenceFont.body(13)).foregroundStyle(StrandPalette.textSecondary)
+                        NavigationLink { TrainingHubView() } label: {
+                            Label("Open gym training", systemImage: "arrow.right")
+                                .frame(minHeight: 44)
+                        }
+                        Text("Sets and reps require confirmation. Automatic rep and exercise recognition is not available.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                }
+                NoopCard {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space3) {
+                        Label("Running programs", systemImage: "figure.run").font(WhoopReferenceFont.heading(22))
+                        Text("Build time or GPS-distance intervals, save templates and set a goal-time pacer. Active-time phases pause with the workout; distance phases wait during GPS loss.")
+                            .font(WhoopReferenceFont.body(13)).foregroundStyle(StrandPalette.textSecondary)
+                        Button("Edit running plan") { showingPlan = true }.frame(minHeight: 44)
+                        Button("Audio and workout feedback") { showingFeedback = true }.frame(minHeight: 44)
+                        WorkoutStartControl()
+                        Text("Choose Running when starting. Enable GPS for distance phases and the pacer; audio feedback is optional.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
+                    }
+                }
+            }
+            .padding(NoopMetrics.screenPadding)
+        }
+        .background { WoopReferenceCanvas().ignoresSafeArea() }
+        .navigationTitle("Gym & Running")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPlan) { WorkoutPlanEditorView(gpsEnabled: true) }
+        .sheet(isPresented: $showingFeedback) {
+            WorkoutFeedbackSettingsView(sport: "Running", gpsEnabled: true, hasTargetZone: false)
+        }
+    }
 }
 #endif
