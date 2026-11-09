@@ -148,6 +148,7 @@ struct WorkoutsView: View {
     /// Analysis migration required: no. Advanced filters are merely disclosed on demand.
     @State private var showingFilters = false
     @State private var showingTrainingAnalysis = false
+    @State private var showingRunningProgram = false
 
     /// Multi-select + merge mode. `selectionMode` toggles the leading checkmarks + the toolbar strip;
     /// `selected` holds the natural keys ("startTs|sport") of the chosen rows. Only MANUAL / DETECTED rows
@@ -324,6 +325,28 @@ struct WorkoutsView: View {
         .task(id: recoveryTrendInputKey(rows: trendRows)) {
             await loadRecoveryTrend(rows: trendRows)
         }
+        #if os(iOS)
+        .toolbar {
+            if referenceUI {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        NavigationLink { TrainingHubView() } label: {
+                            Label("Gym programs", systemImage: "dumbbell")
+                        }
+                        Button { showingRunningProgram = true } label: {
+                            Label("Running program", systemImage: "figure.run")
+                        }
+                    } label: {
+                        Label("Programs", systemImage: "list.clipboard")
+                    }
+                    .accessibilityIdentifier("activity.programs")
+                }
+            }
+        }
+        .sheet(isPresented: $showingRunningProgram) {
+            WorkoutPlanEditorView(gpsEnabled: true)
+        }
+        #endif
         .sheet(item: $sheet) { target in
             ManualWorkoutSheet(editing: target.editing, hrSource: repo) { row, replacing in
                 Task {

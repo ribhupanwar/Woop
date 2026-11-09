@@ -31,6 +31,16 @@ struct WorkoutPlanEditorView: View {
                         .foregroundStyle(.secondary)
                 }
                 if enabled {
+                    Section {
+                        ForEach(RunningProgramStarter.allCases) { starter in
+                            Button(starter.title) {
+                                phases = starter.phases
+                            }
+                        }
+                    } header: { Text("Running starters") }
+                    footer: {
+                        Text("Editable examples, not a recovery-based prescription. Apply the plan, then start Running. Work and recovery phases advance automatically by active time; GPS is enabled separately when recording.")
+                    }
                     if !templates.isEmpty {
                         Section("Saved templates") {
                             ForEach(templates) { template in
@@ -119,5 +129,33 @@ struct WorkoutPlanEditorView: View {
     private func applyPlan() {
         if enabled { WorkoutGuidancePreferences.save(WorkoutGuidance(phases: phases)) }
         dismiss()
+    }
+}
+
+/// Independently authored time-based examples. Selecting one edits the draft only; Apply saves it.
+enum RunningProgramStarter: String, CaseIterable, Identifiable {
+    case easy, intervals, tempo, longRun
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .easy: return String(localized: "Easy run · 35 min")
+        case .intervals: return String(localized: "6 × 2 min · 38 min")
+        case .tempo: return String(localized: "Tempo · 35 min")
+        case .longRun: return String(localized: "Long run · 60 min")
+        }
+    }
+    var phases: [WorkoutGuidance.Phase] {
+        switch self {
+        case .easy:
+            return [.init(kind: .warmup, seconds: 300), .init(kind: .work, seconds: 1500), .init(kind: .cooldown, seconds: 300)]
+        case .intervals:
+            return [.init(kind: .warmup, seconds: 600)] + (0..<6).flatMap { _ in
+                [WorkoutGuidance.Phase(kind: .work, seconds: 120), .init(kind: .recovery, seconds: 120)]
+            } + [.init(kind: .cooldown, seconds: 240)]
+        case .tempo:
+            return [.init(kind: .warmup, seconds: 600), .init(kind: .work, seconds: 1200), .init(kind: .cooldown, seconds: 300)]
+        case .longRun:
+            return [.init(kind: .warmup, seconds: 600), .init(kind: .work, seconds: 2400), .init(kind: .cooldown, seconds: 600)]
+        }
     }
 }

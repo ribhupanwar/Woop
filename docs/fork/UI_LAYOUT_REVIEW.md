@@ -166,3 +166,22 @@ An empty filtered/scope result offers a reset to Current / All time and clears s
 Current still means the existing ten most recent matching sessions, not the entire archive.
 Analysis migration required: no. Swift syntax and whitespace checks passed; Apple compilation and
 populated-device layout validation remain pending for this commit. Android rows are unchanged.
+
+## Activity programs entry and running starters
+
+The iOS reference Activity toolbar now exposes Programs: Gym programs opens the existing native
+TrainingHub (routines, starter plans, exercise library, set logging and history); Running program opens
+the existing interval/pacer editor. Other tab layouts are unchanged. Four independently authored,
+time-based running examples can populate the editor draft: easy 35 minutes, six two-minute work/recovery
+pairs in 38 minutes including warm-up/cool-down, tempo 35 minutes, and long run 60 minutes. Apply saves
+for future sessions; the examples do not prescribe pace or represent recovery-adaptive coaching.
+The existing guidance engine advances active-time phases while the workout records. GPS/voice remain
+separate opt-ins and a live session retains its copied plan. Tests check valid phase sequences, published
+durations and no GPS requirement.
+
+Reference inspected: https://github.com/DuarteSantos8/openGym (AGPL-3.0), README planning/training/Watch
+sections. The documented Watch flow confirms sets using the crown; automatic rep recognition was not
+established. No source, assets or exercise media were copied. Woop's Watch currently records physiology
+for native strength sessions while the phone remains the set-log authority. Automatic exercise/rep/load
+recognition has not been implemented or hardware-validated; planned reps are not recorded as performed
+reps. This follow-up does not add an unvalidated motion classifier. Analysis migration required: no.
