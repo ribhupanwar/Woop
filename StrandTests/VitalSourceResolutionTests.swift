@@ -6,6 +6,37 @@ import WhoopStore
 /// source precedence (imported WHOOP > NOOP-computed > Apple Health), skin temp's deliberate exclusion of
 /// Apple, the provenance captions, and the "latest day that has a value" fallback. All pure — no store.
 final class VitalSourceResolutionTests: XCTestCase {
+    func testHardwareMonitorCarriesWhoopReadingInsteadOfNewerAppleReading() {
+        let readings = BodyVitalSigns.readings(sourceRows: [
+            .init(metric: daily(day: "2026-06-12", spo2Pct: 97, respRateBpm: 16), source: .noopComputed),
+            .init(metric: daily(day: "2026-06-13", spo2Pct: 94, respRateBpm: 20), source: .appleHealth),
+            .init(metric: daily(day: "2026-06-13", spo2Pct: 98), source: .whoopImport)
+        ], temperatureUnit: .celsius, now: localNoon(day: "2026-06-13"),
+           hardwareOnly: true, hardwareLabel: "WHOOP")
+        let oxygen = readings.first { $0.key == "spo2" }
+        XCTAssertEqual(oxygen?.value, 97)
+        XCTAssertEqual(oxygen?.day, "2026-06-12")
+        XCTAssertEqual(oxygen?.source, .noopComputed)
+        XCTAssertTrue(oxygen?.stateCaption.contains("WHOOP") == true)
+        XCTAssertFalse(oxygen?.stateCaption.contains("Apple Health") == true)
+        XCTAssertEqual(readings.first { $0.key == "resp" }?.value, 16)
+    }
+
+    func testHardwareMonitorNeverRelabelsAppleOrMergedCacheAsWhoop() {
+        let readings = BodyVitalSigns.readings(sourceRows: [
+            .init(metric: daily(day: "2026-06-13", spo2Pct: 95, respRateBpm: 19), source: .appleHealth),
+            .init(metric: daily(day: "2026-06-13", spo2Pct: 96), source: .localCache)
+        ], temperatureUnit: .celsius, now: localNoon(day: "2026-06-13"),
+           hardwareOnly: true, hardwareLabel: "WHOOP")
+        for key in ["spo2", "resp", "rhr", "hrv"] {
+            let reading = readings.first { $0.key == key }
+            XCTAssertNil(reading?.value)
+            XCTAssertNil(reading?.source)
+            XCTAssertTrue(reading?.stateCaption.contains("WHOOP") == true)
+        }
+    }
+
+
     func testMergeDailyFillsOnlyMissingImportedFields() {
         let imported = daily(
             day: "2026-06-12",

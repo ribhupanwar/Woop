@@ -1460,7 +1460,9 @@ private struct VitalsSection: View {
             temperatureUnit: temperatureUnit,
             spo2CandidateByDay: spo2CandidateByDay,
             hrvOverCountByDay: hrvOverCountByDay,
-            skinTempPreferred: referenceUI ? .deviation : (SkinTempDisplay.Kind(rawValue: skinTempDisplayRaw) ?? .absolute)
+            skinTempPreferred: referenceUI ? .deviation : (SkinTempDisplay.Kind(rawValue: skinTempDisplayRaw) ?? .absolute),
+            hardwareOnly: referenceUI && repo.activeDeviceIsWhoopForVitals,
+            hardwareLabel: repo.activeDeviceIsWhoopForVitals ? "WHOOP" : nil
         )
         VStack(alignment: .leading, spacing: NoopMetrics.gap) {
             SectionHeader("Vital Signs", overline: "Latest", trailing: BodyVitalSigns.latestDayLabel(readings))
@@ -1486,7 +1488,7 @@ private struct VitalsSection: View {
                 }
                 .disabled(!readings.contains { $0.value != nil })
             }
-            Text("Once NOOP has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
+            Text("Once Woop has 14 nights of history, in-range compares each vital to your own baseline (approximate, not medical advice); until then, typical adult ranges apply.")
                 .font(StrandFont.footnote)
                 .foregroundStyle(StrandPalette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)

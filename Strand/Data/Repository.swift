@@ -176,6 +176,10 @@ final class Repository: ObservableObject {
     /// hypnogram) instead of the generic "On-device", and flag the split as the ring's RAW on-device stages.
     /// Not a stored value and never crosses `.noopbak`, so no Android twin is required.
     var activeDeviceIsOura: Bool { DeviceBrandCatalog.isOura(deviceId) }
+    /// Registry-backed hardware identity for WHOOP-only monitor presentation.
+    var activeDeviceIsWhoopForVitals: Bool {
+        deviceId == Self.whoopSource || registeredWhoopIds.contains(deviceId)
+    }
     private var store: WhoopStore?
 
     /// Daily metrics (recovery/strain/sleep/HRV/RHR…) over the recent window, oldest→newest.

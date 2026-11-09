@@ -59,7 +59,9 @@ struct HomeHealthMonitorCard: View {
                 sourceRows: repo.vitalMetricRows.filter { $0.metric.day <= dayKey }, temperatureUnit: .celsius,
                 now: calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day,
                 hrvOverCountByDay: Dictionary(flags.map { ($0.day, $0.value) }, uniquingKeysWith: { _, last in last }),
-                skinTempPreferred: .deviation)
+                skinTempPreferred: .deviation,
+                hardwareOnly: repo.activeDeviceIsWhoopForVitals,
+                hardwareLabel: repo.activeDeviceIsWhoopForVitals ? "WHOOP" : nil)
             summary = HealthMonitorSummary(readings: readings, day: dayKey)
         }
     }

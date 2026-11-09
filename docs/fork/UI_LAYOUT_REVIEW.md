@@ -209,3 +209,21 @@ include the source caption beside calories. The formatter's default legacy marke
 sentences remain available. Missing energy still displays a dash; numeric values, source precedence,
 confidence and calorie formulas are unchanged. Tests cover clean formatting, legacy provenance marker
 and missing totals. Analysis migration required: no.
+
+## WHOOP hardware-only Health Monitor
+
+For a registry-identified active WHOOP (or the canonical WHOOP source), the reference Health Monitor
+and its Home summary now explicitly restrict resolved vitals to device-derived computed daily rows.
+Apple Health, imported daily files and merged-cache rows cannot fill a missing hardware vital. The
+existing bounded carry/date, missing-data states, over-count caveats, skin deviation preference and
+experimental raw/candidate oxygen gates remain. Captions name WHOOP with on-device calculation (or
+vs baseline for skin temperature); a missing reading names the selected hardware without inventing a
+value. Default mixed-source resolution and non-WHOOP devices retain their existing behavior.
+
+The core's computed daily vitals do not contain imported Apple resting HR (DailyAnalysis's persisted
+history comment); registry identity prevents another brand's computed row being called WHOOP. Legacy
+unknown hardware IDs are not guessed. This is a presentation-source selection, not reanalysis, a new
+sensor decoder, or WHOOP's proprietary clinical algorithm. Tests cover yesterday's fresh device reading
+against newer Apple/import values, and no fallback from Apple/merged cache. The old NOOP footer now
+uses Woop. Apple compilation, test execution and actual band sync remain to be verified.
+Analysis migration required: no. No derived stored values or scoring inputs changed.
