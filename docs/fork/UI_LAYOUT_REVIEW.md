@@ -258,3 +258,24 @@ https://www.whoop.com/us/en/thelocker/how-whoop-measures-muscular-load/
 
 Analysis migration required: no. New Swift syntax parsing/whitespace checks passed. Actual Apple
 compilation, new tests, populated screenshots and runner/gym hardware trials remain required.
+
+## Apple WorkoutKit running preview
+
+The iOS running-plan editor now offers Apple's native WorkoutKit preview for valid running intervals.
+The adapter preserves time/distance units, step order, optional leading warm-up and trailing cooldown;
+it refuses unsupported interior warm-up/cooldown shapes rather than reinterpreting them. Work/recovery
+steps form one non-repeating native block, preserving the source's explicit repetitions. Framework
+activity/goal support is checked and unsupported Watch scheduling disables the preview entry. Each
+explicit preview gets a fresh plan identity; there is no automatic replacement of another saved plan.
+The native controls own user review/add/permissions; merely opening the editor schedules nothing and
+no success banner asserts a Watch sync. Running recording and existing WHOOP monitor provenance do
+not change. Apple Workout uses its own sensor configuration and should not be recorded twice.
+
+Official references checked: WorkoutKit framework overview, CustomWorkout initializer, IntervalStep,
+WorkoutGoal time/distance declarations, WorkoutScheduler.isSupported and SwiftUI workoutPreview.
+https://developer.apple.com/documentation/workoutkit
+https://developer.apple.com/documentation/swiftui/view/workoutpreview(_:ispresented:)
+No third-party model, application runtime or exercise media is embedded. Tests cover faithful interval
+mapping, invalid goals, interior warm-up rejection and work-only plans. New Apple API compilation,
+Watch pairing/native preview and sideloaded-device operation still require CI/hardware validation.
+Analysis migration required: no.

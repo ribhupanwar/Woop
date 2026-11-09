@@ -65,6 +65,11 @@ struct WorkoutPlanEditorView: View {
                             .disabled(phases.count > 62)
                     } header: { Text("Training phases") }
                     footer: { Text("Time targets use active workout time. Distance targets require GPS and wait during signal loss.") }
+                    #if os(iOS) && canImport(WorkoutKit)
+                    Section("Apple Watch") {
+                        WatchRunningPlanPreviewButton(phases: phases, gpsEnabled: gpsEnabled)
+                    }
+                    #endif
                     Section("Save template") {
                         TextField("Template name", text: $templateName)
                         Button("Save template", action: saveTemplate)
