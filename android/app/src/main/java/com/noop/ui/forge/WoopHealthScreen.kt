@@ -17,6 +17,7 @@ internal fun WoopHealthScreen(padding: PaddingValues, viewModel: AppViewModel) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(16.dp),
            verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Health", style = Forge.type.title1, color = Forge.colors.text)
+        TodayCycleForge(viewModel)
         listOf("Healthspan · Age & Pace of Aging" to MoreDest.AgeLess,
                "Health Monitor · Live HR & vitals" to MoreDest.Health,
                "Stress Monitor" to MoreDest.Stress,

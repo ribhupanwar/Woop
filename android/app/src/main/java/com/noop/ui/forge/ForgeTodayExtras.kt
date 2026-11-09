@@ -127,8 +127,8 @@ internal fun TodayCycleForge(viewModel: AppViewModel) {
             onSetUp = { viewModel.setCycleTrackingEnabled(true); tracker = true },
             onOpen = { tracker = true }, onLogToday = { viewModel.logPeriodStart() })
     }
-    val cycle = v5?.cycle
-    if (tracker && cycle != null) Classic {
+    val cycle = cycleTrackerDisplayResult(v5?.cycle)
+    if (tracker) Classic {
         com.noop.ui.CycleTrackerDialog(result = cycle, starts = starts, onLog = viewModel::logPeriodStart,
             onDelete = viewModel::deletePeriodStart, onDeleteAll = viewModel::deleteAllPeriodStarts,
             onDismiss = { tracker = false })
@@ -193,3 +193,7 @@ internal fun ForgeLiveSessionCover(viewModel: AppViewModel, onClose: () -> Unit)
         Classic { com.noop.ui.LiveSessionScreen(vm = viewModel, onClose = onClose) }
     }
 }
+
+/** Logging remains usable before sensor history exists; missing data never becomes a cycle prediction. */
+internal fun cycleTrackerDisplayResult(result: com.noop.analytics.CyclePhaseEngine.Result?): com.noop.analytics.CyclePhaseEngine.Result =
+    result ?: com.noop.analytics.CyclePhaseEngine.classify(emptyList(), baselineUsable = false)

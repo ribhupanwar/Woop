@@ -88,3 +88,14 @@ Gradle 8.7 checksum, an isolated Android SDK/cache, inherited proxy settings and
 Tonight's Sleep now resolves planned wake time through the existing weekday/per-day override resolver
 used for the strap alarm, rather than assuming the base time fires daily. No alarm is armed by the card.
 Analysis migration required: no.
+
+## Menstrual cycle entry (2026-11-09)
+
+Health now exposes the existing optional, local-only cycle tracker. Setup remains an explicit opt-in;
+opening Health does not enable cycle analysis. Period-start dates can be logged with the existing date
+picker, reviewed and removed; deleting all history still requires the existing confirmation. The tracker
+now opens even before `v5Signals.cycle` exists, using the engine's learning result without invented cycle
+days or next-period dates. Sensor phase/window estimates retain the existing data/eligibility gates and
+are awareness estimates, not fertility or contraception guidance. Symptom logging and period end/flow
+tracking are not implemented by this change. No new permissions, server, analytics formula or database
+schema are introduced. Analysis migration required: no.
