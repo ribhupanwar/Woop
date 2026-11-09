@@ -148,6 +148,7 @@ struct WorkoutsView: View {
     /// Analysis migration required: no. Advanced filters are merely disclosed on demand.
     @State private var showingFilters = false
     @State private var showingTrainingAnalysis = false
+    @State private var showingHistory = false
 
     /// Multi-select + merge mode. `selectionMode` toggles the leading checkmarks + the toolbar strip;
     /// `selected` holds the natural keys ("startTs|sport") of the chosen rows. Only MANUAL / DETECTED rows
@@ -214,61 +215,70 @@ struct WorkoutsView: View {
                        // The day-of-sky liquid backdrop, matching Today / Health / Sleep / Trends: a fixed,
                        // full-bleed time-of-day sky behind the scroll content (it does not scroll).
                        topBackground: liquidScaffoldSky()) {
-            if allRows.isEmpty {
-                VStack(alignment: .leading, spacing: NoopMetrics.space4) {
-                    if loaded {
-                        ComingSoon(what: "No workouts yet. They come from your WHOOP and Apple Health history. Import in Data Sources to bring them in, or add one you tracked elsewhere.",
-                                   action: ("Open Data Sources", { router.openDataSources() }))
-                    } else {
-                        ComingSoon.loading("Loading your sessions…", title: "Reading your sessions")
+            if referenceUI {
+                Picker("Activity view", selection: $showingHistory) {
+                    Text("Train").tag(false)
+                    Text("History").tag(true)
+                }.pickerStyle(.segmented)
+                if !showingHistory { ActivityTrainingHome(rows: allRows, historyLoaded: loaded) }
+            }
+            if !referenceUI || showingHistory {
+                if allRows.isEmpty {
+                    VStack(alignment: .leading, spacing: NoopMetrics.space4) {
+                        if loaded {
+                            ComingSoon(what: "No workouts yet. They come from your WHOOP and Apple Health history. Import in Data Sources to bring them in, or add one you tracked elsewhere.",
+                                       action: ("Open Data Sources", { router.openDataSources() }))
+                        } else {
+                            ComingSoon.loading("Loading your sessions…", title: "Reading your sessions")
+                        }
+                        if loaded {
+                            workoutActionRow
+                        }
                     }
-                    if loaded {
-                        workoutActionRow
-                    }
-                }
-            } else {
-                // Compute the per-sport groups ONCE per body evaluation, then thread them into every
-                // section — same idea as `unscopedRows` above, applied to the rest of the fan-out
-                // (rows → sportGroups → …) that used to rebuild several times per render.
-                // Current / Archived applies to what the LIST and its summaries show. `unscopedRows`
-                // itself stays unscoped so the HR-recovery trend and the auto-widen probe keep seeing the
-                // whole window.
-                let windowRows = Self.scopedRows(unscopedRows, scope: scope)
-                let groups = sportGroups(from: windowRows)
-                let zonesSummary = WorkoutZones.summary(from: windowRows)
+                } else {
+                    // Compute the per-sport groups ONCE per body evaluation, then thread them into every
+                    // section — same idea as `unscopedRows` above, applied to the rest of the fan-out
+                    // (rows → sportGroups → …) that used to rebuild several times per render.
+                    // Current / Archived applies to what the LIST and its summaries show. `unscopedRows`
+                    // itself stays unscoped so the HR-recovery trend and the auto-widen probe keep seeing the
+                    // whole window.
+                    let windowRows = Self.scopedRows(unscopedRows, scope: scope)
+                    let groups = sportGroups(from: windowRows)
+                    let zonesSummary = WorkoutZones.summary(from: windowRows)
 
-                workoutActionRow
-                if referenceUI { quickSportFilters }
-                scopeBar
-                rangeBar(rows: windowRows, effectiveRange: resolved)
-                if let postLogNote { postLogBanner(postLogNote) }
-                effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
-                summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
-                if referenceUI { sessionsSection(rows: windowRows) }
-                if referenceUI {
-                    DisclosureGroup(isExpanded: $showingTrainingAnalysis) {
+                    workoutActionRow
+                    if referenceUI { quickSportFilters }
+                    scopeBar
+                    rangeBar(rows: windowRows, effectiveRange: resolved)
+                    if let postLogNote { postLogBanner(postLogNote) }
+                    effortHero(rows: windowRows, effectiveRange: resolved, groups: groups)
+                    summarySection(rows: windowRows, effectiveRange: resolved, groups: groups)
+                    if referenceUI { sessionsSection(rows: windowRows) }
+                    if referenceUI {
+                        DisclosureGroup(isExpanded: $showingTrainingAnalysis) {
+                            analysisRow
+                            heatmapSection()
+                            breakdownSection(groups: groups, rows: windowRows)
+                            if let z = zonesSummary { zonesSection(z, totalSessions: windowRows.count) }
+                            recoveryTrendSection
+                        } label: {
+                            Label("Training analysis", systemImage: "chart.xyaxis.line")
+                                .font(WhoopReferenceFont.label(13))
+                                .foregroundStyle(StrandPalette.textPrimary)
+                                .frame(minHeight: 44)
+                        }
+                        .tint(WoopHomePalette.strain)
+                    } else {
                         analysisRow
                         heatmapSection()
                         breakdownSection(groups: groups, rows: windowRows)
-                        if let z = zonesSummary { zonesSection(z, totalSessions: windowRows.count) }
+                        if let z = zonesSummary {
+                            zonesSection(z, totalSessions: windowRows.count)
+                        }
                         recoveryTrendSection
-                    } label: {
-                        Label("Training analysis", systemImage: "chart.xyaxis.line")
-                            .font(WhoopReferenceFont.label(13))
-                            .foregroundStyle(StrandPalette.textPrimary)
-                            .frame(minHeight: 44)
                     }
-                    .tint(WoopHomePalette.strain)
-                } else {
-                    analysisRow
-                    heatmapSection()
-                    breakdownSection(groups: groups, rows: windowRows)
-                    if let z = zonesSummary {
-                        zonesSection(z, totalSessions: windowRows.count)
-                    }
-                    recoveryTrendSection
+                    if !referenceUI { sessionsSection(rows: windowRows) }
                 }
-                if !referenceUI { sessionsSection(rows: windowRows) }
             }
         }
         // Keyed on the energy revision too: a correction of stored session energy (recipes AI-13 to AI-15)
@@ -321,7 +331,8 @@ struct WorkoutsView: View {
         .onChange(of: range) { newRange in
             Task { await expandWindowIfNeeded(for: newRange == .all ? .all : effectiveRange) }
         }
-        .task(id: recoveryTrendInputKey(rows: trendRows)) {
+        .task(id: "\(showingHistory)|" + recoveryTrendInputKey(rows: trendRows)) {
+            guard !referenceUI || showingHistory else { return }
             await loadRecoveryTrend(rows: trendRows)
         }
         #if os(iOS)

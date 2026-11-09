@@ -227,3 +227,34 @@ sensor decoder, or WHOOP's proprietary clinical algorithm. Tests cover yesterday
 against newer Apple/import values, and no fallback from Apple/merged cache. The old NOOP footer now
 uses Woop. Apple compilation, test execution and actual band sync remain to be verified.
 Analysis migration required: no. No derived stored values or scoring inputs changed.
+
+## Activity Train home for a runner who lifts
+
+Reference Activity now defaults to Train, with the prior editable log/ranges/charts under History.
+Train offers explicit Start GPS run, the running plan/interval/pacer editor, today's scheduled gym
+routine or freestyle start, direct Chest/Back/Legs/Shoulders/Arms/Core selection, resume for an active
+session, observed seven-calendar-day run/session totals, and existing coach/load/goals destinations.
+Muscle selection uses the reviewed exercise-library anatomy and searches actual stored exercises;
+the wearer chooses the exercise order and working-set count, then starts the real native logger.
+Targets are editable plans, not performed reps. No automatic exercise recognition is claimed.
+The selection does not permanently add a routine to the weekly schedule. Other tab layouts are unchanged.
+
+Run start explicitly requests GPS through the existing controller and permissions; the same controller
+prevents a second concurrent session. Displayed progress excludes future/out-of-window sessions, treats
+walking separately, and never treats missing/invalid distance as zero distance. Distance coverage is
+shown. Source/scoring preferences and hardware recording logic are unchanged. Tests cover calendar
+boundaries, future exclusion and missing/invalid distance. High-rate HR is not observed by this new
+home; historical HR-recovery reads are deferred until History is selected. Anatomy filtering is prepared
+once per muscle picker. Loaded training context is reused by the canonical start controller.
+
+References reviewed: openGym remains an independent native feature reference/import format, not a
+ported runtime. Liftosaur's progression-first flow is useful for gym programming; Apple WorkoutKit is
+an official possible future route for Watch interval scheduling. Neither is added as a dependency here.
+https://www.liftosaur.com/features/progressions
+https://developer.apple.com/documentation/workoutkit
+WHOOP's strength docs support keeping logged strength volume separate from HR-only cardiovascular
+load; no proprietary muscular-strain formula is copied:
+https://www.whoop.com/us/en/thelocker/how-whoop-measures-muscular-load/
+
+Analysis migration required: no. New Swift syntax parsing/whitespace checks passed. Actual Apple
+compilation, new tests, populated screenshots and runner/gym hardware trials remain required.
