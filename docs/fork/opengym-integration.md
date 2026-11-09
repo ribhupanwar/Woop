@@ -388,3 +388,14 @@ the same routine again updates the earlier copy instead of adding a second one.
 
 **Analysis migration required: no.** Routine imports add plan definitions only; stored workouts and
 historical analysis are unchanged.
+
+## Direct Activity import entry
+
+Activity → Programs → Import openGym plan opens native Training after its exercise-matching data loads,
+then presents the existing JSON picker once. It reuses the existing routine preview/confirmation and
+import parser; no automatic write or third-party app runtime is added. The source file comes from
+openGym Plan → Export plan file. Progression rules, cardio slots and exercise media are not imported.
+Cancelling does not reopen the picker on repository refresh. Analysis migration required: no.
+
+RunnerUp's Android README and the iOS OutRun project (timfraedrich/OutRun, GPL-3.0) were reviewed as
+running alternatives. Neither is embedded. Woop keeps its native GPS/guidance/audio pipeline.

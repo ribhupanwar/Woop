@@ -2411,6 +2411,12 @@ private struct ActivityProgramsView: View {
                             Label("Open gym training", systemImage: "arrow.right")
                                 .frame(minHeight: 44)
                         }
+                        NavigationLink { TrainingHubView(importOpenGymOnOpen: true) } label: {
+                            Label("Import openGym plan", systemImage: "square.and.arrow.down")
+                                .frame(minHeight: 44)
+                        }
+                        Text("In openGym, use Plan → Export plan file, then choose its JSON here. Review the import before saving. Exercise media and progression rules are not imported.")
+                            .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
                         Text("Sets and reps require confirmation. Automatic rep and exercise recognition is not available.")
                             .font(WhoopReferenceFont.body(11)).foregroundStyle(StrandPalette.textSecondary)
                     }

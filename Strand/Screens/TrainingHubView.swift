@@ -11,6 +11,13 @@ import UIKit
 /// Native training home inspired by OpenGym's useful structure while keeping NOOP's own visual system,
 /// source provenance, analytics and data model. No OpenGym source, strings or assets are included.
 struct TrainingHubView: View {
+    let importOpenGymOnOpen: Bool
+    @State private var presentedInitialImport = false
+
+    init(importOpenGymOnOpen: Bool = false) {
+        self.importOpenGymOnOpen = importOpenGymOnOpen
+    }
+
     // Deliberately not `AppModel`: it republishes on every heart-rate tick, and this screen's body is the
     // most expensive in the app. The session controller changes only when a session starts or ends.
     @EnvironmentObject private var session: ActiveSessionController
@@ -63,6 +70,12 @@ struct TrainingHubView: View {
         .navigationTitle(Text("Training"))
         .task(id: "\(repo.refreshSeq)|\(weekStartRaw)") {
             await model.load(repo: repo, session: session, weekStartsOn: weekStart)
+        }
+        .task(id: model.loaded) {
+            // Wait for exercise matching data before presenting a requested plan import.
+            guard model.loaded, importOpenGymOnOpen, !presentedInitialImport else { return }
+            presentedInitialImport = true
+            showingOpenGymImporter = true
         }
         // A finished session changes history; reload once it is over rather than on every refresh during it.
         .onChange(of: session.hasLiveSession) { live in
