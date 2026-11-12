@@ -9,6 +9,21 @@ final class StrainScorerTests: XCTestCase {
         (0..<n).map { HRSample(ts: start + $0, bpm: bpm) }
     }
 
+
+    /// Moderate walking contributes without a saved workout; quiet HR does not.
+    func testModerateWalkingContributesToDailyStrainWithoutWorkout() {
+        let moderate = hr(115, 600) // (115 - 60) / (190 - 60) = 42.3% HR reserve
+        let quiet = hr(100, 600) // 30.8% HR reserve
+        let durations = Array(repeating: 1.0 / 60.0, count: 600)
+        let walkingLoad = StrainScorer.effortLoad(moderate, restingHR: 60, hrReserve: 130,
+                                                  durations: durations, lowIntensity: .countedIn([]))
+        let quietLoad = StrainScorer.effortLoad(quiet, restingHR: 60, hrReserve: 130,
+                                                durations: durations, lowIntensity: .countedIn([]))
+        XCTAssertGreaterThan(walkingLoad, 0)
+        XCTAssertEqual(quietLoad, 0)
+        XCTAssertGreaterThan(StrainScorer.effortScore21(load: walkingLoad), 0)
+    }
+
     // MARK: - Training Load cardio lane (Banister, P4)
 
     /// An hour at ΔHRR 0.5 (125 bpm, resting 60, maximum 190), male coefficient. Worked independently:
