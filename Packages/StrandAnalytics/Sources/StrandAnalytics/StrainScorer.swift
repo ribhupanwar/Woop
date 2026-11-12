@@ -14,7 +14,7 @@ import WhoopProtocol
 //   1. Heart-Rate Reserve (Karvonen): HRR = HRmax − RHR, HRmax from `MaxHeartRate`.
 //   2. Per-sample intensity x = (HR − RHR) / HRR × 100 % HRR, clamped 0..100.
 //   3. Load: each sample adds `effortWeight(x)` × its minutes, e^(beta (x − 55) / 10) faded out below
-//      20 % HRR. Outside workouts a sample below 50 % HRR adds nothing (`LowIntensity`).
+//      20 % HRR. Outside workouts a sample below 40 % HRR adds nothing (`LowIntensity`); moderate walking contributes.
 //   4. Score: a × ln(1 + load / k) on 0–21, softly capped below 21 (`effortScore21`), shown on 0–100.
 //   The constants are fitted on WHOOP's Strain of the workouts contributed to #2438 (see "Effort curve").
 //
@@ -156,9 +156,11 @@ public enum StrainScorer {
     public static let effortFloorWidth: Double = 3
     /// Exponent of the soft cap at 21.
     public static let effortCapExponent: Double = 8
-    /// Outside workouts heart rate counts from this intensity (% HRR), where Edwards' zone 1 began. Below
-    /// it, a whole day of standing and walking would otherwise add up to a hard day (#2438 step 2 open).
-    public static let effortOutsideWorkoutFloor: Double = 50
+    /// Moderate everyday walking must contribute to cardiovascular load even when not auto-saved
+    /// as a workout. Count >=40% HR reserve outside workout spans, while filtering quiet standing
+    /// and very light movement below this threshold. This is a conservative model choice,
+    /// not a claim about WHOOP's proprietary threshold; calibrate with paired day data.
+    public static let effortOutsideWorkoutFloor: Double = 40
 
     /// Where heart rate below `effortOutsideWorkoutFloor` counts.
     public enum LowIntensity: Hashable, Sendable {
